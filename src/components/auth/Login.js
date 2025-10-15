@@ -64,7 +64,7 @@ const Login = () => {
       const { error } = await signIn(formData.email, formData.password)
       
       if (!error) {
-        navigate('/dashboard')
+        navigate('/panel-principal')
       }
     } catch (error) {
       console.error('Error during login:', error)

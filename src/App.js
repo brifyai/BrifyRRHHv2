@@ -61,7 +61,7 @@ const PublicRoute = ({ children }) => {
     return <LoadingSpinner />
   }
   
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />
+  return !isAuthenticated ? children : <Navigate to="/panel-principal" />
 }
 
 // Layout principal para rutas autenticadas
@@ -167,15 +167,15 @@ function App() {
             <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
             
             {/* Rutas protegidas */}
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/panel-principal"
               element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <ModernDashboard />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route 
               path="/plans" 
@@ -208,7 +208,7 @@ function App() {
               } 
             />
             <Route
-              path="/profile"
+              path="/perfil"
               element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>
@@ -218,7 +218,7 @@ function App() {
               }
             />
             <Route
-              path="/settings"
+              path="/configuracion"
               element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>
@@ -227,8 +227,86 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/configuracion/empresas"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="companies" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/usuarios"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="users" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/general"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="general" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/notificaciones"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="notifications" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/seguridad"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="security" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/integraciones"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="integrations" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/base-de-datos"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="database" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integraciones"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/configuracion/integraciones" replace />
+                </ProtectedRoute>
+              }
+            />
               <Route
-                path="/search"
+                path="/busqueda-ia"
                 element={
                   <ProtectedRoute>
                     <AuthenticatedLayout>
@@ -238,7 +316,7 @@ function App() {
                 }
               />
               <Route
-                path="/abogado"
+                path="/lawyer"
                 element={
                   <ProtectedRoute>
                     <AuthenticatedLayout>
@@ -281,25 +359,15 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/communication/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <AuthenticatedLayout>
-                    <WebrifyCommunicationDashboard activeTab="dashboard" />
-                  </AuthenticatedLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/communication/database" 
+            <Route
+              path="/base-de-datos"
               element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <WebrifyCommunicationDashboard activeTab="database" />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route 
               path="/communication/send" 
@@ -373,11 +441,11 @@ function App() {
                   <div className="text-center">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
                     <p className="text-gray-600 mb-8">Página no encontrada</p>
-                    <a 
-                      href="/dashboard" 
+                    <a
+                      href="/panel-principal"
                       className="btn-primary inline-block"
                     >
-                      Volver al Dashboard
+                      Volver al Panel Principal
                     </a>
                   </div>
                 </div>

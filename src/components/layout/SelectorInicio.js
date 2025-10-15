@@ -9,7 +9,7 @@ const SelectorInicio = () => {
   // Si el usuario ya está autenticado, lo redirigimos al dashboard
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/panel-principal');
     }
   }, [isAuthenticated, navigate]);
 

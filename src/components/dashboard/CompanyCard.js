@@ -199,11 +199,11 @@ const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
                   console.log('Nombre mapeado:', mappedCompanyName);
 
                   // Navegar con el estado
-                  navigate('/communication/dashboard', {
+                  navigate('/base-de-datos', {
                     state: { selectedCompany: mappedCompanyName }
                   });
 
-                  console.log('Navegación ejecutada hacia:', '/communication/dashboard');
+                  console.log('Navegación ejecutada hacia:', '/base-de-datos');
                 }}
               >
                 Recomendaciones IA

@@ -31,7 +31,7 @@ const GoogleAuthCallback = () => {
             setStatus('error')
             setMessage('Error en la autorización de Google Drive')
             toast.error('Error en la autorización de Google Drive')
-            setTimeout(() => navigate('/dashboard'), 3000)
+            setTimeout(() => navigate('/panel-principal'), 3000)
             return
           }
           
@@ -40,7 +40,7 @@ const GoogleAuthCallback = () => {
             setStatus('error')
             setMessage('Código de autorización no encontrado')
             toast.error('Código de autorización no encontrado')
-            setTimeout(() => navigate('/dashboard'), 3000)
+            setTimeout(() => navigate('/panel-principal'), 3000)
             return
           }
           
@@ -154,13 +154,13 @@ const GoogleAuthCallback = () => {
             console.error('GoogleAuthCallback - Error recargando perfil:', profileError)
           }
           
-          setTimeout(() => navigate('/dashboard'), 2000)
+          setTimeout(() => navigate('/panel-principal'), 2000)
         } catch (driveError) {
           console.error('Error testing Drive connection:', driveError)
           setStatus('warning')
           setMessage('Tokens guardados, pero hay problemas con la conexión a Drive')
           toast.warning('Conexión parcial con Google Drive')
-          setTimeout(() => navigate('/dashboard'), 3000)
+          setTimeout(() => navigate('/panel-principal'), 3000)
         }
         
       } catch (error) {
@@ -181,7 +181,7 @@ const GoogleAuthCallback = () => {
         
         setMessage(errorMessage)
         toast.error(errorMessage)
-        setTimeout(() => navigate('/dashboard'), 5000)
+        setTimeout(() => navigate('/panel-principal'), 5000)
       }
     }
 
@@ -270,7 +270,7 @@ const GoogleAuthCallback = () => {
           {(status === 'success' || status === 'warning' || status === 'error') && (
             <div className="mt-6">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/panel-principal')}
                 className="btn-primary"
               >
                 Ir al Dashboard

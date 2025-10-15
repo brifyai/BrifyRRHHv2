@@ -18,7 +18,7 @@ const LoginInnovador = () => {
       const result = await signIn(email, password)
       if (!result.error) {
         toast.success('¡Bienvenido de nuevo!')
-        navigate('/dashboard')
+        navigate('/panel-principal')
       }
     } catch (error) {
       console.error('Error de inicio de sesión:', error)

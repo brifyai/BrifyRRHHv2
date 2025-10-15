@@ -88,7 +88,7 @@ const SendMessage = () => {
 
   // Volver a la base de datos
   const handleBackToDatabase = () => {
-    navigate('/communication/database')
+    navigate('/base-de-datos')
   }
 
   if (!recipientIds) {

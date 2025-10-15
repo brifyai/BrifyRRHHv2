@@ -63,7 +63,7 @@ const SendMessages = () => {
     } else {
       // Si no hay empleados seleccionados, redirigir a la selección
       console.log('No selected employees found, redirecting to database');
-      navigate('/communication/database');
+      navigate('/base-de-datos');
     }
   }, [location, navigate]);
 
@@ -1241,7 +1241,7 @@ const SendMessages = () => {
               Enviar otro mensaje
             </button>
             <button
-              onClick={() => navigate('/communication/database')}
+              onClick={() => navigate('/base-de-datos')}
               className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition-all duration-300"
             >
               Volver a la base de datos

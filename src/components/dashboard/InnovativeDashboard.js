@@ -595,7 +595,7 @@ const InnovativeDashboard = () => {
               {payments.length > 3 && (
                 <div className="mt-4 text-center">
                   <Link
-                    to="/profile"
+                    to="/perfil"
                     className="text-sm font-bold text-blue-600 hover:text-green-600"
                   >
                     Ver historial completo

@@ -503,8 +503,8 @@ El equipo de Brify 💙
                 <p style="font-size: 1.1em; color: #666; margin-bottom: 20px;">
                     Tu plan <strong>${planName}</strong> te da acceso completo a todas estas funcionalidades.
                 </p>
-                <a href="${window.location.origin}/dashboard" class="cta-button">
-                    <span class="emoji">🚀</span> Ir al Dashboard
+                <a href="${window.location.origin}/panel-principal" class="cta-button">
+                    <span class="emoji">🚀</span> Ir al Panel Principal
                 </a>
                 <a href="https://t.me/brifybeta_bot" class="cta-button">
                     <span class="emoji">📱</span> Abrir Bot de Telegram

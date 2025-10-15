@@ -917,7 +917,7 @@ const DashboardInnovador = () => {
             {payments.length > 5 && (
               <div className="mt-4 text-center">
                 <Link
-                  to="/profile"
+                  to="/perfil"
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
                   Ver historial completo

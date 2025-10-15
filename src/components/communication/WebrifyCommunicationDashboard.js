@@ -544,7 +544,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
           confirmButtonColor: '#fcb900'
         }).then(() => {
           // Después de cerrar la alerta, redirigir a la base de datos
-          navigate('/communication/database');
+          navigate('/base-de-datos');
         });
       }
     } catch (error) {
@@ -557,7 +557,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0693e3'
       }).then(() => {
-        navigate('/communication/database');
+        navigate('/base-de-datos');
       });
     }
   };
@@ -723,7 +723,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                         ) : tab.id === 'dashboard' ? (
                           <button
                             onClick={() => {
-                              navigate('/communication/dashboard');
+                              navigate('/base-de-datos');
                               setMobileMenuOpen(false);
                             }}
                             className={`flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 text-left ${
@@ -791,7 +791,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                     </button>
                   ) : tab.id === 'dashboard' ? (
                     <button
-                      onClick={() => navigate('/communication/dashboard')}
+                      onClick={() => navigate('/base-de-datos')}
                       className={`relative flex items-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
                         isActive
                           ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-xl scale-105'
