@@ -95,3 +95,6 @@ jspm_packages/
 # Logs
 logs
 *.log
+
+# Credenciales personales
+CREDENTIALS_PERSONALES.txt
