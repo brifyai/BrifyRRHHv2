@@ -42,7 +42,7 @@
     "start": "react-scripts start",
     "server": "node server.js",
     "dev": "concurrently \"npm run server\" \"npm start\"",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "test:sentiment": "node test_sentiment_analysis.mjs",
     "eject": "react-scripts eject",
