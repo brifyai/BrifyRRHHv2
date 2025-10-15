@@ -15,7 +15,7 @@ git commit -m "Ready for Netlify deployment - BrifyRRHH"
 
 # Conectar con GitHub
 git branch -M main
-git remote add origin https://github.com/TU_USUARIO/webrify.git
+git remote add origin https://github.com/TU_USUARIO/BrifyRRHH.git
 git push -u origin main
 ```
 
@@ -65,7 +65,7 @@ git push -u origin main
 ### 3.2 Conectar Repositorio
 1. Click en "Add new site" → "Import an existing project"
 2. Conecta tu repositorio de GitHub
-3. Selecciona el repositorio `webrify`
+3. Selecciona el repositorio `BrifyRRHH`
 
 ### 3.3 Configurar Build Settings
 Netlify detectará automáticamente:

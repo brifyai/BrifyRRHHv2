@@ -2,7 +2,7 @@
 
 ## 🚀 Paso 1: Inicializar Repositorio Git
 
-Abre tu terminal en la carpeta del proyecto (`/Users/camiloalegria/Downloads/brifywebservicios-master`) y ejecuta:
+Abre tu terminal en la carpeta del proyecto (`/Users/camiloalegria/Downloads/BrifyRRHH`) y ejecuta:
 
 ```bash
 # Inicializar repositorio Git
@@ -139,7 +139,7 @@ git commit -m "Ready for Netlify deployment - BrifyRRHH with new database"
 2. Inicia sesión
 3. Click en **"New repository"** (o "+" en la esquina superior derecha)
 4. Configura el repositorio:
-   - **Repository name**: `brifywebservicios-master` (o el nombre que prefieras)
+   - **Repository name**: `BrifyRRHH` (o el nombre que prefieras)
    - **Description**: `BrifyRRHH - Sistema de Recursos Humanos con Supabase`
    - **Visibility**: Private o Public (según prefieras)
    - **NO marques** "Add a README file" (ya tenemos archivos)
@@ -150,10 +150,10 @@ git commit -m "Ready for Netlify deployment - BrifyRRHH with new database"
 
 ```bash
 # Crear repositorio en GitHub
-gh repo create brifywebservicios-master --public --description "BrifyRRHH - Sistema de Recursos Humanos con Supabase"
+gh repo create BrifyRRHH --public --description "BrifyRRHH - Sistema de Recursos Humanos con Supabase"
 
 # O si prefieres privado
-gh repo create brifywebservicios-master --private --description "BrifyRRHH - Sistema de Recursos Humanos con Supabase"
+gh repo create BrifyRRHH --private --description "BrifyRRHH - Sistema de Recursos Humanos con Supabase"
 ```
 
 ## 🔗 Paso 5: Conectar Local con GitHub
@@ -162,7 +162,7 @@ Después de crear el repositorio en GitHub, te dará las instrucciones. Copia la
 
 ```bash
 # Reemplaza TU_USUARIO con tu nombre de usuario de GitHub
-git remote add origin https://github.com/TU_USUARIO/brifywebservicios-master.git
+git remote add origin https://github.com/TU_USUARIO/BrifyRRHH.git
 
 # Si la rama principal no es main, renombrarla
 git branch -M main
@@ -199,7 +199,7 @@ cat ~/.ssh/id_ed25519.pub
 # Pegar la clave copiada
 
 # Cambiar la URL del remote a SSH
-git remote set-url origin git@github.com:TU_USUARIO/brifywebservicios-master.git
+git remote set-url origin git@github.com:TU_USUARIO/BrifyRRHH.git
 
 # Subir archivos
 git push -u origin main
@@ -220,7 +220,7 @@ Una vez que el código esté en GitHub:
 1. **Ve a [Netlify](https://app.netlify.com)**
 2. **"Add new site" → "Import an existing project"**
 3. **Conecta tu cuenta de GitHub**
-4. **Selecciona el repositorio `brifywebservicios-master`**
+4. **Selecciona el repositorio `BrifyRRHH`**
 5. **Configura las variables de entorno** (usa el archivo `NETLIFY_ENV_VARS.txt`)
 
 ## 📝 Resumen de Comandos
@@ -239,7 +239,7 @@ git add .
 git commit -m "Ready for Netlify deployment - BrifyRRHH with new database"
 
 # 4. Conectar con GitHub (reemplaza TU_USUARIO)
-git remote add origin https://github.com/TU_USUARIO/brifywebservicios-master.git
+git remote add origin https://github.com/TU_USUARIO/BrifyRRHH.git
 git branch -M main
 git push -u origin main
 ```
