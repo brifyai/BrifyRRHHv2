@@ -1,29 +1,19 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { useUserExtensions } from '../../hooks/useUserExtensions'
 import {
   HomeIcon,
   FolderIcon,
-  CreditCardIcon,
   UserIcon,
-  ScaleIcon,
   MagnifyingGlassIcon,
   ArrowRightOnRectangleIcon,
-  ChatBubbleLeftRightIcon,
   Bars3Icon,
   XMarkIcon,
-  DocumentTextIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline'
-import Swal from 'sweetalert2'
-import withReactContent from 'sweetalert2-react-content'
-
-const MySwal = withReactContent(Swal)
 
 const Navbar = () => {
-  const { signOut, user, userProfile, hasActivePlan } = useAuth()
-  const { hasExtension } = useUserExtensions()
+  const { signOut, user, hasActivePlan } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -37,57 +27,31 @@ const Navbar = () => {
     }
   }
 
-  // Función para manejar el clic en "Enviar Mensajes"
-  const handleSendMessagesClick = (e) => {
-    e.preventDefault();
-    
-    // Verificar si hay empleados seleccionados
-    if (window.tempSelectedEmployees && window.tempSelectedEmployees.length > 0) {
-      // Si hay empleados seleccionados, navegar a la página de envío con los datos
-      navigate('/communication/send', { 
-        state: { selectedEmployees: window.tempSelectedEmployees } 
-      });
-    } else if (window.selectedEmployeesData && window.selectedEmployeesData.length > 0) {
-      // Si no hay empleados en tempSelectedEmployees, verificar selectedEmployeesData
-      navigate('/communication/send', { 
-        state: { selectedEmployees: window.selectedEmployeesData.map(emp => emp.id) }
-      });
-    } else {
-      // Si no hay empleados seleccionados, mostrar alerta con SweetAlert
-      MySwal.fire({
-        title: 'Advertencia',
-        text: 'Debe seleccionar al menos un empleado en la Base de Datos antes de poder enviar mensajes',
-        icon: 'warning',
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#fcb900'
-      }).then(() => {
-        // Después de cerrar la alerta, redirigir a la base de datos
-        navigate('/communication/database');
-      });
-    }
-  };
-
   const isActive = (path) => {
     return location.pathname === path
   }
 
-  const getPlanName = () => {
-    if (!userProfile || !userProfile.current_plan_id) return 'Sin plan'
-    
-    // This would normally come from a plans context or API
-    // For now we'll return a generic name
-    return 'Plan Activo'
-  }
 
   // Menú de navegación principal - Solo elementos esenciales en el menú superior
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Base de datos', href: '/communication/dashboard', icon: FolderIcon },
-    ...(hasActivePlan() ? [{ name: 'Búsqueda IA', href: '/search', icon: MagnifyingGlassIcon }] : []),
-    ...(hasExtension('Abogados') ? [{ name: 'Abogado', href: '/abogado', icon: ScaleIcon }] : []),
-    { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon },
-    { name: 'Planes', href: '/plans', icon: CreditCardIcon },
-    { name: 'Perfil', href: '/profile', icon: UserIcon }
+    { name: 'Panel Principal', href: '/panel-principal', icon: HomeIcon },
+    { name: 'Base de datos', href: '/base-de-datos', icon: FolderIcon },
+    ...(hasActivePlan() ? [{ name: 'Búsqueda IA', href: '/busqueda-ia', icon: MagnifyingGlassIcon }] : []),
+    {
+      name: 'Configuración',
+      href: '/configuracion',
+      icon: Cog6ToothIcon,
+      subMenu: [
+        { name: 'Empresas', href: '/configuracion/empresas' },
+        { name: 'Usuarios', href: '/configuracion/usuarios' },
+        { name: 'General', href: '/configuracion/general' },
+        { name: 'Notificaciones', href: '/configuracion/notificaciones' },
+        { name: 'Seguridad', href: '/configuracion/seguridad' },
+        { name: 'Integraciones', href: '/configuracion/integraciones' },
+        { name: 'Base de Datos', href: '/configuracion/base-de-datos' }
+      ]
+    },
+    { name: 'Perfil', href: '/perfil', icon: UserIcon }
   ]
 
   return (
@@ -97,7 +61,7 @@ const Navbar = () => {
           {/* Logo y navegación principal */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/dashboard" className="flex items-center">
+              <Link to="/panel-principal" className="flex items-center">
                 <div className="logo-container">
                   <img 
                     src="/images/Mesa-de-trabajo-105-1.png" 
@@ -150,20 +114,6 @@ const Navbar = () => {
 
           {/* Información del usuario y menú */}
           <div className="hidden sm:flex sm:items-center sm:space-x-2">
-            {/* Información del plan */}
-            {userProfile && (
-              <div className="hidden md:flex items-center text-sm">
-                <span className="font-medium text-gray-700 truncate max-w-[80px]">
-                  {getPlanName()}
-                </span>
-                {userProfile.is_active && (
-                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-engage-blue text-white whitespace-nowrap">
-                    Activo
-                  </span>
-                )}
-              </div>
-            )}
-
             {/* Menú de usuario */}
             <div className="flex items-center">
               <span className="hidden xl:block text-sm font-medium text-gray-700 truncate max-w-[100px]">
@@ -256,16 +206,6 @@ const Navbar = () => {
                 <div className="text-base font-medium text-gray-800">
                   {user && user.email ? user.email : 'Usuario'}
                 </div>
-                {userProfile && (
-                  <div className="text-sm text-gray-500">
-                    {getPlanName()}
-                    {userProfile.is_active && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-engage-blue text-white">
-                        Activo
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
             <div className="mt-3 space-y-1">

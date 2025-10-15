@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
+import googleDriveService from '../../lib/googleDrive'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -17,7 +18,8 @@ import {
   ChatBubbleLeftRightIcon,
   BuildingStorefrontIcon,
   ServerIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
@@ -25,14 +27,34 @@ import CompanyForm from './CompanyForm'
 import UserManagement from './UserManagement'
 import DatabaseSettings from './DatabaseSettings'
 
-const Settings = () => {
+const Settings = ({ activeTab: propActiveTab }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [editingCompany, setEditingCompany] = useState(null)
-  const [activeTab, setActiveTab] = useState('companies')
+  
+  // Determinar el tab activo basado en la URL o el prop
+  const getActiveTabFromUrl = () => {
+    const pathSegments = location.pathname.split('/')
+    const lastSegment = pathSegments[pathSegments.length - 1]
+    
+    const tabMapping = {
+      'empresas': 'companies',
+      'usuarios': 'users',
+      'general': 'general',
+      'notificaciones': 'notifications',
+      'seguridad': 'security',
+      'integraciones': 'integrations',
+      'base-de-datos': 'database'
+    }
+    
+    return tabMapping[lastSegment] || propActiveTab || 'companies'
+  }
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromUrl())
 
   // Estados de integraciones
   const [integrations, setIntegrations] = useState({
@@ -107,6 +129,10 @@ const Settings = () => {
   })
   const [sendingIntegrationRequest, setSendingIntegrationRequest] = useState(false)
 
+  // Estados para Google Drive
+  const [isGoogleDriveConnected, setIsGoogleDriveConnected] = useState(false)
+  const [connectingGoogleDrive, setConnectingGoogleDrive] = useState(false)
+
   useEffect(() => {
     loadCompanies()
     loadNotificationSettings()
@@ -114,7 +140,16 @@ const Settings = () => {
     loadActiveSessions()
     loadSecurityLogs()
     loadBackupSettings()
+    checkGoogleDriveConnection()
   }, [user])
+
+  // Actualizar el tab activo cuando cambia la URL
+  useEffect(() => {
+    const newActiveTab = getActiveTabFromUrl()
+    if (newActiveTab !== activeTab) {
+      setActiveTab(newActiveTab)
+    }
+  }, [location.pathname])
 
   // Cargar configuraciones de notificaciones desde localStorage
   const loadNotificationSettings = () => {
@@ -256,6 +291,42 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Error loading backup settings:', error)
+    }
+  }
+
+  // Función para verificar conexión de Google Drive
+  const checkGoogleDriveConnection = () => {
+    // Usar la información ya disponible en user desde AuthContext
+    // que incluye las credenciales de Google Drive
+    const isConnected = !!(user?.google_refresh_token && user.google_refresh_token.trim() !== '')
+    setIsGoogleDriveConnected(isConnected)
+  }
+
+  // Función para conectar Google Drive
+  const handleConnectGoogleDrive = async () => {
+    try {
+      setConnectingGoogleDrive(true)
+      const authUrl = googleDriveService.generateAuthUrl()
+      window.location.href = authUrl
+    } catch (error) {
+      console.error('Error getting auth URL:', error)
+      toast.error('Error al conectar con Google Drive')
+      setConnectingGoogleDrive(false)
+    }
+  }
+
+  // Función para desconectar Google Drive
+  const handleDisconnectGoogleDrive = async () => {
+    try {
+      setConnectingGoogleDrive(true)
+      // Aquí podrías agregar la lógica para desconectar Google Drive
+      // Por ahora, solo mostraremos un mensaje
+      toast.success('Para desconectar Google Drive, contacta al administrador')
+      setConnectingGoogleDrive(false)
+    } catch (error) {
+      console.error('Error disconnecting Google Drive:', error)
+      toast.error('Error al desconectar Google Drive')
+      setConnectingGoogleDrive(false)
     }
   }
 
@@ -1215,8 +1286,8 @@ const Settings = () => {
         {/* Tabs */}
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('companies')}
+            <Link
+              to="/configuracion/empresas"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'companies'
                   ? 'border-blue-500 text-blue-600'
@@ -1225,9 +1296,9 @@ const Settings = () => {
             >
               <BuildingOfficeIcon className="h-5 w-5 inline mr-2" />
               Empresas
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
+            </Link>
+            <Link
+              to="/configuracion/usuarios"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'users'
                   ? 'border-blue-500 text-blue-600'
@@ -1236,9 +1307,9 @@ const Settings = () => {
             >
               <UserGroupIcon className="h-5 w-5 inline mr-2" />
               Usuarios
-            </button>
-            <button
-              onClick={() => setActiveTab('general')}
+            </Link>
+            <Link
+              to="/configuracion/general"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'general'
                   ? 'border-blue-500 text-blue-600'
@@ -1247,9 +1318,9 @@ const Settings = () => {
             >
               <Cog6ToothIcon className="h-5 w-5 inline mr-2" />
               General
-            </button>
-            <button
-              onClick={() => setActiveTab('notifications')}
+            </Link>
+            <Link
+              to="/configuracion/notificaciones"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'notifications'
                   ? 'border-blue-500 text-blue-600'
@@ -1258,9 +1329,9 @@ const Settings = () => {
             >
               <ChatBubbleLeftRightIcon className="h-5 w-5 inline mr-2" />
               Notificaciones
-            </button>
-            <button
-              onClick={() => setActiveTab('security')}
+            </Link>
+            <Link
+              to="/configuracion/seguridad"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'security'
                   ? 'border-blue-500 text-blue-600'
@@ -1269,9 +1340,9 @@ const Settings = () => {
             >
               <BuildingStorefrontIcon className="h-5 w-5 inline mr-2" />
               Seguridad
-            </button>
-            <button
-              onClick={() => setActiveTab('integrations')}
+            </Link>
+            <Link
+              to="/configuracion/integraciones"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'integrations'
                   ? 'border-blue-500 text-blue-600'
@@ -1280,9 +1351,9 @@ const Settings = () => {
             >
               <PuzzlePieceIcon className="h-5 w-5 inline mr-2" />
               Integraciones
-            </button>
-            <button
-              onClick={() => setActiveTab('database')}
+            </Link>
+            <Link
+              to="/configuracion/base-de-datos"
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'database'
                   ? 'border-blue-500 text-blue-600'
@@ -1291,7 +1362,7 @@ const Settings = () => {
             >
               <ServerIcon className="h-5 w-5 inline mr-2" />
               Base de Datos
-            </button>
+            </Link>
           </nav>
         </div>
       </div>
@@ -2193,13 +2264,89 @@ const Settings = () => {
               <p className="text-gray-600 mt-1">Conecta tu sistema con otras plataformas</p>
             </div>
             <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full">
-              6 integraciones disponibles
+              7 integraciones disponibles
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Google Drive */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg mr-4">
+                    <CloudIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Google Drive</h3>
+                    <p className="text-sm text-gray-600">Almacenamiento en la nube</p>
+                  </div>
+                </div>
+                {isGoogleDriveConnected ? (
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Conectado</span>
+                ) : (
+                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">Desconectado</span>
+                )}
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Sincroniza tus archivos y carpetas con Google Drive para acceso universal.
+                </p>
+
+                {isGoogleDriveConnected && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
+                      <div className="text-sm text-green-700">
+                        <p className="font-medium">Google Drive está conectado</p>
+                        <p className="mt-1">
+                          Tus archivos se sincronizarán automáticamente con tu cuenta de Google Drive.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {isGoogleDriveConnected ? (
+                <button
+                  onClick={handleDisconnectGoogleDrive}
+                  disabled={connectingGoogleDrive}
+                  className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {connectingGoogleDrive ? (
+                    <>
+                      <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                      Desconectando...
+                    </>
+                  ) : (
+                    <>
+                      <XCircleIcon className="h-4 w-4 mr-2" />
+                      Desconectar
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleConnectGoogleDrive}
+                  disabled={connectingGoogleDrive}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {connectingGoogleDrive ? (
+                    <>
+                      <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                      Conectando...
+                    </>
+                  ) : (
+                    <>
+                      Configurar Google Drive
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
             {/* Google Workspace */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mr-4">
@@ -2213,16 +2360,18 @@ const Settings = () => {
                 {getStatusBadge('google')}
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Sincroniza eventos del calendario y automatiza recordatorios de reuniones.
-              </p>
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Sincroniza eventos del calendario y automatiza recordatorios de reuniones.
+                </p>
 
-              <div className="space-y-2 mb-4">
-                {integrations.google.lastSync && (
-                  <div className="text-xs text-gray-500">
-                    Última sincronización: {new Date(integrations.google.lastSync).toLocaleString('es-ES')}
-                  </div>
-                )}
+                <div className="space-y-2 mb-4">
+                  {integrations.google.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.google.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {integrations.google.connected ? (
@@ -2244,7 +2393,7 @@ const Settings = () => {
             </div>
 
             {/* Google Meet */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg mr-4">
@@ -2258,16 +2407,18 @@ const Settings = () => {
                 {getStatusBadge('googlemeet')}
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Sincroniza reuniones de Google Meet y envía recordatorios automáticos por WhatsApp.
-              </p>
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Sincroniza reuniones de Google Meet y envía recordatorios automáticos por WhatsApp.
+                </p>
 
-              <div className="space-y-2 mb-4">
-                {integrations.googlemeet.lastSync && (
-                  <div className="text-xs text-gray-500">
-                    Última sincronización: {new Date(integrations.googlemeet.lastSync).toLocaleString('es-ES')}
-                  </div>
-                )}
+                <div className="space-y-2 mb-4">
+                  {integrations.googlemeet.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.googlemeet.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {integrations.googlemeet.connected ? (
@@ -2289,7 +2440,7 @@ const Settings = () => {
             </div>
 
             {/* Slack */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg mr-4">
@@ -2303,16 +2454,18 @@ const Settings = () => {
                 {getStatusBadge('slack')}
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Envía notificaciones automáticas a canales de Slack.
-              </p>
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Envía notificaciones automáticas a canales de Slack.
+                </p>
 
-              <div className="space-y-2 mb-4">
-                {integrations.slack.lastSync && (
-                  <div className="text-xs text-gray-500">
-                    Última sincronización: {new Date(integrations.slack.lastSync).toLocaleString('es-ES')}
-                  </div>
-                )}
+                <div className="space-y-2 mb-4">
+                  {integrations.slack.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.slack.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {integrations.slack.connected ? (
@@ -2334,7 +2487,7 @@ const Settings = () => {
             </div>
 
             {/* Microsoft Teams */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg mr-4">
@@ -2348,16 +2501,18 @@ const Settings = () => {
                 {getStatusBadge('teams')}
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Envía notificaciones automáticas a equipos de Microsoft Teams.
-              </p>
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Envía notificaciones automáticas a equipos de Microsoft Teams.
+                </p>
 
-              <div className="space-y-2 mb-4">
-                {integrations.teams.lastSync && (
-                  <div className="text-xs text-gray-500">
-                    Última sincronización: {new Date(integrations.teams.lastSync).toLocaleString('es-ES')}
-                  </div>
-                )}
+                <div className="space-y-2 mb-4">
+                  {integrations.teams.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.teams.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {integrations.teams.connected ? (
@@ -2379,7 +2534,7 @@ const Settings = () => {
             </div>
 
             {/* HubSpot */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg mr-4">
@@ -2393,16 +2548,18 @@ const Settings = () => {
                 {getStatusBadge('hubspot')}
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Sincroniza datos de contactos y automatiza comunicaciones basadas en CRM.
-              </p>
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Sincroniza datos de contactos y automatiza comunicaciones basadas en CRM.
+                </p>
 
-              <div className="space-y-2 mb-4">
-                {integrations.hubspot.lastSync && (
-                  <div className="text-xs text-gray-500">
-                    Última sincronización: {new Date(integrations.hubspot.lastSync).toLocaleString('es-ES')}
-                  </div>
-                )}
+                <div className="space-y-2 mb-4">
+                  {integrations.hubspot.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.hubspot.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {integrations.hubspot.connected ? (
@@ -2424,7 +2581,7 @@ const Settings = () => {
             </div>
 
             {/* Salesforce */}
-            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg mr-4">
@@ -2438,16 +2595,18 @@ const Settings = () => {
                 {getStatusBadge('salesforce')}
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Sincroniza datos de leads y oportunidades con Salesforce.
-              </p>
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Sincroniza datos de leads y oportunidades con Salesforce.
+                </p>
 
-              <div className="space-y-2 mb-4">
-                {integrations.salesforce.lastSync && (
-                  <div className="text-xs text-gray-500">
-                    Última sincronización: {new Date(integrations.salesforce.lastSync).toLocaleString('es-ES')}
-                  </div>
-                )}
+                <div className="space-y-2 mb-4">
+                  {integrations.salesforce.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.salesforce.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {integrations.salesforce.connected ? (
