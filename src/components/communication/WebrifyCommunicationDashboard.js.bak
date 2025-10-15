@@ -1,0 +1,2569 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  UsersIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  FunnelIcon,
+  ArrowPathIcon,
+  PaperAirplaneIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  EyeIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  BuildingOfficeIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  MapPinIcon,
+  UserGroupIcon,
+  IdentificationIcon,
+  BriefcaseIcon,
+  HomeModernIcon
+} from '@heroicons/react/24/outline';
+import employeeData from './employeeData';
+import enhancedCommunicationService from '../../services/enhancedCommunicationService';
+import ReportsDashboard from './ReportsDashboard';
+
+const WebrifyCommunicationDashboard = () => {
+  const { userProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState('database');
+  const [message, setMessage] = useState('');
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [filters, setFilters] = useState({
+    region: [],
+    department: [],
+    level: [],
+    workMode: [],
+    contractType: [],
+    company: [],
+    position: []
+  });
+  const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
+  const [stats, setStats] = useState({
+    totalMessages: 0,
+    deliveryRate: 0,
+    readRate: 0,
+    whatsappMessages: 0,
+    telegramMessages: 0
+  });
+
+  // Calcular métricas por empresa
+  const calculateCompanyMetrics = () => {
+    // Verificar que employees esté definido y no esté vacío
+    if (!employees || employees.length === 0) {
+      return [];
+    }
+    
+    const companies = Array.from(new Set(employees.map(emp => emp.company)));
+    return companies.map(company => {
+      const companyEmployees = employees.filter(emp => emp.company === company);
+      
+      // Calcular estadísticas reales basadas en los datos
+      const totalEmployees = companyEmployees.length;
+      const presencialCount = companyEmployees.filter(emp => emp.workMode === 'Presencial').length;
+      const hibridoCount = companyEmployees.filter(emp => emp.workMode === 'Híbrido').length;
+      const remotoCount = companyEmployees.filter(emp => emp.workMode === 'Remoto').length;
+      
+      const indefinidoCount = companyEmployees.filter(emp => emp.contractType === 'Indefinido').length;
+      const plazoFijoCount = companyEmployees.filter(emp => emp.contractType === 'Plazo Fijo').length;
+      const honorariosCount = companyEmployees.filter(emp => emp.contractType === 'Honorarios').length;
+      
+      // Simular métricas para cada empresa
+      const messagesSent = Math.floor(Math.random() * 100) + 50;
+      const deliveryRate = Math.floor(Math.random() * 20) + 80;
+      const readRate = Math.floor(Math.random() * 15) + 75;
+      const whatsappMessages = Math.floor(Math.random() * 60) + 30;
+      const telegramMessages = messagesSent - whatsappMessages;
+      
+      return {
+        company,
+        totalEmployees,
+        presencialCount,
+        hibridoCount,
+        remotoCount,
+        indefinidoCount,
+        plazoFijoCount,
+        honorariosCount,
+        messagesSent,
+        deliveryRate,
+        readRate,
+        whatsappMessages,
+        telegramMessages,
+        trend: Math.random() > 0.5 ? 'up' : 'down'
+      };
+    });
+  };
+
+  const companyMetrics = calculateCompanyMetrics();
+
+  // Obtener color para cada empresa
+  const getCompanyColor = (company) => {
+    const colors = {
+      'Ariztia': 'from-engage-yellow to-yellow-500',
+      'Inchcape': 'from-green-500 to-green-700',
+      'Achs': 'from-purple-500 to-purple-700',
+      'Arcoprime': 'from-pink-500 to-pink-700',
+      'Grupo Saesa': 'from-red-500 to-red-700',
+      'Colbun': 'from-orange-500 to-orange-700',
+      'AFP Habitat': 'from-teal-500 to-teal-700',
+      'Copec': 'from-blue-500 to-blue-700',
+      'Antofagasta Minerals': 'from-amber-500 to-amber-700',
+      'Vida Cámara': 'from-emerald-500 to-emerald-700',
+      'Enaex': 'from-rose-500 to-rose-700',
+      'SQM': 'from-cyan-500 to-cyan-700',
+      'CMPC': 'from-lime-500 to-lime-700',
+      'Corporación Chilena - Alemana': 'from-indigo-500 to-indigo-700',
+      'Hogar Alemán': 'from-violet-500 to-violet-700',
+      'Empresas SB': 'from-fuchsia-500 to-fuchsia-700'
+    };
+    return colors[company] || 'from-gray-500 to-gray-700';
+  };
+
+  // Obtener valores únicos para los filtros
+  const getUniqueValues = (field) => {
+    if (!employees || employees.length === 0) return [];
+    return Array.from(new Set(employees.map(emp => emp[field]))).filter(Boolean);
+  };
+
+  // Obtener todas las posiciones únicas
+  const getAllPositions = () => {
+    const positions = employees.map(emp => emp.position);
+    return Array.from(new Set(positions));
+  };
+
+  // Orden alfabético para empresas, departamentos, niveles, posiciones, modalidades y tipos de contrato
+  const getSortedValues = (field) => {
+    return getUniqueValues(field).sort((a, b) => a.localeCompare(b));
+  };
+
+  // Orden alfabético para posiciones
+  const getSortedPositions = () => {
+    return getAllPositions().sort((a, b) => a.localeCompare(b));
+  };
+
+  // Orden de regiones de norte a sur según el mapa de Chile
+  const getSortedRegions = () => {
+    const regionOrder = [
+      'Región de Tarapacá',
+      'Región de Antofagasta',
+      'Región de Atacama',
+      'Región de Coquimbo',
+      'Región de Valparaíso',
+      'Región del Libertador General Bernardo O\'Higgins',
+      'Región del Maule',
+      'Región de Ñuble',
+      'Región del Biobío',
+      'Región de La Araucanía',
+      'Región de Los Ríos',
+      'Región de Los Lagos',
+      'Región Aysén del General Carlos Ibáñez del Campo',
+      'Región de Magallanes y de la Antártica Chilena',
+      'Región Metropolitana'
+    ];
+    
+    const regions = getUniqueValues('region');
+    return regions.sort((a, b) => {
+      const indexA = regionOrder.indexOf(a);
+      const indexB = regionOrder.indexOf(b);
+      
+      // Si ambas regiones están en la lista, ordenar por índice
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      
+      // Si solo una región está en la lista, esa va primero
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // Si ninguna está en la lista, ordenar alfabéticamente
+      return a.localeCompare(b);
+    });
+  };
+
+  // Simulate employee data loading with multiple companies
+  useEffect(() => {
+    const simulateEmployeeData = async () => {
+      try {
+        // Use the imported employee data
+        setEmployees(employeeData);
+        setFilteredEmployees(employeeData);
+        
+        // Load templates
+        const loadedTemplates = await enhancedCommunicationService.getMessageTemplates();
+        setTemplates(loadedTemplates);
+        
+        // Load stats
+        const loadedStats = await enhancedCommunicationService.getCommunicationStats();
+        setStats(loadedStats);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoading(false);
+      }
+    };
+
+    simulateEmployeeData();
+  }, []);
+
+  // Apply filters
+  useEffect(() => {
+    if (employees.length === 0) return;
+    
+    let result = [...employees];
+    
+    // Aplicar filtros de selección múltiple
+    if (filters.region.length > 0) {
+      result = result.filter(emp => filters.region.includes(emp.region));
+    }
+    
+    if (filters.department.length > 0) {
+      result = result.filter(emp => filters.department.includes(emp.department));
+    }
+    
+    if (filters.level.length > 0) {
+      result = result.filter(emp => filters.level.includes(emp.level));
+    }
+    
+    if (filters.workMode.length > 0) {
+      result = result.filter(emp => filters.workMode.includes(emp.workMode));
+    }
+    
+    if (filters.contractType.length > 0) {
+      result = result.filter(emp => filters.contractType.includes(emp.contractType));
+    }
+    
+    if (filters.company.length > 0) {
+      result = result.filter(emp => filters.company.includes(emp.company));
+    }
+    
+    if (filters.position.length > 0) {
+      result = result.filter(emp => filters.position.includes(emp.position));
+    }
+    
+    setFilteredEmployees(result);
+  }, [filters, employees]);
+
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => {
+      const currentValues = prev[filterName] || [];
+      let newValues;
+      
+      if (currentValues.includes(value)) {
+        // Si el valor ya está seleccionado, lo eliminamos
+        newValues = currentValues.filter(item => item !== value);
+      } else {
+        // Si el valor no está seleccionado, lo agregamos
+        newValues = [...currentValues, value];
+      }
+      
+      return {
+        ...prev,
+        [filterName]: newValues
+      };
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      region: [],
+      department: [],
+      level: [],
+      workMode: [],
+      contractType: [],
+      company: [],
+      position: []
+    });
+  };
+
+  const toggleEmployeeSelection = (employeeId) => {
+    if (selectedEmployees.includes(employeeId)) {
+      setSelectedEmployees(selectedEmployees.filter(id => id !== employeeId));
+    } else {
+      setSelectedEmployees([...selectedEmployees, employeeId]);
+    }
+  };
+
+  const selectAllEmployees = () => {
+    if (selectedEmployees.length === filteredEmployees.length) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(filteredEmployees.map(emp => emp.id));
+    }
+  };
+
+  // Send WhatsApp message
+  const sendWhatsAppMessage = async () => {
+    if (!message.trim()) {
+      setSendError('Por favor ingresa un mensaje');
+      return;
+    }
+
+    if (selectedEmployees.length === 0) {
+      setSendError('Por favor selecciona al menos un empleado');
+      return;
+    }
+
+    setIsSending(true);
+    setSendError('');
+    setSendSuccess(false);
+
+    try {
+      // Send message via enhanced service
+      const result = await enhancedCommunicationService.sendWhatsAppMessage(selectedEmployees, message);
+      
+      console.log('Sending WhatsApp message to:', selectedEmployees);
+      console.log('Message:', message);
+      
+      setSendSuccess(true);
+      setMessage('');
+      
+      // Update stats
+      const updatedStats = await enhancedCommunicationService.getCommunicationStats();
+      setStats(updatedStats);
+    } catch (error) {
+      setSendError('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      console.error('WhatsApp send error:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Send Telegram message
+  const sendTelegramMessage = async () => {
+    if (!message.trim()) {
+      setSendError('Por favor ingresa un mensaje');
+      return;
+    }
+
+    if (selectedEmployees.length === 0) {
+      setSendError('Por favor selecciona al menos un empleado');
+      return;
+    }
+
+    setIsSending(true);
+    setSendError('');
+    setSendSuccess(false);
+
+    try {
+      // Send message via enhanced service
+      const result = await enhancedCommunicationService.sendTelegramMessage(selectedEmployees, message);
+      
+      console.log('Sending Telegram message to:', selectedEmployees);
+      console.log('Message:', message);
+      
+      setSendSuccess(true);
+      setMessage('');
+      
+      // Update stats
+      const updatedStats = await enhancedCommunicationService.getCommunicationStats();
+      setStats(updatedStats);
+    } catch (error) {
+      setSendError('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      console.error('Telegram send error:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const addTemplate = async () => {
+    if (!newTemplate.name.trim() || !newTemplate.content.trim()) {
+      return;
+    }
+    
+    try {
+      const template = await enhancedCommunicationService.createMessageTemplate(newTemplate);
+      setTemplates([...templates, template]);
+      setNewTemplate({ name: '', content: '' });
+      setShowTemplateModal(false);
+    } catch (error) {
+      console.error('Error creating template:', error);
+    }
+  };
+
+  const updateTemplate = async (templateId, updatedTemplate) => {
+    try {
+      const template = await enhancedCommunicationService.updateMessageTemplate(templateId, updatedTemplate);
+      setTemplates(templates.map(t => t.id === templateId ? template : t));
+    } catch (error) {
+      console.error('Error updating template:', error);
+    }
+  };
+
+  const deleteTemplate = async (templateId) => {
+    try {
+      await enhancedCommunicationService.deleteMessageTemplate(templateId);
+      setTemplates(templates.filter(t => t.id !== templateId));
+    } catch (error) {
+      console.error('Error deleting template:', error);
+    }
+  };
+
+  const exportData = () => {
+    // Simulate data export
+    console.log('Exporting employee data...');
+  };
+
+  const importData = () => {
+    // Simulate data import
+    console.log('Importing employee data...');
+  };
+
+  const tabs = [
+    { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
+    { id: 'database', name: 'Base de Datos', icon: UsersIcon },
+    { id: 'send', name: 'Enviar Mensajes', icon: ChatBubbleLeftRightIcon },
+    { id: 'templates', name: 'Plantillas', icon: DocumentTextIcon },
+    { id: 'reports', name: 'Informes', icon: ChartBarIcon }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <ArrowPathIcon className="h-12 w-12 text-engage-blue animate-spin mx-auto" />
+          <p className="mt-4 text-engage-black font-medium">Cargando sistema de comunicación...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+```
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  UsersIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  FunnelIcon,
+  ArrowPathIcon,
+  PaperAirplaneIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  EyeIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  BuildingOfficeIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  MapPinIcon,
+  UserGroupIcon,
+  IdentificationIcon,
+  BriefcaseIcon,
+  HomeModernIcon
+} from '@heroicons/react/24/outline';
+import employeeData from './employeeData';
+import enhancedCommunicationService from '../../services/enhancedCommunicationService';
+import ReportsDashboard from './ReportsDashboard';
+
+const WebrifyCommunicationDashboard = () => {
+  const { userProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState('database');
+  const [message, setMessage] = useState('');
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [filters, setFilters] = useState({
+    region: [],
+    department: [],
+    level: [],
+    workMode: [],
+    contractType: [],
+    company: [],
+    position: []
+  });
+  const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
+  const [stats, setStats] = useState({
+    totalMessages: 0,
+    deliveryRate: 0,
+    readRate: 0,
+    whatsappMessages: 0,
+    telegramMessages: 0
+  });
+
+  // Simulate employee data loading with multiple companies
+  useEffect(() => {
+    const simulateEmployeeData = async () => {
+      try {
+        // Use the imported employee data
+        setEmployees(employeeData);
+        setFilteredEmployees(employeeData);
+        
+        // Load templates
+        const loadedTemplates = await enhancedCommunicationService.getMessageTemplates();
+        setTemplates(loadedTemplates);
+        
+        // Load stats
+        const loadedStats = await enhancedCommunicationService.getCommunicationStats();
+        setStats(loadedStats);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoading(false);
+      }
+    };
+
+    simulateEmployeeData();
+  }, []);
+
+  // Apply filters
+  useEffect(() => {
+    if (employees.length === 0) return;
+    
+    let result = [...employees];
+    
+    // Aplicar filtros de selección múltiple
+    if (filters.region.length > 0) {
+      result = result.filter(emp => filters.region.includes(emp.region));
+    }
+    
+    if (filters.department.length > 0) {
+      result = result.filter(emp => filters.department.includes(emp.department));
+    }
+    
+    if (filters.level.length > 0) {
+      result = result.filter(emp => filters.level.includes(emp.level));
+    }
+    
+    if (filters.workMode.length > 0) {
+      result = result.filter(emp => filters.workMode.includes(emp.workMode));
+    }
+    
+    if (filters.contractType.length > 0) {
+      result = result.filter(emp => filters.contractType.includes(emp.contractType));
+    }
+    
+    if (filters.company.length > 0) {
+      result = result.filter(emp => filters.company.includes(emp.company));
+    }
+    
+    if (filters.position.length > 0) {
+      result = result.filter(emp => filters.position.includes(emp.position));
+    }
+    
+    setFilteredEmployees(result);
+  }, [filters, employees]);
+
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => {
+      const currentValues = prev[filterName] || [];
+      let newValues;
+      
+      if (currentValues.includes(value)) {
+        // Si el valor ya está seleccionado, lo eliminamos
+        newValues = currentValues.filter(item => item !== value);
+      } else {
+        // Si el valor no está seleccionado, lo agregamos
+        newValues = [...currentValues, value];
+      }
+      
+      return {
+        ...prev,
+        [filterName]: newValues
+      };
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      region: [],
+      department: [],
+      level: [],
+      workMode: [],
+      contractType: [],
+      company: [],
+      position: []
+    });
+  };
+
+  const toggleEmployeeSelection = (employeeId) => {
+    if (selectedEmployees.includes(employeeId)) {
+      setSelectedEmployees(selectedEmployees.filter(id => id !== employeeId));
+    } else {
+      setSelectedEmployees([...selectedEmployees, employeeId]);
+    }
+  };
+
+  const selectAllEmployees = () => {
+    if (selectedEmployees.length === filteredEmployees.length) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(filteredEmployees.map(emp => emp.id));
+    }
+  };
+
+  // Send WhatsApp message
+  const sendWhatsAppMessage = async () => {
+    if (!message.trim()) {
+      setSendError('Por favor ingresa un mensaje');
+      return;
+    }
+
+    if (selectedEmployees.length === 0) {
+      setSendError('Por favor selecciona al menos un empleado');
+      return;
+    }
+
+    setIsSending(true);
+    setSendError('');
+    setSendSuccess(false);
+
+    try {
+      // Send message via enhanced service
+      const result = await enhancedCommunicationService.sendWhatsAppMessage(selectedEmployees, message);
+      
+      console.log('Sending WhatsApp message to:', selectedEmployees);
+      console.log('Message:', message);
+      
+      setSendSuccess(true);
+      setMessage('');
+      
+      // Update stats
+      const updatedStats = await enhancedCommunicationService.getCommunicationStats();
+      setStats(updatedStats);
+    } catch (error) {
+      setSendError('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      console.error('WhatsApp send error:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Send Telegram message
+  const sendTelegramMessage = async () => {
+    if (!message.trim()) {
+      setSendError('Por favor ingresa un mensaje');
+      return;
+    }
+
+    if (selectedEmployees.length === 0) {
+      setSendError('Por favor selecciona al menos un empleado');
+      return;
+    }
+
+    setIsSending(true);
+    setSendError('');
+    setSendSuccess(false);
+
+    try {
+      // Send message via enhanced service
+      const result = await enhancedCommunicationService.sendTelegramMessage(selectedEmployees, message);
+      
+      console.log('Sending Telegram message to:', selectedEmployees);
+      console.log('Message:', message);
+      
+      setSendSuccess(true);
+      setMessage('');
+      
+      // Update stats
+      const updatedStats = await enhancedCommunicationService.getCommunicationStats();
+      setStats(updatedStats);
+    } catch (error) {
+      setSendError('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      console.error('Telegram send error:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const addTemplate = async () => {
+    if (!newTemplate.name.trim() || !newTemplate.content.trim()) {
+      return;
+    }
+    
+    try {
+      const template = await enhancedCommunicationService.createMessageTemplate(newTemplate);
+      setTemplates([...templates, template]);
+      setNewTemplate({ name: '', content: '' });
+      setShowTemplateModal(false);
+    } catch (error) {
+      console.error('Error creating template:', error);
+    }
+  };
+
+  const updateTemplate = async (templateId, updatedTemplate) => {
+    try {
+      const template = await enhancedCommunicationService.updateMessageTemplate(templateId, updatedTemplate);
+      setTemplates(templates.map(t => t.id === templateId ? template : t));
+    } catch (error) {
+      console.error('Error updating template:', error);
+    }
+  };
+
+  const deleteTemplate = async (templateId) => {
+    try {
+      await enhancedCommunicationService.deleteMessageTemplate(templateId);
+      setTemplates(templates.filter(t => t.id !== templateId));
+    } catch (error) {
+      console.error('Error deleting template:', error);
+    }
+  };
+
+  const exportData = () => {
+    // Simulate data export
+    console.log('Exporting employee data...');
+  };
+
+  const importData = () => {
+    // Simulate data import
+    console.log('Importing employee data...');
+  };
+
+  // Calcular métricas por empresa
+  const calculateCompanyMetrics = () => {
+    // Verificar que employees esté definido y no esté vacío
+    if (!employees || employees.length === 0) {
+      return [];
+    }
+    
+    const companies = Array.from(new Set(employees.map(emp => emp.company)));
+    return companies.map(company => {
+      const companyEmployees = employees.filter(emp => emp.company === company);
+      
+      // Calcular estadísticas reales basadas en los datos
+      const totalEmployees = companyEmployees.length;
+      const presencialCount = companyEmployees.filter(emp => emp.workMode === 'Presencial').length;
+      const hibridoCount = companyEmployees.filter(emp => emp.workMode === 'Híbrido').length;
+      const remotoCount = companyEmployees.filter(emp => emp.workMode === 'Remoto').length;
+      
+      const indefinidoCount = companyEmployees.filter(emp => emp.contractType === 'Indefinido').length;
+      const plazoFijoCount = companyEmployees.filter(emp => emp.contractType === 'Plazo Fijo').length;
+      const honorariosCount = companyEmployees.filter(emp => emp.contractType === 'Honorarios').length;
+      
+      // Simular métricas para cada empresa
+      const messagesSent = Math.floor(Math.random() * 100) + 50;
+      const deliveryRate = Math.floor(Math.random() * 20) + 80;
+      const readRate = Math.floor(Math.random() * 15) + 75;
+      const whatsappMessages = Math.floor(Math.random() * 60) + 30;
+      const telegramMessages = messagesSent - whatsappMessages;
+      
+      return {
+        company,
+        totalEmployees,
+        presencialCount,
+        hibridoCount,
+        remotoCount,
+        indefinidoCount,
+        plazoFijoCount,
+        honorariosCount,
+        messagesSent,
+        deliveryRate,
+        readRate,
+        whatsappMessages,
+        telegramMessages,
+        trend: Math.random() > 0.5 ? 'up' : 'down'
+      };
+    });
+  };
+
+  const companyMetrics = calculateCompanyMetrics();
+
+  // Obtener color para cada empresa
+  const getCompanyColor = (company) => {
+    const colors = {
+      'Ariztia': 'from-engage-yellow to-yellow-500',
+      'Inchcape': 'from-green-500 to-green-700',
+      'Achs': 'from-purple-500 to-purple-700',
+      'Arcoprime': 'from-pink-500 to-pink-700',
+      'Grupo Saesa': 'from-red-500 to-red-700',
+      'Colbun': 'from-orange-500 to-orange-700',
+      'AFP Habitat': 'from-teal-500 to-teal-700',
+      'Copec': 'from-blue-500 to-blue-700',
+      'Antofagasta Minerals': 'from-amber-500 to-amber-700',
+      'Vida Cámara': 'from-emerald-500 to-emerald-700',
+      'Enaex': 'from-rose-500 to-rose-700',
+      'SQM': 'from-cyan-500 to-cyan-700',
+      'CMPC': 'from-lime-500 to-lime-700',
+      'Corporación Chilena - Alemana': 'from-indigo-500 to-indigo-700',
+      'Hogar Alemán': 'from-violet-500 to-violet-700',
+      'Empresas SB': 'from-fuchsia-500 to-fuchsia-700'
+    };
+    return colors[company] || 'from-gray-500 to-gray-700';
+  };
+
+  // Obtener valores únicos para los filtros
+  const getUniqueValues = (field) => {
+    if (!employees || employees.length === 0) return [];
+    return Array.from(new Set(employees.map(emp => emp[field]))).filter(Boolean);
+  };
+
+  // Obtener todas las posiciones únicas
+  const getAllPositions = () => {
+    const positions = employees.map(emp => emp.position);
+    return Array.from(new Set(positions));
+  };
+
+  // Orden alfabético para empresas, departamentos, niveles, posiciones, modalidades y tipos de contrato
+  const getSortedValues = (field) => {
+    return getUniqueValues(field).sort((a, b) => a.localeCompare(b));
+  };
+
+  // Orden alfabético para posiciones
+  const getSortedPositions = () => {
+    return getAllPositions().sort((a, b) => a.localeCompare(b));
+  };
+
+  // Orden de regiones de norte a sur según el mapa de Chile
+  const getSortedRegions = () => {
+    const regionOrder = [
+      'Región de Tarapacá',
+      'Región de Antofagasta',
+      'Región de Atacama',
+      'Región de Coquimbo',
+      'Región de Valparaíso',
+      'Región del Libertador General Bernardo O\'Higgins',
+      'Región del Maule',
+      'Región de Ñuble',
+      'Región del Biobío',
+      'Región de La Araucanía',
+      'Región de Los Ríos',
+      'Región de Los Lagos',
+      'Región Aysén del General Carlos Ibáñez del Campo',
+      'Región de Magallanes y de la Antártica Chilena',
+      'Región Metropolitana'
+    ];
+    
+    const regions = getUniqueValues('region');
+    return regions.sort((a, b) => {
+      const indexA = regionOrder.indexOf(a);
+      const indexB = regionOrder.indexOf(b);
+      
+      // Si ambas regiones están en la lista, ordenar por índice
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      
+      // Si solo una región está en la lista, esa va primero
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // Si ninguna está en la lista, ordenar alfabéticamente
+      return a.localeCompare(b);
+    });
+  };
+
+  const tabs = [
+    { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
+    { id: 'database', name: 'Base de Datos', icon: UsersIcon },
+    { id: 'send', name: 'Enviar Mensajes', icon: ChatBubbleLeftRightIcon },
+    { id: 'templates', name: 'Plantillas', icon: DocumentTextIcon },
+    { id: 'reports', name: 'Informes', icon: ChartBarIcon }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <ArrowPathIcon className="h-12 w-12 text-engage-blue animate-spin mx-auto" />
+          <p className="mt-4 text-engage-black font-medium">Cargando sistema de comunicación...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-engage-black">Comunicación Interna</h1>
+              <p className="text-gray-600 mt-2">
+                Sistema avanzado de comunicación para múltiples empresas
+              </p>
+            </div>
+            <div className="mt-4 md:mt-0 flex items-center space-x-3">
+              <div className="bg-engage-blue/10 px-3 py-1 rounded-full">
+                <span className="text-engage-blue text-sm font-medium">
+                  {selectedEmployees.length} seleccionados
+                </span>
+              </div>
+              <button
+                onClick={selectAllEmployees}
+                className="text-sm text-engage-blue hover:text-engage-yellow font-medium"
+              >
+                {selectedEmployees.length === filteredEmployees.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-engage-black">Comunicación Interna</h1>
+              <p className="text-gray-600 mt-2">
+                Sistema avanzado de comunicación para múltiples empresas
+              </p>
+            </div>
+            <div className="mt-4 md:mt-0 flex items-center space-x-3">
+              <div className="bg-engage-blue/10 px-3 py-1 rounded-full">
+                <span className="text-engage-blue text-sm font-medium">
+                  {selectedEmployees.length} seleccionados
+                </span>
+              </div>
+              <button
+                onClick={selectAllEmployees}
+                className="text-sm text-engage-blue hover:text-engage-yellow font-medium"
+              >
+                {selectedEmployees.length === filteredEmployees.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-8">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center
+                    ${activeTab === tab.id
+                      ? 'border-engage-blue text-engage-blue'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }
+                  `}
+                >
+                  <Icon className="h-5 w-5 mr-2" />
+                  {tab.name}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-engage-blue/10 rounded-lg">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-engage-blue" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Mensajes Totales</p>
+                    <p className="text-2xl font-bold text-engage-black">{stats.totalMessages}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <CheckCircleIcon className="h-6 w-6 text-green-500" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Tasa de Entrega</p>
+                    <p className="text-2xl font-bold text-engage-black">{stats.deliveryRate}%</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-engage-yellow/10 rounded-lg">
+                    <EyeIcon className="h-6 w-6 text-engage-yellow" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Tasa de Lectura</p>
+                    <p className="text-2xl font-bold text-engage-black">{stats.readRate}%</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <PaperAirplaneIcon className="h-6 w-6 text-green-500" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Canales Activos</p>
+                    <p className="text-2xl font-bold text-engage-black">2</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Company Metrics */}
+            <div>
+              <h2 className="text-xl font-bold text-engage-black mb-6">Métricas por Empresa</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {companyMetrics.map((metric) => (
+                  <div key={metric.company} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-engage-black">{metric.company}</h3>
+                      <div className={`p-1 rounded-full ${metric.trend === 'up' ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {metric.trend === 'up' ? (
+                          <ArrowTrendingUpIcon className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <ArrowTrendingDownIcon className="h-4 w-4 text-red-600" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Empleados</span>
+                        <span className="text-sm font-medium text-engage-black">{metric.totalEmployees}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Mensajes Enviados</span>
+                        <span className="text-sm font-medium text-engage-black">{metric.messagesSent}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Tasa de Entrega</span>
+                        <span className="text-sm font-medium text-engage-black">{metric.deliveryRate}%</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Tasa de Lectura</span>
+                        <span className="text-sm font-medium text-engage-black">{metric.readRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Distribution Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="font-semibold text-engage-black mb-4">Distribución por Canal</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-gray-600">WhatsApp</span>
+                      <span className="text-sm font-medium text-engage-black">{stats.whatsappMessages} mensajes</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{ width: `${stats.whatsappMessages > 0 ? (stats.whatsappMessages / stats.totalMessages) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-gray-600">Telegram</span>
+                      <span className="text-sm font-medium text-engage-black">{stats.telegramMessages} mensajes</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full" 
+                        style={{ width: `${stats.telegramMessages > 0 ? (stats.telegramMessages / stats.totalMessages) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="font-semibold text-engage-black mb-4">Distribución por Modalidad</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-gray-600">Presencial</span>
+                      <span className="text-sm font-medium text-engage-black">
+                        {employees.filter(emp => emp.workMode === 'Presencial').length} empleados
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-engage-blue h-2 rounded-full" 
+                        style={{ 
+                          width: `${employees.length > 0 ? (employees.filter(emp => emp.workMode === 'Presencial').length / employees.length) * 100 : 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-gray-600">Híbrido</span>
+                      <span className="text-sm font-medium text-engage-black">
+                        {employees.filter(emp => emp.workMode === 'Híbrido').length} empleados
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-engage-yellow h-2 rounded-full" 
+                        style={{ 
+                          width: `${employees.length > 0 ? (employees.filter(emp => emp.workMode === 'Híbrido').length / employees.length) * 100 : 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-gray-600">Remoto</span>
+                      <span className="text-sm font-medium text-engage-black">
+                        {employees.filter(emp => emp.workMode === 'Remoto').length} empleados
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{ 
+                          width: `${employees.length > 0 ? (employees.filter(emp => emp.workMode === 'Remoto').length / employees.length) * 100 : 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'database' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Filters Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                    <FunnelIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                    Filtros
+                  </h2>
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-engage-blue hover:text-engage-yellow"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+                
+                <div className="space-y-5 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+                  <div className="bg-engage-blue/5 rounded-lg p-4 border border-engage-blue/10">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <BuildingOfficeIcon className="h-4 w-4 mr-2 text-engage-blue" />
+                        Empresa
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-engage-blue/10 text-engage-blue">
+                        {filters.company.length > 0 ? `${filters.company.length} seleccionadas` : 'Todas'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedValues('company').map(company => (
+                        <div key={company} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`company-${company}`}
+                            checked={filters.company.includes(company)}
+                            onChange={() => handleFilterChange('company', company)}
+                            className="h-4 w-4 text-engage-blue border-gray-300 rounded focus:ring-engage-blue focus:ring-offset-0"
+                          />
+                          <label htmlFor={`company-${company}`} className="ml-2 text-sm text-engage-black group-hover:text-engage-blue cursor-pointer">
+                            {company}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-engage-yellow/5 rounded-lg p-4 border border-engage-yellow/10">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <MapPinIcon className="h-4 w-4 mr-2 text-engage-yellow" />
+                        Región
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-engage-yellow/10 text-engage-yellow">
+                        {filters.region.length > 0 ? `${filters.region.length} seleccionadas` : 'Todas'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedRegions().map(region => (
+                        <div key={region} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`region-${region}`}
+                            checked={filters.region.includes(region)}
+                            onChange={() => handleFilterChange('region', region)}
+                            className="h-4 w-4 text-engage-yellow border-gray-300 rounded focus:ring-engage-yellow focus:ring-offset-0"
+                          />
+                          <label htmlFor={`region-${region}`} className="ml-2 text-sm text-engage-black group-hover:text-engage-yellow cursor-pointer">
+                            {region}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <UserGroupIcon className="h-4 w-4 mr-2 text-gray-500" />
+                        Departamento
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        {filters.department.length > 0 ? `${filters.department.length} seleccionados` : 'Todos'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedValues('department').map(department => (
+                        <div key={department} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`department-${department}`}
+                            checked={filters.department.includes(department)}
+                            onChange={() => handleFilterChange('department', department)}
+                            className="h-4 w-4 text-gray-600 border-gray-300 rounded focus:ring-gray-600 focus:ring-offset-0"
+                          />
+                          <label htmlFor={`department-${department}`} className="ml-2 text-sm text-engage-black group-hover:text-gray-600 cursor-pointer">
+                            {department}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <IdentificationIcon className="h-4 w-4 mr-2 text-gray-500" />
+                        Nivel Jerárquico
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        {filters.level.length > 0 ? `${filters.level.length} seleccionados` : 'Todos'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedValues('level').map(level => (
+                        <div key={level} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`level-${level}`}
+                            checked={filters.level.includes(level)}
+                            onChange={() => handleFilterChange('level', level)}
+                            className="h-4 w-4 text-gray-600 border-gray-300 rounded focus:ring-gray-600 focus:ring-offset-0"
+                          />
+                          <label htmlFor={`level-${level}`} className="ml-2 text-sm text-engage-black group-hover:text-gray-600 cursor-pointer">
+                            {level}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <BriefcaseIcon className="h-4 w-4 mr-2 text-gray-500" />
+                        Posición
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        {filters.position.length > 0 ? `${filters.position.length} seleccionadas` : 'Todas'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedPositions().map(position => (
+                        <div key={position} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`position-${position}`}
+                            checked={filters.position.includes(position)}
+                            onChange={() => handleFilterChange('position', position)}
+                            className="h-4 w-4 text-gray-600 border-gray-300 rounded focus:ring-gray-600 focus:ring-offset-0"
+                          />
+                          <label htmlFor={`position-${position}`} className="ml-2 text-sm text-engage-black group-hover:text-gray-600 cursor-pointer">
+                            {position}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-engage-yellow/5 rounded-lg p-4 border border-engage-yellow/10">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <HomeModernIcon className="h-4 w-4 mr-2 text-engage-yellow" />
+                        Modalidad de Trabajo
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-engage-yellow/10 text-engage-yellow">
+                        {filters.workMode.length > 0 ? `${filters.workMode.length} seleccionadas` : 'Todas'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedValues('workMode').map(workMode => (
+                        <div key={workMode} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`workMode-${workMode}`}
+                            checked={filters.workMode.includes(workMode)}
+                            onChange={() => handleFilterChange('workMode', workMode)}
+                            className="h-4 w-4 text-engage-yellow border-gray-300 rounded focus:ring-engage-yellow focus:ring-offset-0"
+                          />
+                          <label htmlFor={`workMode-${workMode}`} className="ml-2 text-sm text-engage-black group-hover:text-engage-yellow cursor-pointer">
+                            {workMode}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-engage-black flex items-center">
+                        <DocumentTextIcon className="h-4 w-4 mr-2 text-gray-500" />
+                        Tipo de Contrato
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        {filters.contractType.length > 0 ? `${filters.contractType.length} seleccionados` : 'Todos'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {getSortedValues('contractType').map(contractType => (
+                        <div key={contractType} className="flex items-center group">
+                          <input
+                            type="checkbox"
+                            id={`contractType-${contractType}`}
+                            checked={filters.contractType.includes(contractType)}
+                            onChange={() => handleFilterChange('contractType', contractType)}
+                            className="h-4 w-4 text-gray-600 border-gray-300 rounded focus:ring-gray-600 focus:ring-offset-0"
+                          />
+                          <label htmlFor={`contractType-${contractType}`} className="ml-2 text-sm text-engage-black group-hover:text-gray-600 cursor-pointer">
+                            {contractType}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm font-medium text-engage-black">
+                      Resultados: {filteredEmployees.length}
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-engage-blue/10 text-engage-blue">
+                      {selectedEmployees.length} seleccionados
+                    </span>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={exportData}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-engage-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                      Exportar
+                    </button>
+                    <button
+                      onClick={importData}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-engage-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+                    >
+                      <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
+                      Importar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Employee List */}
+            <div className="lg:col-span-3">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+                <div className="overflow-x-auto flex-grow" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Nombre
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Empresa
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Departamento
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Nivel Jerárquico
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Modalidad de Trabajo
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {filteredEmployees.map((employee) => (
+                        <tr key={employee.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.company}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.department}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.level}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.workMode}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => toggleEmployeeSelection(employee.id)}
+                              className={`p-1 rounded-full ${selectedEmployees.includes(employee.id) ? 'bg-engage-blue/10 text-engage-blue' : 'bg-gray-100 text-gray-500'}`}
+                            >
+                              <CheckCircleIcon className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'send' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Send Form */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                    <PaperAirplaneIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                    Enviar Mensajes
+                  </h2>
+                  <span className="text-sm font-medium text-engage-black">
+                    {selectedEmployees.length} seleccionados
+                  </span>
+                </div>
+                
+                <div className="space-y-4">
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={6}
+                    className="w-full resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+                    placeholder="Escribe tu mensaje aquí..."
+                  ></textarea>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={sendWhatsAppMessage}
+                      disabled={isSending}
+                      className={`flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-engage-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue ${isSending ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    >
+                      <ArrowPathIcon className={`h-4 w-4 mr-1 ${isSending ? 'animate-spin' : ''}`} />
+                      Enviar via WhatsApp
+                    </button>
+                    <button
+                      onClick={sendTelegramMessage}
+                      disabled={isSending}
+                      className={`flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-engage-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue ${isSending ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    >
+                      <ArrowPathIcon className={`h-4 w-4 mr-1 ${isSending ? 'animate-spin' : ''}`} />
+                      Enviar via Telegram
+                    </button>
+                  </div>
+                  
+                  {sendError && <div className="mt-4 text-sm text-engage-red flex items-center">
+                    <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
+                    {sendError}
+                  </div>}
+                  
+                  {sendSuccess && <div className="mt-4 text-sm text-engage-green flex items-center">
+                    <CheckCircleIcon className="h-4 w-4 mr-2" />
+                    Mensaje enviado correctamente
+                  </div>}
+                </div>
+              </div>
+            </div>
+            
+            {/* Employee List */}
+            <div className="lg:col-span-3">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+                <div className="overflow-x-auto flex-grow" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Nombre
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Empresa
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Departamento
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Nivel Jerárquico
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Modalidad de Trabajo
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {filteredEmployees.map((employee) => (
+                        <tr key={employee.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.company}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.department}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.level}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {employee.workMode}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => toggleEmployeeSelection(employee.id)}
+                              className={`p-1 rounded-full ${selectedEmployees.includes(employee.id) ? 'bg-engage-blue/10 text-engage-blue' : 'bg-gray-100 text-gray-500'}`}
+                            >
+                              <CheckCircleIcon className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'templates' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Template Form */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                    <DocumentTextIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                    Plantillas de Mensaje
+                  </h2>
+                  <button
+                    onClick={() => setShowTemplateModal(true)}
+                    className="text-sm text-engage-blue hover:text-engage-yellow"
+                  >
+                    Crear Nueva
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Listado de Plantillas */}
+                </div>
+              </div>
+            </div>
+            
+            {/* Employee List */}
+            <div className="lg:col-span-3">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+                <div className="overflow-x-auto flex-grow" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            checked={selectedEmployees.length === filteredEmployees.length && filteredEmployees.length > 0}
+                            onChange={selectAllEmployees}
+                            className="h-4 w-4 text-engage-blue border-gray-300 rounded focus:ring-engage-blue focus:ring-offset-0"
+                          />
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Empleado
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Empresa
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Departamento
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Modalidad
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Contrato
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredEmployees.map((employee) => (
+                        <tr 
+                          key={employee.id} 
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => toggleEmployeeSelection(employee.id)}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedEmployees.includes(employee.id)}
+                              onChange={() => {}}
+                              className="h-4 w-4 text-engage-blue border-gray-300 rounded focus:ring-engage-blue"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-engage-blue/10 flex items-center justify-center">
+                                  <span className="text-engage-blue font-medium">
+                                    {employee.name.charAt(0)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-engage-black">
+                                  {employee.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {employee.email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              employee.company === 'Ariztia' ? 'bg-engage-yellow/10 text-engage-yellow' :
+                              employee.company === 'Inchcape' ? 'bg-green-100 text-green-800' :
+                              employee.company === 'Achs' ? 'bg-purple-100 text-purple-800' :
+                              employee.company === 'Arcoprime' ? 'bg-pink-100 text-pink-800' :
+                              employee.company === 'Grupo Saesa' ? 'bg-red-100 text-red-800' :
+                              employee.company === 'Colbun' ? 'bg-orange-100 text-orange-800' :
+                              employee.company === 'AFP Habitat' ? 'bg-teal-100 text-teal-800' :
+                              employee.company === 'Copec' ? 'bg-blue-100 text-blue-800' :
+                              employee.company === 'Antofagasta Minerals' ? 'bg-amber-100 text-amber-800' :
+                              employee.company === 'Vida Cámara' ? 'bg-emerald-100 text-emerald-800' :
+                              employee.company === 'Enaex' ? 'bg-rose-100 text-rose-800' :
+                              employee.company === 'SQM' ? 'bg-cyan-100 text-cyan-800' :
+                              employee.company === 'CMPC' ? 'bg-lime-100 text-lime-800' :
+                              employee.company === 'Corporación Chilena - Alemana' ? 'bg-indigo-100 text-indigo-800' :
+                              employee.company === 'Hogar Alemán' ? 'bg-violet-100 text-violet-800' :
+                              employee.company === 'Empresas SB' ? 'bg-fuchsia-100 text-fuchsia-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {employee.company}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-engage-black">
+                              {employee.department}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {employee.level}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-engage-yellow/10 text-engage-yellow">
+                              {employee.workMode}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-engage-black">
+                            {employee.contractType}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {filteredEmployees.length === 0 && (
+                  <div className="text-center py-12">
+                    <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron empleados</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Intenta ajustar los filtros para obtener resultados.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'dashboard' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                  <ChartBarIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                  Métricas Generales
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Total de Mensajes</p>
+                    <p className="text-2xl font-bold text-blue-900">{stats.totalMessages}</p>
+                  </div>
+                  <ArrowTrendingUpIcon className="h-16 w-16 text-blue-900" />
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 border border-green-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Tasa de Entrega</p>
+                    <p className="text-2xl font-bold text-green-900">{stats.deliveryRate}%</p>
+                  </div>
+                  <ArrowTrendingUpIcon className="h-16 w-16 text-green-900" />
+                </div>
+                <div className="bg-red-50 rounded-lg p-4 border border-red-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Tasa de Lectura</p>
+                    <p className="text-2xl font-bold text-red-900">{stats.readRate}%</p>
+                  </div>
+                  <ArrowTrendingDownIcon className="h-16 w-16 text-red-900" />
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Mensajes de WhatsApp</p>
+                    <p className="text-2xl font-bold text-purple-900">{stats.whatsappMessages}</p>
+                  </div>
+                  <PaperAirplaneIcon className="h-16 w-16 text-purple-900" />
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Mensajes de Telegram</p>
+                    <p className="text-2xl font-bold text-yellow-900">{stats.telegramMessages}</p>
+                  </div>
+                  <PaperAirplaneIcon className="h-16 w-16 text-yellow-900" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                  <BuildingOfficeIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                  Métricas por Empresa
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {companyMetrics.map(metric => (
+                  <div
+                    key={metric.company}
+                    className={`bg-gradient-to-r ${getCompanyColor(metric.company)} rounded-lg p-4 border border-gray-100 flex items-center justify-between`}
+                  >
+                    <div>
+                      <p className="text-gray-500 text-sm">{metric.company}</p>
+                      <p className="text-2xl font-bold text-white">{metric.messagesSent}</p>
+                    </div>
+                    {metric.trend === 'up' ? (
+                      <ArrowTrendingUpIcon className="h-16 w-16 text-white" />
+                    ) : (
+                      <ArrowTrendingDownIcon className="h-16 w-16 text-white" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                  <EyeIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                  Informes Recientes
+                </h2>
+                <button className="text-sm text-engage-blue hover:text-engage-yellow font-medium">
+                  Ver todos
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Informe de Octubre</p>
+                    <p className="text-gray-700">Análisis de comunicación y métricas</p>
+                  </div>
+                  <button className="text-sm text-engage-blue hover:text-engage-yellow font-medium">
+                    Ver detalle
+                  </button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Informe de Septiembre</p>
+                    <p className="text-gray-700">Evaluación de campañas de marketing</p>
+                  </div>
+                  <button className="text-sm text-engage-blue hover:text-engage-yellow font-medium">
+                    Ver detalle
+                  </button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Informe de Agosto</p>
+                    <p className="text-gray-700">Revisión de cumplimiento de objetivos</p>
+                  </div>
+                  <button className="text-sm text-engage-blue hover:text-engage-yellow font-medium">
+                    Ver detalle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'send' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                    <PaperAirplaneIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                    Enviar Mensaje
+                  </h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="relative">
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      className="w-full h-32 border border-gray-300 rounded-md focus:ring-engage-blue focus:border-engage-blue p-4"
+                      placeholder="Escribe tu mensaje aquí..."
+                    ></textarea>
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={sendWhatsAppMessage}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-engage-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+                    >
+                      <PaperAirplaneIcon className="h-4 w-4 mr-1" />
+                      Enviar a WhatsApp
+                    </button>
+                    <button
+                      onClick={sendTelegramMessage}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-engage-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+                    >
+                      <PaperAirplaneIcon className="h-4 w-4 mr-1" />
+                      Enviar a Telegram
+                    </button>
+                  </div>
+                  {isSending && (
+                    <div className="flex items-center space-x-2">
+                      <ArrowPathIcon className="h-4 w-4 animate-spin text-engage-blue" />
+                      <p className="text-sm text-engage-blue">Enviando...</p>
+                    </div>
+                  )}
+                  {sendSuccess && (
+                    <div className="flex items-center space-x-2">
+                      <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                      <p className="text-sm text-green-600">Mensaje enviado exitosamente</p>
+                    </div>
+                  )}
+                  {sendError && (
+                    <div className="flex items-center space-x-2">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-600" />
+                      <p className="text-sm text-red-600">{sendError}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                    <UsersIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                    Destinatarios Seleccionados
+                  </h2>
+                </div>
+
+                <div className="space-y-4">
+                  {selectedEmployees.length > 0 ? (
+                    selectedEmployees.map(employeeId => {
+                      const employee = employees.find(emp => emp.id === employeeId);
+                      return (
+                        <div key={employeeId} className="bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between">
+                          <div>
+                            <p className="text-gray-500 text-sm">Nombre</p>
+                            <p className="text-gray-700">{employee.name}</p>
+                          </div>
+                          <button
+                            onClick={() => toggleEmployeeSelection(employeeId)}
+                            className="text-sm text-engage-blue hover:text-engage-yellow font-medium"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay destinatarios seleccionados</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'templates' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-engage-black flex items-center">
+                    <DocumentTextIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                    Plantillas de Mensaje
+                  </h2>
+                  <button
+                    onClick={() => setShowTemplateModal(true)}
+                    className="text-sm text-engage-blue hover:text-engage-yellow font-medium"
+                  >
+                    Crear Plantilla
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {templates.length > 0 ? (
+                    templates.map(template => (
+                      <div key={template.id} className="bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between">
+                        <div>
+                          <p className="text-gray-500 text-sm">Nombre</p>
+                          <p className="text-gray-700">{template.name}</p>
+                        </div>
+                        <div className="space-x-2">
+                          <button
+                            onClick={() => setShowTemplateModal(true)}
+                            className="text-sm text-engage-blue hover:text-engage-yellow font-medium"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => deleteTemplate(template.id)}
+                            className="text-sm text-engage-red hover:text-engage-yellow font-medium"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay plantillas disponibles</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'send' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Message Composition */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-xl font-semibold text-engage-black mb-6">Redactar Mensaje</h2>
+                
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-engage-black mb-2">
+                    Mensaje
+                  </label>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={8}
+                    placeholder="Escribe tu mensaje aquí..."
+                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-engage-blue focus:ring-engage-blue"
+                  />
+                  <div className="flex justify-between mt-2">
+                    <span className="text-sm text-gray-500">
+                      {message.length}/1000 caracteres
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {selectedEmployees.length} destinatarios seleccionados
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={sendWhatsAppMessage}
+                    disabled={isSending}
+                    className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                  >
+                    {isSending ? (
+                      <>
+                        <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <PaperAirplaneIcon className="h-4 w-4 mr-2" />
+                        Enviar por WhatsApp
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={sendTelegramMessage}
+                    disabled={isSending}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {isSending ? (
+                      <>
+                        <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <PaperAirplaneIcon className="h-4 w-4 mr-2" />
+                        Enviar por Telegram
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {sendSuccess && (
+                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-green-800">
+                          Mensaje enviado exitosamente a {selectedEmployees.length} empleados
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {sendError && (
+                  <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-red-800">
+                          {sendError}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Message Templates */}
+              <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-engage-black">Plantillas de Mensajes</h2>
+                  <button
+                    onClick={() => setShowTemplateModal(true)}
+                    className="inline-flex items-center px-3 py-2 bg-engage-blue hover:bg-engage-yellow text-white font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Nueva Plantilla
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {templates.map((template) => (
+                    <div 
+                      key={template.id}
+                      className="p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setMessage(template.content)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-medium text-engage-black">{template.name}</h3>
+                          <p className="mt-2 text-sm text-gray-500">
+                            {template.content.substring(0, 100)}...
+                          </p>
+                        </div>
+                        <button className="text-engage-blue hover:text-engage-yellow">
+                          <EyeIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="mt-4 flex items-center text-xs text-gray-500">
+                        <span>Última modificación: {template.lastModified}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Selected Employees */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
+                <h2 className="text-lg font-semibold text-engage-black mb-6">Empleados Seleccionados</h2>
+                
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {selectedEmployees.length > 0 ? (
+                    selectedEmployees.map((id) => {
+                      const employee = employees.find(emp => emp.id === id);
+                      return employee ? (
+                        <div key={employee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8">
+                              <div className="h-8 w-8 rounded-full bg-engage-blue/10 flex items-center justify-center">
+                                <span className="text-engage-blue text-xs font-medium">
+                                  {employee.name.charAt(0)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <p className="text-sm font-medium text-engage-black">
+                                {employee.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {employee.department}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleEmployeeSelection(employee.id)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : null;
+                    })
+                  ) : (
+                    <div className="text-center py-8">
+                      <UsersIcon className="mx-auto h-8 w-8 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-500">
+                        No hay empleados seleccionados
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {selectedEmployees.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setSelectedEmployees([])}
+                      className="w-full text-center text-sm text-engage-blue hover:text-engage-yellow font-medium"
+                    >
+                      Deseleccionar todos
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Communication Stats */}
+              <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold text-engage-black mb-6">Estadísticas</h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm font-medium text-engage-black mb-1">
+                      <span>Mensajes Enviados</span>
+                      <span>{stats.totalMessages}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-engage-blue h-2 rounded-full" style={{ width: '65%' }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm font-medium text-engage-black mb-1">
+                      <span>Tasa de Entrega</span>
+                      <span>{stats.deliveryRate}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-green-500 h-2 rounded-full" style={{ width: `${stats.deliveryRate}%` }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm font-medium text-engage-black mb-1">
+                      <span>Tasa de Lectura</span>
+                      <span>{stats.readRate}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-engage-yellow h-2 rounded-full" style={{ width: `${stats.readRate}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'templates' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-engage-black">Gestión de Plantillas</h2>
+              <button
+                onClick={() => setShowTemplateModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-engage-blue hover:bg-engage-yellow text-white font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-engage-blue"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Crear Nueva Plantilla
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map((template) => (
+                <div key={template.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-medium text-engage-black">{template.name}</h3>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {template.content.substring(0, 100)}...
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button 
+                        className="text-engage-blue hover:text-engage-yellow"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMessage(template.content);
+                          setActiveTab('send');
+                        }}
+                      >
+                        <EyeIcon className="h-5 w-5" />
+                      </button>
+                      <button 
+                        className="text-engage-blue hover:text-engage-yellow"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNewTemplate({ name: template.name, content: template.content });
+                        }}
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button 
+                        className="text-red-500 hover:text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteTemplate(template.id);
+                        }}
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center text-xs text-gray-500">
+                    <span>Última modificación: {template.lastModified}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'reports' && (
+          <ReportsDashboard />
+        )}
+        
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-engage-black mb-6">Dashboard de Comunicación</h2>
+              
+              {/* KPIs Generales - Modern Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-engage-blue to-blue-700 rounded-xl p-5 text-white shadow-lg transform hover:scale-105 transition-transform duration-300">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-blue-100 text-sm">Mensajes Enviados</p>
+                      <p className="text-3xl font-bold mt-2">{stats.totalMessages}</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-lg">
+                      <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center text-blue-100 text-sm">
+                      <span>+12% desde el mes anterior</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-5 text-white shadow-lg transform hover:scale-105 transition-transform duration-300">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-green-100 text-sm">Tasa de Entrega</p>
+                      <p className="text-3xl font-bold mt-2">{stats.deliveryRate}%</p>
+                    </div>
+                    <div className="bg-white/20 p-33 rounded-lg">
+                      <CheckCircleIcon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center text-green-100 text-sm">
+                      <span>+2.3% desde el mes anterior</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-engage-yellow to-yellow-600 rounded-xl p-5 text-engage-black shadow-lg transform hover:scale-105 transition-transform duration-300">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-yellow-800 text-sm">Tasa de Lectura</p>
+                      <p className="text-3xl font-bold mt-2">{stats.readRate}%</p>
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-lg">
+                      <EyeIcon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center text-yellow-800 text-sm">
+                      <span>+1.7% desde el mes anterior</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-5 text-white shadow-lg transform hover:scale-105 transition-transform duration-300">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-purple-100 text-sm">Empleados Totales</p>
+                      <p className="text-3xl font-bold mt-2">{employees.length}</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-lg">
+                      <UsersIcon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center text-purple-100 text-sm">
+                      <span>+5 nuevas contrataciones</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Distribución por Canal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-green-500 p-2 rounded-lg">
+                      <ChatBubbleLeftRightIcon className="h-5 w-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-green-800 ml-3">Mensajes por WhatsApp</h3>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-3xl font-bold text-green-800">{stats.whatsappMessages}</p>
+                      <p className="text-green-700 text-sm mt-1">Mensajes enviados</p>
+                    </div>
+                    <div className="w-24 h-24">
+                      <div className="relative w-24 h-24">
+                        <svg className="w-24 h-24" viewBox="0 0 36 36">
+                          <path
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="3"
+                          />
+                          <path
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="3"
+                            strokeDasharray={`${stats.whatsappMessages > 0 ? (stats.whatsappMessages / stats.totalMessages) * 100 : 0}, 100`}
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-blue-500 p-2 rounded-lg">
+                      <ChatBubbleLeftRightIcon className="h-5 w-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-blue-800 ml-3">Mensajes por Telegram</h3>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-3xl font-bold text-blue-800">{stats.telegramMessages}</p>
+                      <p className="text-blue-700 text-sm mt-1">Mensajes enviados</p>
+                    </div>
+                    <div className="w-24 h-24">
+                      <div className="relative w-24 h-24">
+                        <svg className="w-24 h-24" viewBox="0 0 36 36">
+                          <path
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="3"
+                          />
+                          <path
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="3"
+                            strokeDasharray={`${stats.telegramMessages > 0 ? (stats.telegramMessages / stats.totalMessages) * 100 : 0}, 100`}
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Métricas por Empresa - Modern Cards */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-engage-black mb-6 flex items-center">
+                <BuildingOfficeIcon className="h-5 w-5 mr-2 text-engage-blue" />
+                Métricas por Empresa
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {companyMetrics.map((metric) => {
+                  const gradientClass = getCompanyColor(metric.company);
+                  
+                  return (
+                    <div 
+                      key={metric.company} 
+                      className="rounded-2xl p-6 bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold text-lg text-engage-black">{metric.company}</h4>
+                        <div className={`p-2 rounded-lg bg-gradient-to-r ${gradientClass}`}>
+                          <BuildingOfficeIcon className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Empleados</span>
+                          <span className="font-semibold text-engage-black">{metric.totalEmployees}</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="bg-blue-50 rounded-lg p-2">
+                            <p className="text-xs text-blue-800">Presencial</p>
+                            <p className="font-semibold text-blue-800">{metric.presencialCount}</p>
+                          </div>
+                          <div className="bg-yellow-50 rounded-lg p-2">
+                            <p className="text-xs text-yellow-800">Híbrido</p>
+                            <p className="font-semibold text-yellow-800">{metric.hibridoCount}</p>
+                          </div>
+                          <div className="bg-green-50 rounded-lg p-2">
+                            <p className="text-xs text-green-800">Remoto</p>
+                            <p className="font-semibold text-green-800">{metric.remotoCount}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="bg-purple-50 rounded-lg p-2">
+                            <p className="text-xs text-purple-800">Indefinido</p>
+                            <p className="font-semibold text-purple-800">{metric.indefinidoCount}</p>
+                          </div>
+                          <div className="bg-orange-50 rounded-lg p-2">
+                            <p className="text-xs text-orange-800">Plazo Fijo</p>
+                            <p className="font-semibold text-orange-800">{metric.plazoFijoCount}</p>
+                          </div>
+                          <div className="bg-red-50 rounded-lg p-2">
+                            <p className="text-xs text-red-800">Honorarios</p>
+                            <p className="font-semibold text-red-800">{metric.honorariosCount}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Mensajes Enviados</span>
+                          <span className="font-semibold text-engage-black">{metric.messagesSent}</span>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Tasa de Entrega</span>
+                            <div className="flex items-center">
+                              <span className="font-semibold text-engage-black mr-1">{metric.deliveryRate}%</span>
+                              {metric.trend === 'up' ? (
+                                <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full bg-gradient-to-r ${gradientClass}`}
+                              style={{ width: `${metric.deliveryRate}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Tasa de Lectura</span>
+                            <span className="font-semibold text-engage-black">{metric.readRate}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="h-2 rounded-full bg-gradient-to-r from-engage-yellow to-yellow-500"
+                              style={{ width: `${metric.readRate}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                          <div className="bg-green-50 rounded-lg p-3 text-center">
+                            <p className="text-xs text-green-800">WhatsApp</p>
+                            <p className="font-semibold text-green-800">{metric.whatsappMessages}</p>
+                          </div>
+                          <div className="bg-blue-50 rounded-lg p-3 text-center">
+                            <p className="text-xs text-blue-800">Telegram</p>
+                            <p className="font-semibold text-blue-800">{metric.telegramMessages}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default WebrifyCommunicationDashboard;
