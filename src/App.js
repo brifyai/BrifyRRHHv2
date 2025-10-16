@@ -27,7 +27,7 @@ import LoginInnovador from './components/auth/LoginInnovador.js'
 import RegisterInnovador from './components/auth/RegisterInnovador.js'
 // Componente de dashboard innovador
 // import DashboardInnovador from './components/dashboard/DashboardInnovador.js'
-import ModernDashboard from './components/dashboard/ModernDashboard.js'
+import ModernDashboard from './components/dashboard/ModernDashboardRedesigned.js'
 // Componentes de prueba de empresas (no implementados aún)
 // import TestCompanyData from './components/dashboard/TestCompanyData'
 // import DebugCompanyData from './components/dashboard/DebugCompanyData'
@@ -369,6 +369,16 @@ function App() {
             />
             <Route
               path="/base-de-datos"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <WebrifyCommunicationDashboard activeTab="dashboard" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/base-de-datos/database"
               element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { db, supabase } from '../../lib/supabase'
@@ -17,17 +17,16 @@ import {
   EyeIcon,
   ArrowDownTrayIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
-  CalendarIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import LoadingSpinner from '../common/LoadingSpinner'
 import RoutineUpload from '../routines/RoutineUpload'
 import DragDropUpload from '../common/DragDropUpload'
 import toast from 'react-hot-toast'
+import '../../styles/responsive-tables.css'
 
 const Files = () => {
-  const { user, userProfile, hasActivePlan } = useAuth()
+  const { user, userProfile } = useAuth()
   const { hasExtension } = useUserExtensions()
   const location = useLocation()
   const [files, setFiles] = useState([])
@@ -48,17 +47,15 @@ const Files = () => {
   const fileInputRef = useRef(null)
 
   useEffect(() => {
-    if (hasActivePlan()) {
-      loadFolders()
-      loadFiles()
-    }
-  }, [hasActivePlan])
+    loadFolders()
+    loadFiles()
+  }, [loadFolders, loadFiles])
 
   useEffect(() => {
     if (selectedFolder) {
       loadFiles(selectedFolder)
     }
-  }, [selectedFolder])
+  }, [selectedFolder, loadFiles])
 
   // Manejar carpeta preseleccionada desde navegación
   useEffect(() => {
@@ -69,7 +66,7 @@ const Files = () => {
     }
   }, [location.state])
 
-  const loadFolders = async () => {
+  const loadFolders = useCallback(async () => {
     try {
       // Cargar carpetas del usuario
       const { data: adminFolders, error: adminError } = await db.adminFolders.getByUser(user.id)
@@ -83,13 +80,13 @@ const Files = () => {
       console.log('Current user:', user)
       
       const allFolders = [
-        ...(adminFolders || []).map(f => ({ 
-          ...f, 
+        ...(adminFolders || []).map(f => ({
+          ...f,
           type: 'admin',
           google_folder_id: f.id_drive_carpeta
         })),
-        ...(userFolders || []).map(f => ({ 
-          ...f, 
+        ...(userFolders || []).map(f => ({
+          ...f,
           type: 'user',
           google_folder_id: f.id_carpeta_drive
         }))
@@ -101,9 +98,9 @@ const Files = () => {
       console.error('Error loading folders:', error)
       toast.error('Error cargando las carpetas')
     }
-  }
+  }, [user])
 
-  const loadFiles = async (folderId = null) => {
+  const loadFiles = useCallback(async (folderId = null) => {
     try {
       setLoading(true)
       
@@ -180,7 +177,7 @@ const Files = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, userProfile])
 
   // Tipos de archivo permitidos
   const allowedFileTypes = {
@@ -300,7 +297,7 @@ const Files = () => {
         availableFolders: folders.map(f => ({ id: f.id, type: typeof f.id, name: f.folder_name || f.correo }))
       })
       
-      const folder = folders.find(f => f.id == selectedFolder) // Usar == para comparación no estricta
+      const folder = folders.find(f => f.id === selectedFolder) // Usar === para comparación estricta
       console.log('📁 Carpeta encontrada:', folder)
       
       if (!folder) {
@@ -763,28 +760,9 @@ const Files = () => {
       }
     })
 
-  if (!hasActivePlan()) {
-    return (
-      <div className="text-center py-12">
-        <DocumentIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Plan Requerido
-        </h3>
-        <p className="text-gray-600 mb-6">
-          Necesitas un plan activo para acceder a la gestión de archivos.
-        </p>
-        <button
-          onClick={() => window.location.href = '/plans'}
-          className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          Ver Planes
-        </button>
-      </div>
-    )
-  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 responsive-layout">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -794,7 +772,7 @@ const Files = () => {
           </p>
         </div>
         
-        <div className="flex space-x-3 mt-4 sm:mt-0">
+        <div className="action-buttons mt-4 sm:mt-0">
           <button
             onClick={() => fileInputRef.current?.click()}
             className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
@@ -825,7 +803,7 @@ const Files = () => {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="filters-grid">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Carpeta
@@ -892,7 +870,7 @@ const Files = () => {
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div className="search-container">
         <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         <input
           type="text"
@@ -937,7 +915,7 @@ const Files = () => {
       {loading ? (
         <LoadingSpinner text="Cargando archivos..." />
       ) : filteredAndSortedFiles.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="empty-state">
           <DocumentIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             {searchTerm || fileTypeFilter !== 'all' ? 'No se encontraron archivos' : 'No hay archivos'}
@@ -958,9 +936,17 @@ const Files = () => {
           )}
         </div>
       ) : (
-        <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden card-with-table">
+          {/* Indicador de scroll para móviles */}
+          <div className="table-scroll-hint">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+            Desliza horizontalmente para ver más información
+          </div>
+          
+          <div className="table-responsive-container scroll-horizontal">
+            <table className="min-w-full divide-y divide-gray-200 files-table responsive-table">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -985,12 +971,12 @@ const Files = () => {
                     <tr key={file.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <FileIcon className="h-8 w-8 text-gray-400 mr-3" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                          <FileIcon className="h-8 w-8 text-gray-400 mr-3 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-gray-900 truncate">
                               {file.metadata?.name || file.metadata?.file_name || 'Sin nombre'}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 truncate">
                               {file.metadata?.file_type || 'Tipo desconocido'}
                             </div>
                           </div>
@@ -1010,7 +996,7 @@ const Files = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center justify-end space-x-2 action-buttons">
                           {file.google_file_id && (
                             <a
                               href={`https://drive.google.com/file/d/${file.google_file_id}/view`}
@@ -1065,7 +1051,7 @@ const Files = () => {
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 upload-modal">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Subir Archivos
             </h3>

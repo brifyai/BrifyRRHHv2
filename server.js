@@ -15,14 +15,59 @@ import driveNotificationsHandler from './src/api/webhook/drive-notifications.js'
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// Middleware - Configuración segura de CORS
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permitir orígenes específicos en desarrollo y producción
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3003',
+      'https://brifyrrhhapp.netlify.app',
+      'https://brifyrrhh.vercel.app',
+      'https://tmqglnycivlcjijoymwe.supabase.co'
+    ];
+    
+    // Permitir solicitudes sin origen (como apps móviles) solo en desarrollo
+    if (process.env.NODE_ENV === 'development' && !origin) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware adicional de seguridad
+app.use((req, res, next) => {
+  // Headers de seguridad
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
+
 // Configuración de Supabase - BrifyRRHH
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://tmqglnycivlcjijoymwe.supabase.co';
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcWdsbnljaXZsY2ppam95bXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTQ1NDYsImV4cCI6MjA3NjEzMDU0Nn0.ILwxm7pKdFZtG-Xz8niMSHaTwMvE4S7VlU8yDSgxOpE';
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+// Validar que las variables de entorno existan
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Error: Faltan variables de entorno de Supabase');
+  console.error('Por favor, configura REACT_APP_SUPABASE_URL y REACT_APP_SUPABASE_ANON_KEY');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Función para extraer el ID del archivo de la URI de Google Drive
@@ -67,6 +112,24 @@ async function getFileDetails(fileId, accessToken) {
     return null;
   }
 }
+
+// Middleware de manejo de errores para CORS
+app.use((err, req, res, next) => {
+  if (err.message === 'No permitido por CORS') {
+    console.error('❌ Error CORS:', req.origin);
+    return res.status(403).json({
+      success: false,
+      error: 'Origen no permitido',
+      message: 'Esta solicitud no está permitida desde tu dominio'
+    });
+  }
+  
+  console.error('❌ Error del servidor:', err);
+  res.status(500).json({
+    success: false,
+    error: 'Error interno del servidor'
+  });
+});
 
 // Endpoint para recibir notificaciones de Microsoft 365
 app.post('/api/webhook/microsoft365-notifications', async (req, res) => {

@@ -1,82 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BuildingOfficeIcon, UsersIcon, PaperAirplaneIcon, EyeIcon, FaceSmileIcon, FaceFrownIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-import databaseEmployeeService from '../../services/databaseEmployeeService';
-
-// Estilos CSS para el efecto de flip
-const flipStyles = `
-  .flip-card {
-    perspective: 1000px;
-  }
-
-  .flip-card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    transition: transform 0.8s;
-    transform-style: preserve-3d;
-  }
-
-  .flip-card.flipped .flip-card-inner {
-    transform: rotateY(180deg);
-  }
-
-  .flip-card-front, .flip-card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    top: 0;
-    left: 0;
-    overflow: hidden;
-  }
-
-  .flip-card-back {
-    transform: rotateY(180deg);
-  }
-`;
 
 const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
   const navigate = useNavigate();
-  const [scheduledMessages, setScheduledMessages] = useState(0);
-  const [draftMessages, setDraftMessages] = useState(0);
-  const [nextSendDate, setNextSendDate] = useState('');
-
-  useEffect(() => {
-    const loadCompanyMessageStats = async () => {
-      try {
-        const stats = await databaseEmployeeService.getCompanyMessageStats(company.id);
-        setScheduledMessages(stats.scheduledMessages);
-        setDraftMessages(stats.draftMessages);
-        setNextSendDate(stats.nextSendDate);
-      } catch (error) {
-        console.error('Error loading company message stats:', error);
-        setScheduledMessages(0);
-        setDraftMessages(0);
-        setNextSendDate('');
-      }
-    };
-
-    loadCompanyMessageStats();
-  }, [company.id]);
+  
+  // Usar los datos que ya vienen del componente padre
+  const scheduledMessages = company.scheduledMessages || 0;
+  const draftMessages = company.draftMessages || 0;
+  const nextSendDate = company.nextScheduledDate;
   return (
     <div
       className="group relative"
-      style={{ animationDelay: `${Math.random() * 100}ms` }}
+      style={{
+        animationDelay: `${Math.random() * 100}ms`,
+        perspective: '1000px'
+      }}
     >
-      {/* Inyectar estilos CSS para flip effect */}
-      <style dangerouslySetInnerHTML={{ __html: flipStyles }} />
-
       <div className="absolute inset-0 bg-gradient-to-r from-violet-400 via-purple-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
       <div
-        className={`flip-card cursor-pointer ${isFlipped ? 'flipped' : ''}`}
-        onClick={() => onToggleFlip(company.id)}
-        style={{ height: '400px' }}
+        className="relative cursor-pointer transition-all duration-700"
+        style={{
+          height: '400px',
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+        }}
+        onClick={(e) => {
+          // Verificar si el clic fue en el botón de tendencias
+          if (e.target.closest('button')) {
+            return; // No hacer nada si el clic fue en un botón
+          }
+          onToggleFlip(company.id);
+        }}
       >
-        <div className="flip-card-inner">
+        <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d' }}>
           {/* Front of card */}
-          <div className="flip-card-front relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-violet-50 p-5 min-h-[400px]">
+          <div className="absolute inset-0 bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-violet-50 p-5 min-h-[400px]"
+               style={{ backfaceVisibility: 'hidden' }}>
 
             <div className="flex items-center justify-between mb-3">
               <div className="min-w-0 flex-1 mr-2">
@@ -165,12 +125,12 @@ const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
             <div className="mt-4 text-center">
               <span className="text-xs text-gray-500">Haz clic para ver mensajes pendientes</span>
               <button
-                className="mt-2 px-3 py-1.5 pb-[15px] text-black text-xs font-medium rounded-md hover:text-[#5F3DE4] transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                className="mt-2 px-3 py-1.5 pb-[15px] text-black text-xs font-medium rounded-md hover:text-[#5F3DE4] transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 z-10 relative"
                 onClick={(e) => {
                   e.stopPropagation(); // Evitar que se propague el click al contenedor
                   e.preventDefault(); // Prevenir cualquier comportamiento por defecto
 
-                  console.log('Botón Recomendaciones IA clickeado para:', company.name);
+                  console.log('Botón Tendencias clickeado para:', company.name);
 
                   // Mapeo de nombres de empresas para asegurar coincidencia exacta
                   const companyNameMapping = {
@@ -198,21 +158,35 @@ const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
 
                   console.log('Nombre mapeado:', mappedCompanyName);
 
-                  // Navegar con el estado
+                  // Navegar con el estado a la página de base de datos (Tendencias)
                   navigate('/base-de-datos', {
                     state: { selectedCompany: mappedCompanyName }
                   });
 
                   console.log('Navegación ejecutada hacia:', '/base-de-datos');
                 }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onMouseUp={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               >
-                Recomendaciones IA
+                Tendencias
               </button>
             </div>
           </div>
 
           {/* Back of card */}
-          <div className="flip-card-back relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-violet-50 p-5 min-h-[400px]">
+          <div
+            className="absolute inset-0 bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-violet-50 p-5 min-h-[400px]"
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)'
+            }}
+          >
 
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-bold text-gray-900 text-base">{company.name}</h4>

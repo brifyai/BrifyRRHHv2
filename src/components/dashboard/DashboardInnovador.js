@@ -27,7 +27,7 @@ import CompanySummary from './CompanySummary'
 import toast from 'react-hot-toast'
 
 const DashboardInnovador = () => {
-  const { user, userProfile, hasActivePlan, getDaysRemaining } = useAuth()
+  const { user, userProfile, getDaysRemaining } = useAuth()
   const [payments, setPayments] = useState([])
   const [isGoogleDriveConnected, setIsGoogleDriveConnected] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -447,29 +447,6 @@ const DashboardInnovador = () => {
 
         {/* Alertas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {!hasActivePlan() && (
-            <div className="bg-gradient-to-r from-yellow-100 to-blue-100 border border-yellow-300 rounded-xl p-5 shadow-md">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Plan Inactivo
-                  </h3>
-                  <p className="text-gray-700 mt-1">
-                    Adquiere un plan para acceder a todas las funcionalidades.
-                  </p>
-                  <Link
-                    to="/plans"
-                    className="mt-3 inline-block px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg transition-colors duration-200"
-                  >
-                    Ver Planes
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
 
           {!isGoogleDriveConnected && (
             <div className="bg-gradient-to-r from-blue-100 to-gray-100 border border-blue-300 rounded-xl p-5 shadow-md">
@@ -727,15 +704,6 @@ const DashboardInnovador = () => {
                 <span className="text-sm font-medium text-gray-900 group-hover:text-blue-700">Subir Archivos</span>
               </Link>
               
-              {!hasActivePlan() && (
-                <Link
-                  to="/plans"
-                  className="flex items-center p-3 rounded-lg bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 hover:from-amber-200 hover:to-orange-200 transition-colors duration-200 group"
-                >
-                  <CreditCardIcon className="h-5 w-5 text-amber-600 mr-3" />
-                  <span className="text-sm font-medium text-amber-700 group-hover:text-amber-800">Ver Planes</span>
-                </Link>
-              )}
             </div>
           </div>
 
@@ -793,19 +761,10 @@ const DashboardInnovador = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Estado</p>
                     <div className="flex items-center mt-1">
-                      {hasActivePlan() ? (
-                        <>
-                          <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                          <span className="text-sm text-green-600">
-                            Activo ({getDaysRemaining()} días restantes)
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <ExclamationTriangleIcon className="h-4 w-4 text-red-500 mr-2" />
-                          <span className="text-sm text-red-600">Inactivo</span>
-                        </>
-                      )}
+                      <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
+                      <span className="text-sm text-green-600">
+                        Activo
+                      </span>
                     </div>
                   </div>
                   
@@ -836,12 +795,10 @@ const DashboardInnovador = () => {
           </div>
         </div>
 
-        {/* Plantilla de Rutina - Solo para usuarios con plan activo */}
-        {hasActivePlan() && (
-          <div className="mb-8">
-            <TemplateDownload />
-          </div>
-        )}
+        {/* Plantilla de Rutina */}
+        <div className="mb-8">
+          <TemplateDownload />
+        </div>
 
         {/* Historial de Compras */}
         {payments.length > 0 && (

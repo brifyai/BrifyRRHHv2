@@ -98,3 +98,23 @@ logs
 
 # Credenciales personales
 CREDENTIALS_PERSONALES.txt
+
+# Archivos de configuración con credenciales
+**/config/production.js
+**/config/staging.js
+**/secrets.json
+**/credentials.json
+
+# Archivos de log que pueden contener información sensible
+**/logs/*.log
+**/logs/error.log
+**/logs/access.log
+
+# Backups de base de datos que pueden contener información sensible
+**/backups/*.sql
+**/backups/*.dump
+**/backups/*.backup
+
+# Archivos temporales que pueden contener credenciales
+**/temp/*.env
+**/tmp/*.env

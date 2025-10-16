@@ -18,7 +18,7 @@ import TemplateDownload from '../templates/TemplateDownload'
 import toast from 'react-hot-toast'
 
 const Dashboard = () => {
-  const { user, userProfile, hasActivePlan } = useAuth()
+  const { user, userProfile } = useAuth()
   const [isGoogleDriveConnected, setIsGoogleDriveConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -271,22 +271,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Alertas */}
-      {!hasActivePlan() && (
-        <div className="alert-warning">
-          <div className="flex items-center">
-            <ExclamationTriangleIcon className="h-5 w-5 text-engage-yellow mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-engage-black">
-                No tienes un plan activo
-              </h3>
-              <p className="text-sm text-engage-black mt-1">
-                Contacta al administrador para activar tu cuenta.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {!isGoogleDriveConnected && (
         <div className="bg-engage-blue/10 border border-engage-blue/20 rounded-lg p-4">
@@ -432,12 +416,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Plantilla de Rutina - Solo para usuarios con plan activo */}
-      {hasActivePlan() && (
-        <div className="mt-8">
-          <TemplateDownload />
-        </div>
-      )}
+      {/* Plantilla de Rutina */}
+      <div className="mt-8">
+        <TemplateDownload />
+      </div>
 
 
       {/* Sección de Uso de Tokens */}

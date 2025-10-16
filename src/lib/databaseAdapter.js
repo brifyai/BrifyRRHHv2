@@ -200,9 +200,9 @@ class DatabaseAdapter {
 
     try {
       const { data, error } = await supabase
-        .from('employee_folders')
+        .from('carpetas_usuario')
         .select('*')
-        .eq('employee_email', employeeEmail)
+        .eq('administrador', employeeEmail)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -217,7 +217,7 @@ class DatabaseAdapter {
     await this.init();
 
     const { data, error } = await supabase
-      .from('employee_folders')
+      .from('carpetas_usuario')
       .insert(folderData)
       .select()
       .single();

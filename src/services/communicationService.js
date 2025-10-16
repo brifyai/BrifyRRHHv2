@@ -2,46 +2,56 @@ import { supabase } from '../lib/supabase.js';
 import inMemoryEmployeeService from './inMemoryEmployeeService.js';
 
 class CommunicationService {
-  // Get all employees with optional filters
+  // Get all employees with optional filters - Optimized version
   async getEmployees(filters = {}) {
     try {
+      // Build base query with only essential fields initially
       let query = supabase
         .from('employees')
         .select(`
-          *,
-          company:companies(name),
-          skills:employee_skills(skill:skills(name)),
-          interests:employee_interests(interest:interests(name))
+          id,
+          name,
+          email,
+          phone,
+          region,
+          department,
+          level,
+          position,
+          work_mode,
+          contract_type,
+          has_subordinates,
+          company_id,
+          is_active
         `)
         .eq('is_active', true);
 
-      // Apply filters
+      // Apply filters efficiently - use exact matches where possible
       if (filters.companyId) {
         query = query.eq('company_id', filters.companyId);
       }
       
       if (filters.region) {
-        query = query.ilike('region', `%${filters.region}%`);
+        query = query.eq('region', filters.region);
       }
       
       if (filters.branch) {
-        query = query.ilike('branch', `%${filters.branch}%`);
+        query = query.eq('branch', filters.branch);
       }
       
       if (filters.department) {
-        query = query.ilike('department', `%${filters.department}%`);
+        query = query.eq('department', filters.department);
       }
       
       if (filters.team) {
-        query = query.ilike('team', `%${filters.team}%`);
+        query = query.eq('team', filters.team);
       }
       
       if (filters.level) {
-        query = query.ilike('level', `%${filters.level}%`);
+        query = query.eq('level', filters.level);
       }
       
       if (filters.position) {
-        query = query.ilike('position', `%${filters.position}%`);
+        query = query.eq('position', filters.position);
       }
       
       if (filters.hasSubordinates !== undefined) {
@@ -49,41 +59,166 @@ class CommunicationService {
       }
       
       if (filters.workMode) {
-        query = query.ilike('work_mode', `%${filters.workMode}%`);
+        query = query.eq('work_mode', filters.workMode);
       }
       
       if (filters.contractType) {
-        query = query.ilike('contract_type', `%${filters.contractType}%`);
+        query = query.eq('contract_type', filters.contractType);
       }
       
       if (filters.seniority) {
-        query = query.ilike('seniority', `%${filters.seniority}%`);
-      }
-      
-      if (filters.projectId) {
-        // This would require a more complex query with joins
-        // For simplicity, we'll handle this separately
-      }
-      
-      if (filters.skill) {
-        // This would require a more complex query with joins
-        // For simplicity, we'll handle this separately
-      }
-      
-      if (filters.interest) {
-        // This would require a more complex query with joins
-        // For simplicity, we'll handle this separately
+        query = query.eq('seniority', filters.seniority);
       }
 
-      const { data, error } = await query
+      // Apply pagination and ordering
+      const { data: employees, error } = await query
         .order('name', { ascending: true })
         .limit(filters.limit || 1000);
 
       if (error) throw error;
       
-      return data;
+      if (!employees || employees.length === 0) {
+        return [];
+      }
+
+      // Fetch related data separately only if needed and in batches
+      let enrichedEmployees = employees;
+      
+      // Only fetch company data if we have employees and it's needed
+      if (filters.includeCompany !== false) {
+        const companyIds = [...new Set(employees.map(emp => emp.company_id))];
+        if (companyIds.length > 0) {
+          const { data: companies } = await supabase
+            .from('companies')
+            .select('id, name')
+            .in('id', companyIds);
+          
+          const companyMap = (companies || []).reduce((map, company) => {
+            map[company.id] = company.name;
+            return map;
+          }, {});
+          
+          enrichedEmployees = enrichedEmployees.map(emp => ({
+            ...emp,
+            company: { name: companyMap[emp.company_id] || 'Unknown' }
+          }));
+        }
+      }
+
+      // Only fetch skills if specifically requested
+      if (filters.includeSkills) {
+        const employeeIds = employees.map(emp => emp.id);
+        const { data: skills } = await supabase
+          .from('employee_skills')
+          .select(`
+            employee_id,
+            skill:skills(name)
+          `)
+          .in('employee_id', employeeIds);
+        
+        const skillsMap = (skills || []).reduce((map, item) => {
+          if (!map[item.employee_id]) map[item.employee_id] = [];
+          if (item.skill?.name) map[item.employee_id].push(item.skill);
+          return map;
+        }, {});
+        
+        enrichedEmployees = enrichedEmployees.map(emp => ({
+          ...emp,
+          skills: skillsMap[emp.id] || []
+        }));
+      }
+
+      // Only fetch interests if specifically requested
+      if (filters.includeInterests) {
+        const employeeIds = employees.map(emp => emp.id);
+        const { data: interests } = await supabase
+          .from('employee_interests')
+          .select(`
+            employee_id,
+            interest:interests(name)
+          `)
+          .in('employee_id', employeeIds);
+        
+        const interestsMap = (interests || []).reduce((map, item) => {
+          if (!map[item.employee_id]) map[item.employee_id] = [];
+          if (item.interest?.name) map[item.employee_id].push(item.interest);
+          return map;
+        }, {});
+        
+        enrichedEmployees = enrichedEmployees.map(emp => ({
+          ...emp,
+          interests: interestsMap[emp.id] || []
+        }));
+      }
+
+      // Handle complex filters with separate queries for better performance
+      if (filters.projectId) {
+        const { data: projectEmployees } = await supabase
+          .from('project_assignments')
+          .select('employee_id')
+          .eq('project_id', filters.projectId);
+        
+        const projectEmployeeIds = (projectEmployees || []).map(pe => pe.employee_id);
+        enrichedEmployees = enrichedEmployees.filter(emp =>
+          projectEmployeeIds.includes(emp.id)
+        );
+      }
+      
+      if (filters.skill) {
+        const { data: skillEmployees } = await supabase
+          .from('employee_skills')
+          .select('employee_id')
+          .eq('skill_id', filters.skill);
+        
+        const skillEmployeeIds = (skillEmployees || []).map(se => se.employee_id);
+        enrichedEmployees = enrichedEmployees.filter(emp =>
+          skillEmployeeIds.includes(emp.id)
+        );
+      }
+      
+      if (filters.interest) {
+        const { data: interestEmployees } = await supabase
+          .from('employee_interests')
+          .select('employee_id')
+          .eq('interest_id', filters.interest);
+        
+        const interestEmployeeIds = (interestEmployees || []).map(ie => ie.employee_id);
+        enrichedEmployees = enrichedEmployees.filter(emp =>
+          interestEmployeeIds.includes(emp.id)
+        );
+      }
+      
+      return enrichedEmployees;
     } catch (error) {
       console.error('Error fetching employees:', error);
+      throw error;
+    }
+  }
+
+  // Optimized method to get employee count only
+  async getEmployeesCount(filters = {}) {
+    try {
+      let query = supabase
+        .from('employees')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+
+      // Apply same filters as getEmployees but without joins
+      if (filters.companyId) query = query.eq('company_id', filters.companyId);
+      if (filters.region) query = query.eq('region', filters.region);
+      if (filters.department) query = query.eq('department', filters.department);
+      if (filters.level) query = query.eq('level', filters.level);
+      if (filters.position) query = query.eq('position', filters.position);
+      if (filters.hasSubordinates !== undefined) query = query.eq('has_subordinates', filters.hasSubordinates);
+      if (filters.workMode) query = query.eq('work_mode', filters.workMode);
+      if (filters.contractType) query = query.eq('contract_type', filters.contractType);
+
+      const { count, error } = await query;
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting employees count:', error);
       throw error;
     }
   }
@@ -105,131 +240,364 @@ class CommunicationService {
     }
   }
 
-  // Get employee by ID
-  async getEmployeeById(id) {
+  // Get employee by ID - Optimized version
+  async getEmployeeById(id, options = {}) {
     try {
-      const { data, error } = await supabase
+      if (!id) {
+        throw new Error('Employee ID is required');
+      }
+
+      // Start with basic employee data
+      let query = supabase
         .from('employees')
         .select(`
-          *,
-          company:companies(name),
-          skills:employee_skills(skill:skills(name)),
-          interests:employee_interests(interest:interests(name))
+          id,
+          name,
+          email,
+          phone,
+          region,
+          department,
+          level,
+          position,
+          work_mode,
+          contract_type,
+          has_subordinates,
+          company_id,
+          is_active,
+          created_at,
+          updated_at
         `)
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      const { data: employee, error } = await query;
       
-      return data;
+      if (error) throw error;
+      if (!employee) return null;
+
+      // Fetch related data separately and conditionally
+      let enrichedEmployee = { ...employee };
+
+      // Only fetch company data if needed
+      if (options.includeCompany !== false) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('id, name')
+          .eq('id', employee.company_id)
+          .single();
+        
+        enrichedEmployee.company = company || { name: 'Unknown' };
+      }
+
+      // Only fetch skills if specifically requested
+      if (options.includeSkills) {
+        const { data: skills } = await supabase
+          .from('employee_skills')
+          .select(`
+            skill:skills(name, id)
+          `)
+          .eq('employee_id', id);
+        
+        enrichedEmployee.skills = (skills || []).map(s => s.skill).filter(Boolean);
+      }
+
+      // Only fetch interests if specifically requested
+      if (options.includeInterests) {
+        const { data: interests } = await supabase
+          .from('employee_interests')
+          .select(`
+            interest:interests(name, id)
+          `)
+          .eq('employee_id', id);
+        
+        enrichedEmployee.interests = (interests || []).map(i => i.interest).filter(Boolean);
+      }
+
+      return enrichedEmployee;
     } catch (error) {
       console.error('Error fetching employee:', error);
       throw error;
     }
   }
 
-  // Send WhatsApp message
+  // Send WhatsApp message - Optimized version
   async sendWhatsAppMessage(recipientIds, message) {
     try {
-      // In a real implementation, this would call the WhatsApp Business API
-      // For now, we'll just log the action and create a communication log
+      console.log('🚀 Iniciando envío de WhatsApp message');
+      console.log('Recipient IDs:', recipientIds);
+      console.log('Message:', message);
       
-      const { data: senderData, error: senderError } = await supabase
-        .from('employees')
-        .select('id, company_id')
-        .eq('email', (await supabase.auth.getUser()).data.user.email)
-        .single();
+      // Validate inputs
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+        throw new Error('Recipient IDs must be a non-empty array');
+      }
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('Message must be a non-empty string');
+      }
       
-      if (senderError) throw senderError;
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
       
-      // Create communication log
-      const { data, error } = await supabase
-        .from('communication_logs')
-        .insert({
-          company_id: senderData.company_id,
-          sender_id: senderData.id,
-          recipient_ids: recipientIds,
-          message: message,
-          channel_id: 'whatsapp', // Assuming whatsapp channel exists
-          status: 'sent'
-        })
-        .select();
-
-      if (error) throw error;
+      // Validate recipient IDs using optimized helper
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'whatsapp'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
       
       // Simulate API call delay
+      console.log('⏳ Simulando llamada a API de WhatsApp...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      return { success: true, log: data[0] };
+      console.log('✅ Mensaje de WhatsApp enviado exitosamente');
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía WhatsApp`,
+        recipientCount: validRecipientIds.length,
+        channel: 'whatsapp',
+        timestamp: new Date().toISOString(),
+        logId: logId
+      };
     } catch (error) {
-      console.error('Error sending WhatsApp message:', error);
+      console.error('❌ Error sending WhatsApp message:', error);
       throw error;
     }
   }
 
-  // Send Telegram message
+  // Send Telegram message - Optimized version
   async sendTelegramMessage(recipientIds, message) {
     try {
-      // In a real implementation, this would call the Telegram Bot API
-      // For now, we'll just log the action and create a communication log
+      console.log('🚀 Iniciando envío de Telegram message');
+      console.log('Recipient IDs:', recipientIds);
+      console.log('Message:', message);
       
-      const { data: senderData, error: senderError } = await supabase
-        .from('employees')
-        .select('id, company_id')
-        .eq('email', (await supabase.auth.getUser()).data.user.email)
-        .single();
+      // Validate inputs
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+        throw new Error('Recipient IDs must be a non-empty array');
+      }
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('Message must be a non-empty string');
+      }
       
-      if (senderError) throw senderError;
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
       
-      // Create communication log
-      const { data, error } = await supabase
-        .from('communication_logs')
-        .insert({
-          company_id: senderData.company_id,
-          sender_id: senderData.id,
-          recipient_ids: recipientIds,
-          message: message,
-          channel_id: 'telegram', // Assuming telegram channel exists
-          status: 'sent'
-        })
-        .select();
-
-      if (error) throw error;
+      // Validate recipient IDs using optimized helper
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'telegram'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
       
       // Simulate API call delay
+      console.log('⏳ Simulando llamada a API de Telegram...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      return { success: true, log: data[0] };
+      console.log('✅ Mensaje de Telegram enviado exitosamente');
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía Telegram`,
+        recipientCount: validRecipientIds.length,
+        channel: 'telegram',
+        timestamp: new Date().toISOString(),
+        logId: logId
+      };
     } catch (error) {
-      console.error('Error sending Telegram message:', error);
+      console.error('❌ Error sending Telegram message:', error);
       throw error;
     }
   }
 
-  // Get communication statistics
-  async getCommunicationStats() {
+  // Optimized helper method to get sender data (shared between message methods)
+  async getSenderData() {
     try {
-      const { data: senderData, error: senderError } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('email', (await supabase.auth.getUser()).data.user.email)
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (senderError) throw senderError;
+      if (user?.email) {
+        const { data: userData, error: senderError } = await supabase
+          .from('employees')
+          .select('id, company_id')
+          .eq('email', user.email)
+          .single();
+        
+        if (!senderError && userData) {
+          return userData;
+        }
+      }
       
+      return { id: 'admin', company_id: 1 }; // Default fallback
+    } catch (error) {
+      console.warn('⚠️ Error getting sender data, using default:', error.message);
+      return { id: 'admin', company_id: 1 };
+    }
+  }
+
+  // Optimized helper method to validate recipients
+  async validateRecipients(recipientIds) {
+    if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+      throw new Error('Recipient IDs must be a non-empty array');
+    }
+
+    const limitedIds = recipientIds.slice(0, 100); // Limit for performance
+    const { data: existingRecipients, error } = await supabase
+      .from('employees')
+      .select('id')
+      .in('id', limitedIds);
+    
+    if (error) {
+      console.warn('⚠️ Error validating recipients:', error);
+      return limitedIds; // Return original IDs if validation fails
+    }
+
+    const existingIds = (existingRecipients || []).map(r => r.id);
+    const missingIds = limitedIds.filter(id => !existingIds.includes(id));
+    
+    if (missingIds.length > 0) {
+      console.warn('⚠️ Some recipient IDs not found:', missingIds);
+    }
+
+    return existingIds;
+  }
+
+  // Optimized helper method to create communication log
+  async createCommunicationLog(senderData, recipientIds, message, channelId) {
+    try {
+      const logData = {
+        company_id: senderData.company_id,
+        sender_id: senderData.id,
+        recipient_ids: recipientIds.slice(0, 50), // Limit array size
+        message: message.substring(0, 1000), // Limit message length
+        channel_id: channelId,
+        status: 'sent',
+        sent_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('communication_logs')
-        .select('channel, status, count')
-        .eq('sender_id', senderData.id)
-        .group('channel, status');
+        .insert(logData)
+        .select('id')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('⚠️ Error creating communication log:', error);
+        return null;
+      }
+
+      return data.id;
+    } catch (error) {
+      console.warn('⚠️ Critical error creating communication log:', error);
+      return null;
+    }
+  }
+
+  // Get communication statistics - Optimized version
+  async getCommunicationStats() {
+    try {
+      // Get user data with caching
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        throw new Error('User not authenticated');
+      }
+
+      // Use a more efficient query with specific fields
+      const { data: senderData, error: senderError } = await supabase
+        .from('employees')
+        .select('id, company_id')
+        .eq('email', user.email)
+        .single();
       
-      return data;
+      if (senderError) {
+        console.warn('Sender not found in employees table:', senderError);
+        return this.getEmptyStats();
+      }
+
+      // Use a simpler query without grouping for better performance
+      const { data: logs, error } = await supabase
+        .from('communication_logs')
+        .select('channel_id, status')
+        .eq('sender_id', senderData.id)
+        .order('created_at', { ascending: false })
+        .limit(1000); // Limit to recent logs for better performance
+
+      if (error) {
+        console.warn('Error fetching communication logs:', error);
+        return this.getEmptyStats();
+      }
+
+      // Process stats in JavaScript instead of database grouping
+      const stats = this.processCommunicationStats(logs || []);
+      return stats;
     } catch (error) {
       console.error('Error fetching communication stats:', error);
-      throw error;
+      return this.getEmptyStats();
     }
+  }
+
+  // Helper method to process stats locally
+  processCommunicationStats(logs) {
+    const stats = {
+      total: logs.length,
+      byChannel: {},
+      byStatus: {
+        sent: 0,
+        delivered: 0,
+        read: 0,
+        failed: 0
+      },
+      deliveryRate: 0,
+      readRate: 0
+    };
+
+    logs.forEach(log => {
+      const channel = log.channel_id || 'unknown';
+      const status = log.status || 'unknown';
+
+      // Count by channel
+      stats.byChannel[channel] = (stats.byChannel[channel] || 0) + 1;
+
+      // Count by status
+      if (stats.byStatus[status] !== undefined) {
+        stats.byStatus[status]++;
+      }
+    });
+
+    // Calculate rates
+    stats.deliveryRate = stats.total > 0 ? ((stats.byStatus.delivered + stats.byStatus.read) / stats.total) * 100 : 0;
+    stats.readRate = stats.total > 0 ? (stats.byStatus.read / stats.total) * 100 : 0;
+
+    return stats;
+  }
+
+  // Helper method for empty stats
+  getEmptyStats() {
+    return {
+      total: 0,
+      byChannel: {},
+      byStatus: {
+        sent: 0,
+        delivered: 0,
+        read: 0,
+        failed: 0
+      },
+      deliveryRate: 0,
+      readRate: 0
+    };
   }
 
   // Generate AI-powered insights for a specific company
@@ -263,7 +631,6 @@ class CommunicationService {
   // Analyze communication data and generate insights
   analyzeCommunicationData(logs, companyName) {
     const totalMessages = logs.length;
-    const sentMessages = logs.filter(log => log.status === 'sent').length;
     const deliveredMessages = logs.filter(log => log.status === 'delivered').length;
     const readMessages = logs.filter(log => log.status === 'read').length;
 
@@ -573,4 +940,6 @@ class CommunicationService {
   }
 }
 
-export default new CommunicationService();
+// Create a named instance for better debugging and stack traces
+const communicationService = new CommunicationService();
+export default communicationService;

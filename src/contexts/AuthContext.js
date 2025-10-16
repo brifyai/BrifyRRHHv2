@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { auth, db, supabase } from '../lib/supabase'
+import { auth, db } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
         const userProfileData = {
           id: userId,
           email: user?.email || '',
-          name: user?.user_metadata?.name || 'Usuario',
+          name: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Usuario',
           telegram_id: null,
           is_active: true,
           current_plan_id: null,
@@ -304,17 +304,9 @@ export const AuthProvider = ({ children }) => {
   }
 
   // Verificar si el usuario tiene un plan activo
+  // Siempre devuelve true para eliminar todas las restricciones de planes
   const hasActivePlan = () => {
-    if (!userProfile) return false
-    
-    if (!userProfile.is_active || !userProfile.plan_expiration) {
-      return false
-    }
-    
-    const expirationDate = new Date(userProfile.plan_expiration)
-    const now = new Date()
-    
-    return expirationDate > now
+    return true
   }
 
   // Obtener días restantes del plan
@@ -354,7 +346,7 @@ export const AuthProvider = ({ children }) => {
     }
     
     initializeAuth()
-  }, [])
+  }, [loadUserProfile])
 
   // Efecto para manejar cambios de autenticación
   useEffect(() => {
@@ -429,7 +421,7 @@ export const AuthProvider = ({ children }) => {
       if (profileLoadTimeout) clearTimeout(profileLoadTimeout)
       if (visibilityTimeout) clearTimeout(visibilityTimeout)
     }
-  }, [user, loading])
+  }, [user, loading, loadUserProfile, userProfile])
 
   const value = {
     user,

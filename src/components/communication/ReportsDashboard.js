@@ -4,7 +4,6 @@ import {
   ChatBubbleLeftRightIcon,
   BuildingOfficeIcon,
   UserGroupIcon,
-  DocumentTextIcon,
   CalendarIcon,
   FunnelIcon,
   ClockIcon,
@@ -12,17 +11,9 @@ import {
   HandThumbUpIcon,
   ArrowPathIcon,
   ArrowTrendingUpIcon,
-  MapPinIcon,
-  BriefcaseIcon,
-  HomeModernIcon,
   XMarkIcon,
   ChevronDownIcon,
-  MagnifyingGlassIcon,
   PlusIcon,
-  FaceSmileIcon,
-  FaceFrownIcon,
-  ExclamationTriangleIcon,
-  HeartIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import {
@@ -37,7 +28,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Bar } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import enhancedCommunicationService from '../../services/enhancedCommunicationService';
@@ -144,7 +135,6 @@ const ReportsDashboard = () => {
   const [allPositions, setAllPositions] = useState([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
   const [showFilters, setShowFilters] = useState(false);
   const [automatedReportSettings, setAutomatedReportSettings] = useState({
     frequency: 'weekly',
@@ -393,7 +383,6 @@ const ReportsDashboard = () => {
 
       // Preparar datos para Excel
       const excelData = allReports.recentActivity.map(log => {
-        const recipientCount = log.recipient_ids.length;
         const firstRecipient = employees.find(emp => emp.id === log.recipient_ids[0]);
 
         return {
@@ -606,27 +595,6 @@ const ReportsDashboard = () => {
   };
 
   // Get company color
-  const getCompanyColor = (company) => {
-    const colors = {
-      'Ariztia': 'bg-engage-yellow text-engage-black',
-      'Inchcape': 'bg-green-500 text-white',
-      'Achs': 'bg-purple-500 text-white',
-      'Arcoprime': 'bg-pink-500 text-white',
-      'Grupo Saesa': 'bg-red-500 text-white',
-      'Colbun': 'bg-orange-500 text-white',
-      'AFP Habitat': 'bg-teal-500 text-white',
-      'Copec': 'bg-blue-500 text-white',
-      'Antofagasta Minerals': 'bg-amber-500 text-white',
-      'Vida Cámara': 'bg-emerald-500 text-white',
-      'Enaex': 'bg-rose-500 text-white',
-      'SQM': 'bg-cyan-500 text-white',
-      'CMPC': 'bg-lime-500 text-engage-black',
-      'Corporación Chilena - Alemana': 'bg-indigo-500 text-white',
-      'Hogar Alemán': 'bg-violet-500 text-white',
-      'Empresas SB': 'bg-fuchsia-500 text-white'
-    };
-    return colors[company] || 'bg-gray-500 text-white';
-  };
 
   if (loading) {
     return (

@@ -4,11 +4,8 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  ChatBubbleLeftRightIcon,
-  PaperAirplaneIcon,
   ClockIcon,
   UserPlusIcon,
-  CalendarIcon,
   BellIcon
 } from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';

@@ -1,4 +1,4 @@
-import inMemoryEmployeeService from './inMemoryEmployeeService';
+import inMemoryEmployeeService from './inMemoryEmployeeService.js';
 
 class EmployeeFolderService {
   // Simulamos un sistema de archivos en memoria
@@ -375,4 +375,6 @@ class EmployeeFolderService {
   }
 }
 
-export default new EmployeeFolderService();
+// Create a named instance for better debugging and stack traces
+const employeeFolderService = new EmployeeFolderService();
+export default employeeFolderService;

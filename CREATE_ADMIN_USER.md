@@ -12,7 +12,7 @@ El error `foreign key constraint "users_id_fkey"` ocurre porque la tabla `users`
 2. En el menú lateral, ve a **Authentication** → **Users**
 3. Haz clic en **Add user**
 4. Ingresa los siguientes datos:
-   - **Email**: `camiloalegriabarra@gmail.com`
+   - **Email**: `juanpablo.riesco@example.com`
    - **Password**: `Antonito26`
 5. Desmarca **"Send invite email"** (para que no requiera confirmación)
 6. Haz clic en **Save**
@@ -23,7 +23,7 @@ El error `foreign key constraint "users_id_fkey"` ocurre porque la tabla `users`
 ```sql
 SELECT id, email, created_at
 FROM auth.users
-WHERE email = 'camiloalegriabarra@gmail.com';
+WHERE email = 'juanpablo.riesco@example.com';
 ```
 
 ### Paso 3: Ejecutar Script de Datos
@@ -34,7 +34,7 @@ Ahora ejecuta el script `database/generate-sample-data.sql` nuevamente. La funci
 
 1. En **SQL Editor**, ejecuta:
 ```sql
-SELECT 
+SELECT
   u.id,
   u.email,
   u.full_name,
@@ -45,13 +45,13 @@ FROM users u
 LEFT JOIN companies c ON u.company_id = c.id
 LEFT JOIN payments pay ON pay.user_id = u.id AND pay.status = 'paid'
 LEFT JOIN plans p ON p.id = pay.plan_id
-WHERE u.email = 'camiloalegriabarra@gmail.com';
+WHERE u.email = 'juanpablo.riesco@example.com';
 ```
 
 ## 🎯 Resultado Esperado
 
 Deberías ver:
-- Usuario `camiloalegriabarra@gmail.com` con rol de administrador
+- Usuario `juanpablo.riesco@example.com` con rol de administrador
 - Asignado al "Plan Profesional"
 - Listo para usar en la aplicación
 
@@ -59,7 +59,7 @@ Deberías ver:
 
 Una vez creado el usuario, puedes iniciar sesión en la aplicación:
 - **URL**: http://localhost:3000
-- **Email**: `camiloalegriabarra@gmail.com`
+- **Email**: `juanpablo.riesco@example.com`
 - **Password**: `Antonito26`
 
 ## 📝 Notas Importantes
@@ -68,7 +68,7 @@ Una vez creado el usuario, puedes iniciar sesión en la aplicación:
 2. **Relación**: La tabla `users` extiende la información de `auth.users`
 3. **Seguridad**: Usa contraseñas seguras para el administrador
 4. **Email**: El email debe coincidir exactamente en ambas tablas
-5. **Credenciales**: Email: camiloalegriabarra@gmail.com | Password: Antonito26
+5. **Credenciales**: Email: juanpablo.riesco@example.com | Password: Antonito26
 
 ## 🚀 Siguiente Paso
 
@@ -80,7 +80,7 @@ Una vez que el usuario administrador esté funcionando, puedes:
 ## 🆘 Si tienes problemas
 
 Si el usuario no se crea correctamente:
-1. Verifica que el email sea exactamente `camiloalegriabarra@gmail.com`
+1. Verifica que el email sea exactamente `juanpablo.riesco@example.com`
 2. Asegúrate de que el usuario exista en `auth.users`
 3. Revisa los logs de Supabase para errores detallados
 4. Ejecuta las consultas de verificación mencionadas arriba

@@ -2,9 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   PaperAirplaneIcon,
-  PhotoIcon,
-  DocumentIcon,
-  VideoCameraIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   EyeIcon,
@@ -13,17 +10,17 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { List } from 'react-window';
-import { EditorState, convertToRaw, ContentState, Modifier } from 'draft-js';
+import { EditorState, ContentState } from 'draft-js';
 import { Editor } from 'react-draft-wysiwyg';
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
 import { useAuth } from '../../contexts/AuthContext';
-import inMemoryUserService from '../../services/inMemoryUserService';
 import templateService from '../../services/templateService';
 import inMemoryDraftService from '../../services/inMemoryDraftService';
 import { supabase } from '../../lib/supabase';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
+import communicationService from '../../services/communicationService';
 
 const SendMessages = () => {
   const navigate = useNavigate();
@@ -38,10 +35,8 @@ const SendMessages = () => {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [userPermissions, setUserPermissions] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [showAppointmentScheduler, setShowAppointmentScheduler] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
 
   useEffect(() => {
@@ -61,28 +56,26 @@ const SendMessages = () => {
       // Limpiar los datos temporales
       delete window.selectedEmployeesData;
     } else {
-      // Si no hay empleados seleccionados, redirigir a la selección
-      console.log('No selected employees found, redirecting to database');
-      navigate('/base-de-datos');
+      // Si no hay empleados seleccionados, mostrar mensaje y redirigir
+      console.log('No selected employees found, showing alert and redirecting');
+      Swal.fire({
+        title: 'No hay empleados seleccionados',
+        text: 'Por favor, seleccione empleados desde la base de datos antes de enviar mensajes.',
+        icon: 'info',
+        confirmButtonText: 'Ir a la base de datos',
+        confirmButtonColor: '#0693e3'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/base-de-datos');
+        }
+      });
     }
   }, [location, navigate]);
 
   useEffect(() => {
-    // Cargar permisos del usuario y plantillas
-    loadUserPermissions();
+    // Cargar plantillas
     loadTemplates();
   }, [user]);
-
-  const loadUserPermissions = async () => {
-    if (!user) return;
-
-    try {
-      const permissions = await inMemoryUserService.getUserPermissions(user.id);
-      setUserPermissions(permissions);
-    } catch (error) {
-      console.error('Error loading user permissions:', error);
-    }
-  };
 
   const loadTemplates = async () => {
     try {
@@ -122,6 +115,12 @@ const SendMessages = () => {
   };
 
   const handleSendMessage = async (channel) => {
+    // Verificar que haya empleados seleccionados
+    if (selectedEmployees.length === 0) {
+      setError('Debe seleccionar al menos un empleado para enviar mensajes.');
+      return;
+    }
+
     if (!message.trim() && !media) {
       setError('Por favor, ingrese un mensaje o adjunte un archivo');
       return;
@@ -187,56 +186,64 @@ const SendMessages = () => {
     setSuccessMessage('');
 
     try {
-      // Simular envío de mensaje
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Obtener los IDs de los empleados seleccionados
+      const employeeIds = selectedEmployees.map(emp => emp.id);
+      
+      console.log(`🚀 Enviando mensaje por ${channel} a ${employeeIds.length} empleados:`, employeeIds);
+      console.log('💬 Mensaje:', message);
+      
+      // Enviar el mensaje usando el servicio de comunicación
+      let result;
+      if (channel === 'WhatsApp') {
+        console.log('📱 Llamando a sendWhatsAppMessage...');
+        result = await communicationService.sendWhatsAppMessage(employeeIds, message);
+      } else if (channel === 'Telegram') {
+        console.log('✈️ Llamando a sendTelegramMessage...');
+        result = await communicationService.sendTelegramMessage(employeeIds, message);
+      }
 
-      // En un entorno real, aquí se llamaría al servicio de comunicación
-      // para enviar el mensaje por el canal especificado (WhatsApp o Telegram)
+      console.log('📊 Resultado del envío:', result);
 
-      setSent(true);
-      setSuccessMessage(`Mensaje enviado exitosamente a ${selectedEmployees.length} empleados vía ${channel}`);
+      if (result && result.success) {
+        setSent(true);
+        const successMsg = result.message || `Mensaje enviado exitosamente a ${selectedEmployees.length} empleados vía ${channel}`;
+        setSuccessMessage(successMsg);
+        
+        // Mostrar toast de éxito con más detalles
+        toast.success(successMsg, {
+          duration: 4000,
+          position: 'top-center'
+        });
+
+        // Navegar de vuelta después de un breve delay
+        setTimeout(() => {
+          console.log('🔄 Navegando de vuelta al dashboard de comunicación...');
+          navigate('/communication');
+        }, 2000);
+      } else {
+        console.error('❌ El servicio reportó fallo:', result);
+        const errorMsg = result?.error || 'Error desconocido al enviar el mensaje';
+        setError(`Error al enviar el mensaje: ${errorMsg}`);
+        toast.error(`Error: ${errorMsg}`, {
+          duration: 5000,
+          position: 'top-center'
+        });
+      }
     } catch (err) {
-      setError('Error al enviar el mensaje. Por favor, inténtelo de nuevo.');
+      console.error('❌ Error general en handleSendMessage:', err);
+      const errorMessage = err.message || 'Error al enviar el mensaje. Por favor, inténtelo de nuevo.';
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        duration: 5000,
+        position: 'top-center'
+      });
     } finally {
       setSending(false);
     }
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setMedia(file);
 
-      // Determinar el tipo de medio
-      if (file.type.startsWith('image/')) {
-        setMediaType('image');
-      } else if (file.type.startsWith('video/')) {
-        setMediaType('video');
-      } else if (file.type === 'application/pdf') {
-        setMediaType('pdf');
-      } else {
-        setMediaType('document');
-      }
-    }
-  };
 
-  const removeMedia = () => {
-    setMedia(null);
-    setMediaType('');
-  };
-
-  const getMediaIcon = () => {
-    switch (mediaType) {
-      case 'image':
-        return <PhotoIcon className="h-6 w-6 text-green-500" />;
-      case 'video':
-        return <VideoCameraIcon className="h-6 w-6 text-purple-500" />;
-      case 'pdf':
-        return <DocumentIcon className="h-6 w-6 text-red-500" />;
-      default:
-        return <DocumentIcon className="h-6 w-6 text-blue-500" />;
-    }
-  };
 
   // Componente memoizado para lista de empleados con virtualización
   const EmployeeListItem = React.memo(({ employee, style }) => (
@@ -269,7 +276,6 @@ const SendMessages = () => {
   const handleEditorChange = (state) => {
     setEditorState(state);
     const contentState = state.getCurrentContent();
-    const rawContent = convertToRaw(contentState);
     const plainText = contentState.getPlainText();
     setMessage(plainText);
   };
@@ -632,7 +638,7 @@ const SendMessages = () => {
       };
 
       // Guardar el borrador
-      const savedDraft = await inMemoryDraftService.createDraft(draftData);
+      await inMemoryDraftService.createDraft(draftData);
 
       setSuccessMessage(`Borrador "${draftTitle}" guardado exitosamente`);
 
@@ -1004,6 +1010,10 @@ const SendMessages = () => {
         case 'microsoft-365':
           calendarName = 'Microsoft 365';
           break;
+        default:
+          console.warn('Calendario no reconocido:', formValues.calendar);
+          calendarName = 'Calendario no especificado';
+          break;
       }
 
       // Crear evento en el calendario correspondiente
@@ -1045,6 +1055,11 @@ const SendMessages = () => {
             meetingLink = formValues.location || 'Ubicación por confirmar';
             platformName = 'Presencial';
             break;
+          default:
+            console.warn('Plataforma no reconocida:', formValues.platform);
+            meetingLink = formValues.location || 'Ubicación por confirmar';
+            platformName = 'Presencial';
+            break;
         }
       } else {
         // Determinar nombre de plataforma basado en el link real
@@ -1070,27 +1085,18 @@ const SendMessages = () => {
         minute: '2-digit'
       });
 
-      let agendaMessage = `*AGENDA DE CITA*\n\n`;
-      agendaMessage += `*Título:* ${formValues.title}\n`;
-      agendaMessage += `*Fecha:* ${formattedDate}\n`;
-      agendaMessage += `*Hora:* ${formattedTime}\n`;
-      agendaMessage += `*Calendario:* ${calendarName}\n`;
+      const agendaMessageText = `*Título:* ${formValues.title}\n` +
+        `*Fecha:* ${formattedDate}\n` +
+        `*Hora:* ${formattedTime}\n` +
+        `*Calendario:* ${calendarName}\n` +
+        (formValues.location && formValues.platform !== 'presencial' ? `*Ubicación:* ${formValues.location}\n` : '') +
+        `*Plataforma:* ${platformName}\n` +
+        (formValues.platform !== 'presencial' ? `*Link de reunión:* ${meetingLink}\n\n` : `*Lugar:* ${meetingLink}\n\n`) +
+        `*Descripción:*\n${formValues.description}\n\n` +
+        `*Recordatorio:* Se enviará un recordatorio 15 minutos antes de la reunión.\n\n` +
+        `*Confirmación:* Por favor confirma tu asistencia respondiendo a este mensaje.`;
 
-      if (formValues.location && formValues.platform !== 'presencial') {
-        agendaMessage += `*Ubicación:* ${formValues.location}\n`;
-      }
-
-      agendaMessage += `*Plataforma:* ${platformName}\n`;
-
-      if (formValues.platform !== 'presencial') {
-        agendaMessage += `*Link de reunión:* ${meetingLink}\n\n`;
-      } else {
-        agendaMessage += `*Lugar:* ${meetingLink}\n\n`;
-      }
-
-      agendaMessage += `*Descripción:*\n${formValues.description}\n\n`;
-      agendaMessage += `*Recordatorio:* Se enviará un recordatorio 15 minutos antes de la reunión.\n\n`;
-      agendaMessage += `*Confirmación:* Por favor confirma tu asistencia respondiendo a este mensaje.`;
+      console.log('📅 Mensaje de agenda generado:', agendaMessageText);
 
       // Enviar el mensaje
       setSending(true);

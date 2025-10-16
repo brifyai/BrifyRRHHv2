@@ -187,11 +187,11 @@ BEGIN
     INSERT INTO users (id, email, full_name, is_active)
     SELECT
       au.id,
-      'camiloalegriabarra@gmail.com',
-      'Camilo Alegria Barra',
+      'juanpablo.riesco@example.com',
+      'Juan Pablo Riesco',
       true
     FROM auth.users au
-    WHERE au.email = 'camiloalegriabarra@gmail.com'
+    WHERE au.email = 'juanpablo.riesco@example.com'
     ON CONFLICT (email) DO NOTHING;
     
     -- Asignar plan profesional al administrador
@@ -203,13 +203,13 @@ BEGIN
       'paid',
       NOW()
     FROM users u, plans p
-    WHERE u.email = 'camiloalegriabarra@gmail.com'
+    WHERE u.email = 'juanpablo.riesco@example.com'
     AND p.name = 'Plan Profesional'
-    AND EXISTS (SELECT 1 FROM auth.users WHERE email = 'camiloalegriabarra@gmail.com')
+    AND EXISTS (SELECT 1 FROM auth.users WHERE email = 'juanpablo.riesco@example.com')
     ON CONFLICT DO NOTHING;
     
     RAISE NOTICE 'Usuario administrador configurado exitosamente';
-    RAISE NOTICE 'IMPORTANTE: Debes crear el usuario camiloalegriabarra@gmail.com en Supabase Auth primero';
+    RAISE NOTICE 'IMPORTANTE: Debes crear el usuario juanpablo.riesco@example.com en Supabase Auth primero';
 END;
 $$ LANGUAGE plpgsql;
 

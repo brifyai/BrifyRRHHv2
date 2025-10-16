@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ChartBarIcon,
   BuildingOfficeIcon,
@@ -21,9 +21,7 @@ import ReportsDashboard from './ReportsDashboard';
 import EmployeeBulkUpload from './EmployeeBulkUpload'; // Importar el nuevo componente
 import templateService from '../../services/templateService';
 import databaseEmployeeService from '../../services/databaseEmployeeService';
-import inMemoryDraftService from '../../services/inMemoryDraftService';
 import communicationService from '../../services/communicationService';
-import { supabase } from '../../lib/supabase';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -69,86 +67,78 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Función para determinar la pestaña activa basada en la URL actual
+  const getActiveTabFromUrl = useCallback(() => {
+    const currentPath = location.pathname;
+    
+    // Mapeo de URLs a pestañas
+    const urlToTabMap = {
+      '/base-de-datos': 'dashboard',
+      '/base-de-datos/database': 'database',
+      '/communication/send': 'send',
+      '/communication/folders': 'folders',
+      '/communication/templates': 'templates',
+      '/communication/reports': 'reports',
+      '/communication/bulk-upload': 'bulk-upload'
+    };
+    
+    return urlToTabMap[currentPath] || activeTab;
+  }, [location.pathname, activeTab]);
+  
+  const [currentTab, setCurrentTab] = useState(getActiveTabFromUrl());
+  
+  // Actualizar la pestaña activa cuando cambia la URL
+  useEffect(() => {
+    const newTab = getActiveTabFromUrl();
+    if (newTab !== currentTab) {
+      setCurrentTab(newTab);
+    }
+  }, [location.pathname, currentTab, getActiveTabFromUrl]);
+  
   const [templatesCount, setTemplatesCount] = useState(0);
-  const [totalEmployees, setTotalEmployees] = useState(0);
   const [sentMessages, setSentMessages] = useState(0);
   const [readRate, setReadRate] = useState(0);
   const [flippedCards, setFlippedCards] = useState(new Set());
-  const [expandedCards, setExpandedCards] = useState(new Set());
   const [companyInsights, setCompanyInsights] = useState({});
-  const [loadingInsights, setLoadingInsights] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Cargar datos del dashboard al montar el componente
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        console.log('Cargando dashboard de comunicación...');
-
-        // Cargar conteo de plantillas
-        const templatesCount = await templateService.getTemplatesCount();
-        setTemplatesCount(templatesCount);
-
-        // Cargar estadísticas del dashboard desde el servicio de base de datos
-        const dashboardStats = await databaseEmployeeService.getDashboardStats();
-        setTotalEmployees(dashboardStats.totalEmployees);
-        setSentMessages(dashboardStats.sentMessages);
-        setReadRate(dashboardStats.readRate);
-
-        // Cargar insights de IA para todas las compañías
-        await loadCompanyInsights();
-
-        // Verificar si hay una compañía seleccionada desde el estado de navegación
-        console.log('Verificando estado de navegación...');
-        console.log('location:', location);
-        console.log('location.state:', location.state);
-
-        if (location.state && location.state.selectedCompany) {
-          const selectedCompany = location.state.selectedCompany;
-          console.log('Compañía seleccionada desde navegación:', selectedCompany);
-          console.log('Compañías disponibles:', companies);
-
-          // Buscar la compañía que coincida exactamente
-          const matchingCompany = companies.find(company => company === selectedCompany);
-          console.log('Compañía encontrada:', matchingCompany);
-
-          if (matchingCompany) {
-            // Abrir la tarjeta de la compañía seleccionada
-            setFlippedCards(prev => new Set([...prev, matchingCompany]));
-            console.log('Tarjeta volteada para:', matchingCompany);
-          } else {
-            console.warn('No se encontró coincidencia para:', selectedCompany);
-          }
-        } else {
-          console.log('No hay compañía seleccionada en el estado');
-        }
-
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        setTemplatesCount(0);
-        setTotalEmployees(0);
-        setSentMessages(0);
-        setReadRate(0);
-      }
-    };
-
-    loadDashboardData();
-  }, []);
-
-  // Lista de compañías para análisis (ordenadas alfabéticamente)
-  const companies = ['Achs', 'AFP Habitat', 'Antofagasta Minerals', 'Arcoprime', 'Ariztia', 'CMPC', 'Colbun', 'Copec', 'Corporación Chilena', 'Empresas SB', 'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'];
+  // Lista de compañías para análisis (ordenadas alfabéticamente) - useMemo para evitar recreación
+  const companies = useMemo(() => [
+    'Achs', 'AFP Habitat', 'Antofagasta Minerals', 'Arcoprime', 'Ariztia',
+    'CMPC', 'Colbun', 'Copec', 'Corporación Chilena', 'Empresas SB',
+    'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'
+  ], []);
 
   // Función para cargar insights de IA para todas las compañías
-  const loadCompanyInsights = async () => {
-    setLoadingInsights(true);
+  const loadCompanyInsights = useCallback(async () => {
     try {
       const insightsPromises = companies.map(async (companyName) => {
         try {
           const insights = await communicationService.generateCompanyInsights(companyName);
           return { companyName, insights };
         } catch (error) {
-          console.error(`Error loading insights for ${companyName}:`, error);
-          return { companyName, insights: null };
+          console.warn(`Error loading insights for ${companyName}:`, error.message);
+          // Retornar insights por defecto cuando hay error
+          return {
+            companyName,
+            insights: {
+              frontInsights: [
+                {
+                  title: 'Información Limitada',
+                  description: 'Los datos de comunicación están siendo procesados. Por favor, intente más tarde.',
+                  type: 'info'
+                }
+              ],
+              backInsights: [
+                {
+                  title: 'Análisis Pendiente',
+                  description: 'El sistema está recopilando información para generar insights detallados.',
+                  type: 'info'
+                }
+              ]
+            }
+          };
         }
       });
 
@@ -161,10 +151,86 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
       setCompanyInsights(insightsMap);
     } catch (error) {
       console.error('Error loading company insights:', error);
-    } finally {
-      setLoadingInsights(false);
     }
-  };
+  }, [companies]); // companies es una dependencia válida ya que viene de useMemo
+
+  // Cargar datos del dashboard al montar el componente y cuando cambia el estado de navegación
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        console.log('Cargando dashboard de comunicación...');
+
+        // Cargar conteo de plantillas con manejo de error
+        try {
+          const templatesCount = await templateService.getTemplatesCount();
+          setTemplatesCount(templatesCount);
+        } catch (error) {
+          console.warn('Error loading templates count:', error);
+          setTemplatesCount(0);
+        }
+
+        // Cargar estadísticas del dashboard desde el servicio de base de datos con manejo de error
+        try {
+          const dashboardStats = await databaseEmployeeService.getDashboardStats();
+          // setTotalEmployees(dashboardStats.totalEmployees); // Comentado ya que no se usa
+          setSentMessages(dashboardStats.sentMessages);
+          setReadRate(dashboardStats.readRate);
+        } catch (error) {
+          console.warn('Error loading dashboard stats:', error);
+          // setTotalEmployees(0); // Comentado ya que no se usa
+          setSentMessages(0);
+          setReadRate(0);
+        }
+
+        // Cargar insights de IA para todas las compañías con manejo de error
+        try {
+          await loadCompanyInsights();
+        } catch (error) {
+          console.warn('Error loading company insights:', error);
+        }
+
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        setTemplatesCount(0);
+        // setTotalEmployees(0); // Comentado ya que no se usa
+        setSentMessages(0);
+        setReadRate(0);
+      }
+    };
+
+    loadDashboardData();
+  }, [loadCompanyInsights]);
+
+  // Efecto separado para manejar la compañía seleccionada
+  useEffect(() => {
+    // Verificar si hay una compañía seleccionada desde el estado de navegación
+    console.log('Verificando estado de navegación...');
+    console.log('location:', location);
+    console.log('location.state:', location.state);
+
+    if (location.state && location.state.selectedCompany) {
+      const selectedCompany = location.state.selectedCompany;
+      console.log('Compañía seleccionada desde navegación:', selectedCompany);
+      
+      // Lista de compañías para comparación
+      const companiesList = ['Achs', 'AFP Habitat', 'Antofagasta Minerals', 'Arcoprime', 'Ariztia', 'CMPC', 'Colbun', 'Copec', 'Corporación Chilena', 'Empresas SB', 'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'];
+      console.log('Compañías disponibles:', companiesList);
+
+      // Buscar la compañía que coincida exactamente
+      const matchingCompany = companiesList.find(company => company === selectedCompany);
+      console.log('Compañía encontrada:', matchingCompany);
+
+      if (matchingCompany) {
+        // Abrir la tarjeta de la compañía seleccionada
+        setFlippedCards(prev => new Set([...prev, matchingCompany]));
+        console.log('Tarjeta volteada para:', matchingCompany);
+      } else {
+        console.warn('No se encontró coincidencia para:', selectedCompany);
+      }
+    } else {
+      console.log('No hay compañía seleccionada en el estado');
+    }
+  }, [location]); // Añadir location como dependencia completa
 
   // Función para voltear tarjetas
   const toggleFlip = (companyId) => {
@@ -179,18 +245,6 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     });
   };
 
-  // Función para expandir/colapsar tarjetas
-  const toggleExpansion = (companyId) => {
-    setExpandedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(companyId)) {
-        newSet.delete(companyId);
-      } else {
-        newSet.add(companyId);
-      }
-      return newSet;
-    });
-  };
 
   // Función para filtrar compañías basadas en el término de búsqueda
   const filteredCompanies = companies.filter(company =>
@@ -511,59 +565,35 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   };
 
   const tabs = [
-    { id: 'dashboard', name: 'Tendencias', icon: ChartBarIcon },
-    { id: 'database', name: 'Datos', icon: BuildingOfficeIcon },
-    { id: 'send', name: 'Enviar', icon: PaperAirplaneIcon },
-    { id: 'folders', name: 'Carpetas', icon: FolderIcon },
-    { id: 'templates', name: 'Plantillas', icon: TemplateIcon },
-    { id: 'reports', name: 'Reportes', icon: DocumentReportIcon },
-    { id: 'bulk-upload', name: 'Importar', icon: ArrowUpTrayIcon }, // Agregar nueva pestaña
+    { id: 'dashboard', name: 'Tendencias', icon: ChartBarIcon, url: '/base-de-datos' },
+    { id: 'database', name: 'Datos', icon: BuildingOfficeIcon, url: '/base-de-datos/database' },
+    { id: 'send', name: 'Enviar', icon: PaperAirplaneIcon, url: '/communication/send' },
+    { id: 'folders', name: 'Carpetas', icon: FolderIcon, url: '/communication/folders' },
+    { id: 'templates', name: 'Plantillas', icon: TemplateIcon, url: '/communication/templates' },
+    { id: 'reports', name: 'Reportes', icon: DocumentReportIcon, url: '/communication/reports' },
+    { id: 'bulk-upload', name: 'Importar', icon: ArrowUpTrayIcon, url: '/communication/bulk-upload' },
   ];
 
-  // Función para verificar si hay empleados seleccionados antes de navegar
-  const handleNavigateToSend = async () => {
+  // Función para navegar a una URL específica
+  const handleNavigation = async (tab) => {
     try {
-      // Verificar si hay empleados seleccionados en el almacenamiento temporal
-      if (window.tempSelectedEmployees && window.tempSelectedEmployees.length > 0) {
-        // Si hay empleados seleccionados, navegar a la página de envío con los datos
-        navigate('/communication/send', { 
-          state: { selectedEmployees: window.tempSelectedEmployees } 
-        });
-      } else if (window.selectedEmployeesData && window.selectedEmployeesData.length > 0) {
-        // Si no hay empleados en tempSelectedEmployees, verificar selectedEmployeesData
-        navigate('/communication/send', { 
-          state: { selectedEmployees: window.selectedEmployeesData.map(emp => emp.id) } 
-        });
-      } else {
-        // Si no hay empleados seleccionados, mostrar alerta con SweetAlert
-        MySwal.fire({
-          title: 'Advertencia',
-          text: 'Debe seleccionar al menos un empleado en la Base de Datos antes de poder enviar mensajes',
-          icon: 'warning',
-          confirmButtonText: 'Aceptar',
-          confirmButtonColor: '#fcb900'
-        }).then(() => {
-          // Después de cerrar la alerta, redirigir a la base de datos
-          navigate('/base-de-datos');
-        });
-      }
+      console.log(`🚀 Navegando a: ${tab.url}`);
+      navigate(tab.url);
     } catch (error) {
-      console.error('Error al navegar a enviar mensajes:', error);
-      // En caso de error, mostrar alerta y redirigir a la base de datos
+      console.error('❌ Error al navegar:', error);
+      // En caso de error, mostrar alerta
       MySwal.fire({
         title: 'Error',
-        text: 'Hubo un problema al acceder a la función de envío de mensajes',
+        text: 'Hubo un problema al navegar. Por favor, inténtelo de nuevo.',
         icon: 'error',
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0693e3'
-      }).then(() => {
-        navigate('/base-de-datos');
       });
     }
   };
 
   const renderActiveTab = () => {
-    switch (activeTab) {
+    switch (currentTab) {
       case 'database':
         return <EmployeeSelector />;
       case 'send':
@@ -705,50 +735,20 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                     const Icon = tab.icon;
                     return (
                       <div key={tab.id}>
-                        {tab.id === 'send' ? (
-                          <button
-                            onClick={() => {
-                              handleNavigateToSend();
-                              setMobileMenuOpen(false);
-                            }}
-                            className={`flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 text-left ${
-                              activeTab === tab.id
-                                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-                                : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            <Icon className="h-5 w-5 mr-3" />
-                            {tab.name}
-                          </button>
-                        ) : tab.id === 'dashboard' ? (
-                          <button
-                            onClick={() => {
-                              navigate('/base-de-datos');
-                              setMobileMenuOpen(false);
-                            }}
-                            className={`flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 text-left ${
-                              activeTab === tab.id
-                                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-                                : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            <Icon className="h-5 w-5 mr-3" />
-                            {tab.name}
-                          </button>
-                        ) : (
-                          <Link
-                            to={`/communication/${tab.id}`}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                              activeTab === tab.id
-                                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-                                : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            <Icon className="h-5 w-5 mr-3" />
-                            {tab.name}
-                          </Link>
-                        )}
+                        <button
+                          onClick={() => {
+                            handleNavigation(tab);
+                            setMobileMenuOpen(false);
+                          }}
+                          className={`flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 text-left ${
+                            window.location.pathname === tab.url
+                              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Icon className="h-5 w-5 mr-3" />
+                          {tab.name}
+                        </button>
                       </div>
                     );
                   })}
@@ -766,68 +766,28 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
           <nav className="flex items-center justify-center gap-3 bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl p-4 shadow-lg border border-gray-200/50 backdrop-blur-sm overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+              const isActive = window.location.pathname === tab.url;
 
               return (
                 <div key={tab.id} className="relative group">
-                  {tab.id === 'send' ? (
-                    <button
-                      onClick={handleNavigateToSend}
-                      className={`relative flex items-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
-                        isActive
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-xl scale-105'
-                          : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:shadow-md hover:scale-102 border border-gray-200'
-                      }`}
-                    >
-                      <Icon className={`h-5 w-5 mr-3 transition-colors duration-300 ${
-                        isActive ? 'text-blue-100' : 'text-blue-500 group-hover:text-blue-600'
-                      }`} />
-                      <span className="tracking-wide">{tab.name}</span>
+                  <button
+                    onClick={() => handleNavigation(tab)}
+                    className={`relative flex items-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-xl scale-105'
+                        : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:shadow-md hover:scale-102 border border-gray-200'
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 mr-3 transition-colors duration-300 ${
+                      isActive ? 'text-blue-100' : 'text-blue-500 group-hover:text-blue-600'
+                    }`} />
+                    <span className="tracking-wide">{tab.name}</span>
 
-                      {/* Active glow effect */}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-xl blur opacity-30 animate-pulse"></div>
-                      )}
-                    </button>
-                  ) : tab.id === 'dashboard' ? (
-                    <button
-                      onClick={() => navigate('/base-de-datos')}
-                      className={`relative flex items-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
-                        isActive
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-xl scale-105'
-                          : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:shadow-md hover:scale-102 border border-gray-200'
-                      }`}
-                    >
-                      <Icon className={`h-5 w-5 mr-3 transition-colors duration-300 ${
-                        isActive ? 'text-blue-100' : 'text-blue-500 group-hover:text-blue-600'
-                      }`} />
-                      <span className="tracking-wide">{tab.name}</span>
-
-                      {/* Active glow effect */}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-xl blur opacity-30 animate-pulse"></div>
-                      )}
-                    </button>
-                  ) : (
-                    <Link
-                      to={`/communication/${tab.id}`}
-                      className={`relative flex items-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
-                        isActive
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-xl scale-105'
-                          : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:shadow-md hover:scale-102 border border-gray-200'
-                      }`}
-                    >
-                      <Icon className={`h-5 w-5 mr-3 transition-colors duration-300 ${
-                        isActive ? 'text-blue-100' : 'text-blue-500 group-hover:text-blue-600'
-                      }`} />
-                      <span className="tracking-wide">{tab.name}</span>
-
-                      {/* Active glow effect */}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-xl blur opacity-30 animate-pulse"></div>
-                      )}
-                    </Link>
-                  )}
+                    {/* Active glow effect */}
+                    {isActive && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-xl blur opacity-30 animate-pulse"></div>
+                    )}
+                  </button>
 
                   {/* Decorative elements */}
                   {!isActive && (
