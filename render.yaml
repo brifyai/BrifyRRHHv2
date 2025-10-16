@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: webrify-backend
+    name: brifyrrhhapp-backend
     env: node
     plan: free
     buildCommand: npm install

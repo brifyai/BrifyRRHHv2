@@ -1,5 +1,5 @@
 {
-  "name": "webrify",
+  "name": "brifyrrhhapp",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -46,7 +46,8 @@
     "test": "react-scripts test",
     "test:sentiment": "node test_sentiment_analysis.mjs",
     "eject": "react-scripts eject",
-    "start:prod": "NODE_ENV=production node server.js"
+    "start:prod": "NODE_ENV=production node server.js",
+    "build:prod": "NODE_ENV=production node scripts/build-production.js"
   },
   "eslintConfig": {
     "extends": [

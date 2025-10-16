@@ -9,7 +9,7 @@
 # Redirecciones para API (backend separado)
 [[redirects]]
   from = "/api/*"
-  to = "https://webrify-backend.onrender.com/api/:splat"
+  to = "https://brifyrrhhapp-backend.onrender.com/api/:splat"
   status = 200
   force = true
 

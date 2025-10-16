@@ -42,7 +42,7 @@ console.log('✅ vercel.json creado');
 // 2. Crear archivo render.yaml para despliegue en Render
 const renderConfig = `services:
   - type: web
-    name: webrify-backend
+    name: brifyrrhhapp-backend
     env: node
     plan: free
     buildCommand: npm install
@@ -215,8 +215,8 @@ Una vez desplegado, verifica que el backend esté funcionando:
 ## URLs de Producción
 
 - Frontend (Netlify): https://webrify.netlify.app
-- Backend (Vercel): https://webrify-backend.vercel.app
-- Backend (Render): https://webrify-backend.onrender.com
+- Backend (Vercel): https://brifyrrhhapp-backend.vercel.app
+- Backend (Render): https://brifyrrhhapp-backend.onrender.com
 `;
 
 fs.writeFileSync(

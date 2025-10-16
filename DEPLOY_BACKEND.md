@@ -40,6 +40,6 @@ Una vez desplegado, verifica que el backend esté funcionando:
 
 ## URLs de Producción
 
-- Frontend (Netlify): https://webrify.netlify.app
-- Backend (Vercel): https://webrify-backend.vercel.app
-- Backend (Render): https://webrify-backend.onrender.com
+- Frontend (Netlify): https://brifyrrhhapp.netlify.app
+- Backend (Vercel): https://brifyrrhhapp-backend.vercel.app
+- Backend (Render): https://brifyrrhhapp-backend.onrender.com

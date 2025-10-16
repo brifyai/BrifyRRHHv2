@@ -17,7 +17,7 @@ Esta guía te ayudará a:
 2. Inicia sesión con tu cuenta
 3. Haz clic en "New Project"
 4. Configura el proyecto:
-   - **Nombre**: `webrify-production` (o el que prefieras)
+   - **Nombre**: `brifyrrhhapp-production` (o el que prefieras)
    - **Organización**: Selecciona tu organización
    - **Región**: `South America East` (o la más cercana)
    - **Contraseña de base de datos**: Crea una contraseña segura
