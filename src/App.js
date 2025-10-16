@@ -18,15 +18,15 @@ import GoogleAuthCallback from './components/auth/GoogleAuthCallback.js'
 // Componentes auxiliares
 import ColorClasses from './components/layout/ColorClasses.js'
 import PruebaColores from './components/layout/PruebaColores.js'
-// Nuevo Home Moderno
-import HomeModern from './components/home/HomeModern.js'
+// Página de prueba
+import TestHome from './components/home/TestHome.js'
 // Página innovadora
 import LandingInnovadora from './components/layout/LandingInnovadora.js'
 // Componentes de autenticación innovadores
 import LoginInnovador from './components/auth/LoginInnovador.js'
 import RegisterInnovador from './components/auth/RegisterInnovador.js'
 // Componente de dashboard innovador
-import DashboardInnovador from './components/dashboard/DashboardInnovador.js'
+// import DashboardInnovador from './components/dashboard/DashboardInnovador.js'
 import ModernDashboard from './components/dashboard/ModernDashboard.js'
 // Componentes de prueba de empresas (no implementados aún)
 // import TestCompanyData from './components/dashboard/TestCompanyData'
@@ -109,10 +109,10 @@ function App() {
           />
           
           <Routes>
-            {/* Página de inicio - Home Moderno */}
+            {/* Página de inicio - Redirigir directamente al login */}
             <Route
               path="/"
-              element={<HomeModern />}
+              element={<Navigate to="/login" replace />}
             />
             
             {/* Página de prueba básica */}
@@ -128,9 +128,15 @@ function App() {
             />
             
             {/* Ruta de prueba de Tailwind */}
-            <Route 
-              path="/prueba-tailwind" 
-              element={<PruebaTailwind />} 
+            <Route
+              path="/prueba-tailwind"
+              element={<PruebaTailwind />}
+            />
+            
+            {/* Ruta de prueba del Home Moderno */}
+            <Route
+              path="/test-home"
+              element={<TestHome />}
             />
             
             {/* Rutas públicas */}
