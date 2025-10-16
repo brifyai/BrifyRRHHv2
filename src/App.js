@@ -18,6 +18,8 @@ import GoogleAuthCallback from './components/auth/GoogleAuthCallback.js'
 // Componentes auxiliares
 import ColorClasses from './components/layout/ColorClasses.js'
 import PruebaColores from './components/layout/PruebaColores.js'
+// Nuevo Home Moderno
+import HomeModern from './components/home/HomeModern.js'
 // Página innovadora
 import LandingInnovadora from './components/layout/LandingInnovadora.js'
 // Componentes de autenticación innovadores
@@ -107,10 +109,10 @@ function App() {
           />
           
           <Routes>
-            {/* Página de inicio - redirige al login */}
-            <Route 
-              path="/" 
-              element={<LoginInnovador />} 
+            {/* Página de inicio - Home Moderno */}
+            <Route
+              path="/"
+              element={<HomeModern />}
             />
             
             {/* Página de prueba básica */}
