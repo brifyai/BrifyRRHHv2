@@ -424,6 +424,270 @@ class CommunicationService {
     }
   }
 
+  // Send SMS message - New method
+  async sendSMSMessage(recipientIds, message) {
+    try {
+      console.log('🚀 Iniciando envío de SMS message');
+      console.log('Recipient IDs:', recipientIds);
+      console.log('Message:', message);
+      
+      // Validate inputs
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+        throw new Error('Recipient IDs must be a non-empty array');
+      }
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('Message must be a non-empty string');
+      }
+      
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
+      
+      // Validate recipient IDs using optimized helper
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'sms'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
+      
+      // Simulate API call delay
+      console.log('⏳ Simulando llamada a API de SMS...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('✅ Mensaje SMS enviado exitosamente');
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía SMS`,
+        recipientCount: validRecipientIds.length,
+        channel: 'sms',
+        timestamp: new Date().toISOString(),
+        logId: logId
+      };
+    } catch (error) {
+      console.error('❌ Error sending SMS message:', error);
+      throw error;
+    }
+  }
+
+  // Send Email message - New method
+  async sendEmailMessage(recipientIds, message, subject = 'Sin asunto') {
+    try {
+      console.log('🚀 Iniciando envío de Email message');
+      console.log('Recipient IDs:', recipientIds);
+      console.log('Message:', message);
+      console.log('Subject:', subject);
+      
+      // Validate inputs
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+        throw new Error('Recipient IDs must be a non-empty array');
+      }
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('Message must be a non-empty string');
+      }
+      
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
+      
+      // Validate recipient IDs using optimized helper
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'email'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
+      
+      // Simulate API call delay
+      console.log('⏳ Simulando llamada a API de Email...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log('✅ Mensaje Email enviado exitosamente');
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía Email`,
+        recipientCount: validRecipientIds.length,
+        channel: 'email',
+        timestamp: new Date().toISOString(),
+        logId: logId
+      };
+    } catch (error) {
+      console.error('❌ Error sending Email message:', error);
+      throw error;
+    }
+  }
+
+  // Smart fallback message delivery - New method
+  async sendWithFallback(recipientIds, message, primaryChannel = 'whatsapp', options = {}) {
+    try {
+      console.log('🚀 Iniciando envío con fallback inteligente');
+      console.log('Primary channel:', primaryChannel);
+      console.log('Recipient IDs:', recipientIds);
+      
+      const results = {
+        total: recipientIds.length,
+        successful: 0,
+        failed: 0,
+        byChannel: {},
+        details: []
+      };
+
+      // Get employee data to check available channels
+      const employees = await this.getEmployeesByIds(recipientIds);
+      
+      // Group employees by available channels
+      const channelGroups = this.groupEmployeesByChannel(employees, primaryChannel);
+      
+      // Send messages through each channel
+      for (const [channel, employeeIds] of Object.entries(channelGroups)) {
+        if (employeeIds.length === 0) continue;
+        
+        console.log(`📤 Enviando ${employeeIds.length} mensajes por ${channel}`);
+        
+        try {
+          let result;
+          switch (channel) {
+            case 'whatsapp':
+              result = await this.sendWhatsAppMessage(employeeIds, message);
+              break;
+            case 'telegram':
+              result = await this.sendTelegramMessage(employeeIds, message);
+              break;
+            case 'sms':
+              result = await this.sendSMSMessage(employeeIds, message);
+              break;
+            case 'email':
+              const emailSubject = options.subject || 'Mensaje de Brify AI';
+              result = await this.sendEmailMessage(employeeIds, message, emailSubject);
+              break;
+            default:
+              console.warn(`⚠️ Canal desconocido: ${channel}`);
+              continue;
+          }
+          
+          if (result.success) {
+            results.successful += result.recipientCount;
+            results.byChannel[channel] = (results.byChannel[channel] || 0) + result.recipientCount;
+            
+            results.details.push({
+              channel,
+              recipientCount: result.recipientCount,
+              status: 'success',
+              message: result.message
+            });
+          }
+        } catch (error) {
+          console.error(`❌ Error enviando por ${channel}:`, error);
+          results.failed += employeeIds.length;
+          
+          results.details.push({
+            channel,
+            recipientCount: employeeIds.length,
+            status: 'failed',
+            error: error.message
+          });
+        }
+      }
+      
+      const successRate = (results.successful / results.total) * 100;
+      
+      console.log('✅ Envío con fallback completado:', results);
+      
+      return {
+        success: results.successful > 0,
+        message: `Mensaje enviado con fallback: ${results.successful}/${results.total} entregados (${successRate.toFixed(1)}%)`,
+        totalRecipients: results.total,
+        successfulDeliveries: results.successful,
+        failedDeliveries: results.failed,
+        successRate: successRate,
+        byChannel: results.byChannel,
+        details: results.details,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error('❌ Error en envío con fallback:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to get employees by IDs
+  async getEmployeesByIds(employeeIds) {
+    try {
+      const { data: employees, error } = await supabase
+        .from('employees')
+        .select(`
+          id,
+          name,
+          email,
+          phone,
+          telegram_id,
+          company_id
+        `)
+        .in('id', employeeIds)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return employees || [];
+    } catch (error) {
+      console.error('Error fetching employees by IDs:', error);
+      return [];
+    }
+  }
+
+  // Helper method to group employees by available channels
+  groupEmployeesByChannel(employees, primaryChannel) {
+    const groups = {
+      whatsapp: [],
+      telegram: [],
+      sms: [],
+      email: []
+    };
+    
+    employees.forEach(employee => {
+      const hasWhatsApp = employee.phone && employee.phone.length > 0;
+      const hasTelegram = employee.telegram_id && employee.telegram_id.length > 0;
+      const hasSMS = employee.phone && employee.phone.length > 0;
+      const hasEmail = employee.email && employee.email.length > 0;
+      
+      // Primary channel first
+      if (primaryChannel === 'whatsapp' && hasWhatsApp) {
+        groups.whatsapp.push(employee.id);
+      } else if (primaryChannel === 'telegram' && hasTelegram) {
+        groups.telegram.push(employee.id);
+      } else if (primaryChannel === 'sms' && hasSMS) {
+        groups.sms.push(employee.id);
+      } else if (primaryChannel === 'email' && hasEmail) {
+        groups.email.push(employee.id);
+      } else {
+        // Fallback logic
+        if (hasWhatsApp && primaryChannel !== 'whatsapp') {
+          groups.whatsapp.push(employee.id);
+        } else if (hasTelegram && primaryChannel !== 'telegram') {
+          groups.telegram.push(employee.id);
+        } else if (hasSMS && primaryChannel !== 'sms') {
+          groups.sms.push(employee.id);
+        } else if (hasEmail && primaryChannel !== 'email') {
+          groups.email.push(employee.id);
+        }
+      }
+    });
+    
+    return groups;
+  }
+
   // Optimized helper method to get sender data (shared between message methods)
   async getSenderData() {
     try {

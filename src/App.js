@@ -42,6 +42,10 @@ import PruebaBasica from './components/layout/PruebaBasica.js'
 import WebrifyCommunicationDashboard from './components/communication/WebrifyCommunicationDashboard.js'
 // Componente de configuración
 import Settings from './components/settings/Settings.js'
+// Dashboard de estadísticas de Brevo
+import BrevoStatisticsDashboard from './components/communication/BrevoStatisticsDashboard.js'
+// Gestor de plantillas de Brevo
+import BrevoTemplatesManager from './components/communication/BrevoTemplatesManager.js'
 
 
 // Componente para rutas protegidas
@@ -438,6 +442,49 @@ function App() {
               } 
             />
 
+
+            
+            {/* Dashboard de estadísticas de Brevo */}
+            <Route
+              path="/estadisticas-brevo"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <BrevoStatisticsDashboard />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Gestor de plantillas de Brevo */}
+            <Route
+              path="/plantillas-brevo"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <BrevoTemplatesManager />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Rutas de redirección para configuración */}
+            <Route
+              path="/configuracion/estadisticas-brevo"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/estadisticas-brevo" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/plantillas-brevo"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/plantillas-brevo" replace />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Ruta de prueba de empresas y empleados */}
             <Route 

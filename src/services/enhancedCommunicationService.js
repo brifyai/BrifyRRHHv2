@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase.js';
 import communicationService from './communicationService.js';
 import groqService from './groqService.js';
 import inMemoryEmployeeService from './inMemoryEmployeeService.js';
+import gamificationService from './gamificationService.js';
 
 /**
  * Servicio de comunicación mejorado que integra IA y análisis predictivo
@@ -45,7 +46,7 @@ class EnhancedCommunicationService {
       
       // Enviar mensaje usando el servicio base
       const result = await communicationService.sendWhatsAppMessage(
-        recipientIds, 
+        recipientIds,
         optimizedMessage.content
       );
       
@@ -58,6 +59,29 @@ class EnhancedCommunicationService {
         optimalTiming,
         channel: 'whatsapp'
       });
+      
+      // Otorgar puntos por actividad de gamificación
+      if (result.success && result.messageId) {
+        try {
+          // Para cada destinatario, otorgar puntos por envío de mensaje
+          for (const recipientId of recipientIds) {
+            await gamificationService.awardPoints(
+              result.userId || 'system',
+              recipientId,
+              'message_sent',
+              result.messageId,
+              `Mensaje WhatsApp enviado: ${optimizedMessage.content.substring(0, 50)}...`,
+              {
+                channel: 'whatsapp',
+                engagementScore: engagementPrediction.score,
+                optimized: optimizedMessage.applied.length > 0
+              }
+            );
+          }
+        } catch (gamificationError) {
+          console.warn('⚠️ Error en gamificación (no crítico):', gamificationError);
+        }
+      }
       
       return {
         ...result,
@@ -101,7 +125,7 @@ class EnhancedCommunicationService {
       
       // Enviar mensaje usando el servicio base
       const result = await communicationService.sendTelegramMessage(
-        recipientIds, 
+        recipientIds,
         optimizedMessage.content
       );
       
@@ -114,6 +138,29 @@ class EnhancedCommunicationService {
         optimalTiming,
         channel: 'telegram'
       });
+      
+      // Otorgar puntos por actividad de gamificación
+      if (result.success && result.messageId) {
+        try {
+          // Para cada destinatario, otorgar puntos por envío de mensaje
+          for (const recipientId of recipientIds) {
+            await gamificationService.awardPoints(
+              result.userId || 'system',
+              recipientId,
+              'message_sent',
+              result.messageId,
+              `Mensaje Telegram enviado: ${optimizedMessage.content.substring(0, 50)}...`,
+              {
+                channel: 'telegram',
+                engagementScore: engagementPrediction.score,
+                optimized: optimizedMessage.applied.length > 0
+              }
+            );
+          }
+        } catch (gamificationError) {
+          console.warn('⚠️ Error en gamificación (no crítico):', gamificationError);
+        }
+      }
       
       return {
         ...result,
@@ -506,6 +553,26 @@ Proporciona solo el mensaje adaptado, sin explicaciones adicionales.`;
         topic: this.extractTopic(userMessage),
         responseLength: response.response.length
       });
+      
+      // Otorgar puntos por interacción con chatbot
+      try {
+        await gamificationService.awardPoints(
+          userId,
+          userId, // Para el chatbot, user y employee son el mismo
+          'message_read', // Usamos message_read como interacción
+          null,
+          `Interacción con chatbot IA: ${userMessage.substring(0, 50)}...`,
+          {
+            channel: 'chatbot',
+            sentiment: sentimentAnalysis.label,
+            topic: this.extractTopic(userMessage),
+            responseLength: response.response.length,
+            contextUsed: response.contextUsed
+          }
+        );
+      } catch (gamificationError) {
+        console.warn('⚠️ Error en gamificación chatbot (no crítico):', gamificationError);
+      }
       
       return {
         response: response.response,

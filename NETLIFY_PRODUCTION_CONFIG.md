@@ -25,6 +25,15 @@ REACT_APP_GEMINI_API_KEY=tu_gemini_api_key_produccion
 REACT_APP_GROQ_API_KEY=tu_groq_api_key_produccion
 ```
 
+### 📧 Brevo - SMS y Email Masivo
+
+```
+REACT_APP_BREVO_API_KEY=tu_brevo_api_key_v3_produccion
+REACT_APP_BREVO_SMS_SENDER=BrifyAI
+REACT_APP_BREVO_EMAIL_SENDER=noreply@brify.ai
+REACT_APP_BREVO_EMAIL_NAME=Brify AI
+```
+
 ### 💳 Mercado Pago (Opcional)
 
 ```

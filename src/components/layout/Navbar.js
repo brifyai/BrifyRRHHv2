@@ -62,12 +62,13 @@ const Navbar = () => {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/panel-principal" className="flex items-center">
-                <div className="logo-container">
-                  <img 
-                    src="/images/Mesa-de-trabajo-105-1.png" 
-                    alt="Logo" 
-                    className="logo-image"
-                  />
+                <div className="flex items-center">
+                  <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    Brify
+                  </span>
+                  <span className="text-2xl font-bold text-gray-800 ml-1">
+                    AI
+                  </span>
                 </div>
               </Link>
             </div>

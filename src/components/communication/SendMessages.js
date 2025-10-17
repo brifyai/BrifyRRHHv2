@@ -168,7 +168,7 @@ const SendMessages = () => {
       `,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: channel === 'WhatsApp' ? '#25D366' : '#0088cc',
+      confirmButtonColor: getChannelColor(channel),
       cancelButtonColor: '#6c757d',
       confirmButtonText: `Sí, enviar por ${channel}`,
       cancelButtonText: 'Cancelar',
@@ -200,6 +200,28 @@ const SendMessages = () => {
       } else if (channel === 'Telegram') {
         console.log('✈️ Llamando a sendTelegramMessage...');
         result = await communicationService.sendTelegramMessage(employeeIds, message);
+      } else if (channel === 'SMS') {
+        console.log('📱 Llamando a sendSMSMessage...');
+        result = await communicationService.sendSMSMessage(employeeIds, message);
+      } else if (channel === 'Email') {
+        console.log('📧 Llamando a sendEmailMessage...');
+        const subject = await Swal.fire({
+          title: 'Asunto del Email',
+          input: 'text',
+          inputLabel: 'Ingrese el asunto del correo electrónico',
+          inputValue: 'Mensaje de Brify AI',
+          showCancelButton: true,
+          confirmButtonText: 'Enviar',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#007bff'
+        });
+        
+        if (subject.isConfirmed && subject.value) {
+          result = await communicationService.sendEmailMessage(employeeIds, message, subject.value);
+        } else {
+          setSending(false);
+          return;
+        }
       }
 
       console.log('📊 Resultado del envío:', result);
@@ -231,6 +253,142 @@ const SendMessages = () => {
       }
     } catch (err) {
       console.error('❌ Error general en handleSendMessage:', err);
+      const errorMessage = err.message || 'Error al enviar el mensaje. Por favor, inténtelo de nuevo.';
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        duration: 5000,
+        position: 'top-center'
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Función para obtener el color del canal
+  const getChannelColor = (channel) => {
+    switch (channel) {
+      case 'WhatsApp': return '#25D366';
+      case 'Telegram': return '#0088cc';
+      case 'SMS': return '#ff6b35';
+      case 'Email': return '#007bff';
+      default: return '#6c757d';
+    }
+  };
+
+  // Función para enviar con fallback inteligente
+  const handleSendWithFallback = async (primaryChannel = 'WhatsApp') => {
+    // Verificar que haya empleados seleccionados
+    if (selectedEmployees.length === 0) {
+      setError('Debe seleccionar al menos un empleado para enviar mensajes.');
+      return;
+    }
+
+    if (!message.trim() && !media) {
+      setError('Por favor, ingrese un mensaje o adjunte un archivo');
+      return;
+    }
+
+    if (!canSendMessages()) {
+      setError('No tienes permisos para enviar mensajes.');
+      return;
+    }
+
+    // Mostrar modal de confirmación para fallback
+    const result = await Swal.fire({
+      title: '🔄 Envío Inteligente con Fallback',
+      html: `
+        <div style="text-align: left; font-size: 16px; line-height: 1.6;">
+          <p style="margin-bottom: 12px;"><strong>¿Desea enviar con fallback inteligente?</strong></p>
+          <p style="margin-bottom: 8px;">El sistema intentará enviar por <strong>${primaryChannel}</strong> primero, y si algún empleado no tiene disponible ese canal, usará automáticamente:</p>
+          <div style="background: #f0f8ff; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+            <div style="color: #007bff; font-weight: bold; margin-bottom: 4px;">🔄 Orden de Fallback:</div>
+            <div style="font-size: 14px;">
+              ${primaryChannel} → Telegram → SMS → Email
+            </div>
+          </div>
+          <p style="margin-bottom: 8px;"><strong>Destinatarios:</strong> ${selectedEmployees.length} empleados</p>
+          <p style="margin-bottom: 8px;"><strong>Canal principal:</strong> ${primaryChannel}</p>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonColor: getChannelColor(primaryChannel),
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: `🚀 Enviar con Fallback`,
+      cancelButtonText: 'Cancelar',
+      customClass: {
+        popup: 'swal-confirmation'
+      }
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    setSending(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const employeeIds = selectedEmployees.map(emp => emp.id);
+      
+      console.log(`🚀 Enviando mensaje con fallback inteligente a ${employeeIds.length} empleados:`, employeeIds);
+      console.log('💬 Mensaje:', message);
+      console.log('🎯 Canal principal:', primaryChannel);
+      
+      // Enviar usando el servicio de fallback
+      const fallbackResult = await communicationService.sendWithFallback(
+        employeeIds,
+        message,
+        primaryChannel.toLowerCase()
+      );
+
+      console.log('📊 Resultado del envío con fallback:', fallbackResult);
+
+      if (fallbackResult && fallbackResult.success) {
+        setSent(true);
+        const successMsg = fallbackResult.message || `Mensaje enviado con fallback a ${selectedEmployees.length} empleados`;
+        setSuccessMessage(successMsg);
+        
+        // Mostrar detalles del envío
+        const detailsHtml = fallbackResult.details.map(detail => `
+          <div style="margin-bottom: 8px; padding: 8px; background: ${detail.status === 'success' ? '#d4edda' : '#f8d7da'}; border-radius: 4px;">
+            <strong>${detail.channel}:</strong> ${detail.recipientCount} destinatarios - ${detail.status}
+            ${detail.error ? `<br><small>Error: ${detail.error}</small>` : ''}
+          </div>
+        `).join('');
+
+        Swal.fire({
+          title: '✅ Envío con Fallback Completado',
+          html: `
+            <div style="text-align: left; font-size: 16px; line-height: 1.6;">
+              <p style="margin-bottom: 12px;"><strong>${successMsg}</strong></p>
+              <p style="margin-bottom: 8px;"><strong>Tasa de éxito:</strong> ${fallbackResult.successRate.toFixed(1)}%</p>
+              <p style="margin-bottom: 8px;"><strong>Detalles por canal:</strong></p>
+              ${detailsHtml}
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#28a745'
+        });
+
+        // Navegar de vuelta después de un breve delay
+        setTimeout(() => {
+          console.log('🔄 Navegando de vuelta al dashboard de comunicación...');
+          navigate('/communication');
+        }, 2000);
+      } else {
+        console.error('❌ El fallback reportó fallo:', fallbackResult);
+        const errorMsg = fallbackResult?.error || 'Error desconocido al enviar el mensaje';
+        setError(`Error al enviar el mensaje: ${errorMsg}`);
+        toast.error(`Error: ${errorMsg}`, {
+          duration: 5000,
+          position: 'top-center'
+        });
+      }
+    } catch (err) {
+      console.error('❌ Error general en handleSendWithFallback:', err);
       const errorMessage = err.message || 'Error al enviar el mensaje. Por favor, inténtelo de nuevo.';
       setError(errorMessage);
       toast.error(errorMessage, {
@@ -1599,11 +1757,11 @@ const SendMessages = () => {
               </div>
 
               {/* Botones de envío */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <button
                   onClick={() => handleSendMessage('WhatsApp')}
                   disabled={sending || selectedEmployees.length === 0}
-                  className={`flex-1 flex items-center justify-center px-8 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                  className={`flex items-center justify-center px-6 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
                     sending || selectedEmployees.length === 0
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
@@ -1611,32 +1769,125 @@ const SendMessages = () => {
                 >
                   {sending ? (
                     <div>
-                      <svg className="animate-spin -ml-1 mr-4 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span className="text-lg">Enviando mensajes...</span>
+                      <span className="text-sm">Enviando...</span>
                     </div>
                   ) : (
                     <React.Fragment>
-                      <svg className="w-6 h-6 mr-4" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                       </svg>
                       <div className="text-left">
-                        <div className="text-lg font-bold">Enviar por WhatsApp</div>
-                        <div className="text-sm opacity-90">Mensajes instantáneos</div>
+                        <div className="text-sm font-bold">WhatsApp</div>
+                        <div className="text-xs opacity-90">Instantáneo</div>
                       </div>
-                        </React.Fragment>
+                    </React.Fragment>
                   )}
                 </button>
 
                 <button
                   onClick={() => handleSendMessage('Telegram')}
                   disabled={sending || selectedEmployees.length === 0}
-                  className={`flex-1 flex items-center justify-center px-8 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                  className={`flex items-center justify-center px-6 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
                     sending || selectedEmployees.length === 0
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
+                  }`}
+                >
+                  {sending ? (
+                    <div>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-sm">Enviando...</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.788-1.48-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                      </svg>
+                      <div className="text-left">
+                        <div className="text-sm font-bold">Telegram</div>
+                        <div className="text-xs opacity-90">Seguro</div>
+                      </div>
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleSendMessage('SMS')}
+                  disabled={sending || selectedEmployees.length === 0}
+                  className={`flex items-center justify-center px-6 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+                    sending || selectedEmployees.length === 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                  }`}
+                >
+                  {sending ? (
+                    <div>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-sm">Enviando...</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <div className="text-left">
+                        <div className="text-sm font-bold">SMS</div>
+                        <div className="text-xs opacity-90">Texto directo</div>
+                      </div>
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleSendMessage('Email')}
+                  disabled={sending || selectedEmployees.length === 0}
+                  className={`flex items-center justify-center px-6 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+                    sending || selectedEmployees.length === 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white'
+                  }`}
+                >
+                  {sending ? (
+                    <div>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-sm">Enviando...</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <div className="text-left">
+                        <div className="text-sm font-bold">Email</div>
+                        <div className="text-xs opacity-90">Correos</div>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Botón de Fallback Inteligente */}
+              <div className="mt-4">
+                <button
+                  onClick={() => handleSendWithFallback('WhatsApp')}
+                  disabled={sending || selectedEmployees.length === 0}
+                  className={`w-full flex items-center justify-center px-8 py-4 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+                    sending || selectedEmployees.length === 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-700 hover:via-pink-700 hover:to-red-700 text-white'
                   }`}
                 >
                   {sending ? (
@@ -1645,18 +1896,18 @@ const SendMessages = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span className="text-lg">Enviando mensajes...</span>
+                      <span className="text-lg">Enviando con Fallback...</span>
                     </div>
                   ) : (
-                    <div>
-                      <svg className="w-6 h-6 mr-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.788-1.48-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    <React.Fragment>
+                      <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                       <div className="text-left">
-                        <div className="text-lg font-bold">Enviar por Telegram</div>
-                        <div className="text-sm opacity-90">Mensajes seguros</div>
+                        <div className="text-lg font-bold">🔄 Fallback Inteligente</div>
+                        <div className="text-sm opacity-90">Entrega garantizada con múltiples canales</div>
                       </div>
-                    </div>
+                    </React.Fragment>
                   )}
                 </button>
               </div>

@@ -191,12 +191,19 @@ export const AuthProvider = ({ children }) => {
         }
 
         // Usar upsert para evitar duplicados en caso de re-ejecución
-        const { error: profileError } = await db.users.upsert(userProfileData)
+        const { data: profileData, error: profileError } = await db.users.upsert(userProfileData)
         
         if (profileError) {
           console.error('Error creating user profile:', profileError)
-          toast.error('Error al crear el perfil de usuario')
-          return { error: profileError }
+          // Solo mostrar error si es un error real, no si es por duplicado
+          if (!profileError.message?.includes('duplicate') && !profileError.message?.includes('already exists')) {
+            toast.error('Error al crear el perfil de usuario')
+            return { error: profileError }
+          }
+          // Si es un error de duplicado, continuar normalmente
+          console.log('User profile already exists, continuing...')
+        } else {
+          console.log('✅ User profile created successfully:', profileData)
         }
 
         // Crear registro inicial en user_tokens_usage usando upsert

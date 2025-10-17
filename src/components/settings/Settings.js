@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
 import googleDriveService from '../../lib/googleDrive'
+import brevoService from '../../services/brevoService'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -30,32 +31,11 @@ import DatabaseSettings from './DatabaseSettings'
 const Settings = ({ activeTab: propActiveTab }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [editingCompany, setEditingCompany] = useState(null)
   
-  // Determinar el tab activo basado en la URL o el prop
-  const getActiveTabFromUrl = () => {
-    const pathSegments = location.pathname.split('/')
-    const lastSegment = pathSegments[pathSegments.length - 1]
-    
-    const tabMapping = {
-      'empresas': 'companies',
-      'usuarios': 'users',
-      'general': 'general',
-      'notificaciones': 'notifications',
-      'seguridad': 'security',
-      'integraciones': 'integrations',
-      'base-de-datos': 'database'
-    }
-    
-    return tabMapping[lastSegment] || propActiveTab || 'companies'
-  }
-  
-  const [activeTab, setActiveTab] = useState(getActiveTabFromUrl())
-
   // Estados de integraciones
   const [integrations, setIntegrations] = useState({
     google: { connected: false, status: 'disconnected', lastSync: null },
@@ -64,8 +44,11 @@ const Settings = ({ activeTab: propActiveTab }) => {
     slack: { connected: false, status: 'disconnected', lastSync: null },
     teams: { connected: false, status: 'disconnected', lastSync: null },
     hubspot: { connected: false, status: 'disconnected', lastSync: null },
-    salesforce: { connected: false, status: 'disconnected', lastSync: null }
+    salesforce: { connected: false, status: 'disconnected', lastSync: null },
+    brevo: { connected: false, status: 'disconnected', lastSync: null }
   })
+
+  const [activeTab, setActiveTab] = useState(propActiveTab || 'companies')
 
   // Estados para configuraciones de notificaciones
   const [notificationSettings, setNotificationSettings] = useState({
@@ -134,25 +117,54 @@ const Settings = ({ activeTab: propActiveTab }) => {
   const [connectingGoogleDrive, setConnectingGoogleDrive] = useState(false)
 
   useEffect(() => {
-    loadCompanies()
-    loadNotificationSettings()
-    loadSecuritySettings()
-    loadActiveSessions()
-    loadSecurityLogs()
-    loadBackupSettings()
-    checkGoogleDriveConnection()
-  }, [user])
-
-  // Actualizar el tab activo cuando cambia la URL
-  useEffect(() => {
-    const newActiveTab = getActiveTabFromUrl()
-    if (newActiveTab !== activeTab) {
-      setActiveTab(newActiveTab)
+    // Sincronizar el tab activo con la prop del routing
+    if (propActiveTab && propActiveTab !== activeTab) {
+      setActiveTab(propActiveTab)
     }
-  }, [location.pathname])
+  }, [propActiveTab, activeTab])
+
+  useEffect(() => {
+    // Evitar ejecución múltiple si no hay usuario
+    if (!user?.id) return
+    
+    // Usar un flag para evitar ejecuciones duplicadas
+    let isMounted = true
+    
+    const loadData = async () => {
+      try {
+        // Cargar datos de forma secuencial para evitar parpadeo
+        await loadCompanies()
+        
+        if (!isMounted) return
+        
+        // Cargar configuraciones locales en paralelo (no causan re-renders significativos)
+        await Promise.all([
+          loadNotificationSettings(),
+          loadSecuritySettings(),
+          loadActiveSessions(),
+          loadSecurityLogs(),
+          loadBackupSettings(),
+          checkGoogleDriveConnection(),
+          checkBrevoConfiguration()
+        ])
+      } catch (error) {
+        console.error('Error loading settings data:', error)
+      }
+    }
+    
+    if (isMounted) {
+      loadData()
+    }
+    
+    return () => {
+      isMounted = false
+    }
+  }, [user?.id]) // Solo depender del ID del usuario para evitar ciclos infinitos
+
+  // Eliminado el useEffect que causaba parpadeo - ahora el tab se maneja de forma estática
 
   // Cargar configuraciones de notificaciones desde localStorage
-  const loadNotificationSettings = () => {
+  const loadNotificationSettings = useCallback(() => {
     try {
       const saved = localStorage.getItem('notificationSettings')
       if (saved) {
@@ -174,7 +186,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
     } catch (error) {
       console.error('Error loading notification settings:', error)
     }
-  }
+  }, [user?.email])
 
   // Guardar configuraciones de notificaciones
   const saveNotificationSettings = async (settings) => {
@@ -188,7 +200,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
   }
 
   // Cargar configuraciones de seguridad
-  const loadSecuritySettings = () => {
+  const loadSecuritySettings = useCallback(() => {
     try {
       const saved = localStorage.getItem('securitySettings')
       if (saved) {
@@ -198,10 +210,10 @@ const Settings = ({ activeTab: propActiveTab }) => {
     } catch (error) {
       console.error('Error loading security settings:', error)
     }
-  }
+  }, [])
 
   // Cargar sesiones activas
-  const loadActiveSessions = () => {
+  const loadActiveSessions = useCallback(() => {
     try {
       // Simular sesiones activas (en producción vendría de una API)
       const sessions = [
@@ -226,10 +238,10 @@ const Settings = ({ activeTab: propActiveTab }) => {
     } catch (error) {
       console.error('Error loading active sessions:', error)
     }
-  }
+  }, [])
 
   // Cargar logs de seguridad
-  const loadSecurityLogs = () => {
+  const loadSecurityLogs = useCallback(() => {
     try {
       // Simular logs de seguridad (en producción vendría de una API)
       const logs = [
@@ -270,10 +282,10 @@ const Settings = ({ activeTab: propActiveTab }) => {
     } catch (error) {
       console.error('Error loading security logs:', error)
     }
-  }
+  }, [])
 
   // Cargar configuraciones de backup
-  const loadBackupSettings = () => {
+  const loadBackupSettings = useCallback(() => {
     try {
       const saved = localStorage.getItem('backupSettings')
       if (saved) {
@@ -292,15 +304,29 @@ const Settings = ({ activeTab: propActiveTab }) => {
     } catch (error) {
       console.error('Error loading backup settings:', error)
     }
-  }
+  }, [])
 
   // Función para verificar conexión de Google Drive
-  const checkGoogleDriveConnection = () => {
+  const checkGoogleDriveConnection = useCallback(() => {
     // Usar la información ya disponible en user desde AuthContext
     // que incluye las credenciales de Google Drive
     const isConnected = !!(user?.google_refresh_token && user.google_refresh_token.trim() !== '')
     setIsGoogleDriveConnected(isConnected)
-  }
+  }, [user?.google_refresh_token])
+
+  // Función para verificar configuración de Brevo
+  const checkBrevoConfiguration = useCallback(() => {
+    const config = brevoService.loadConfiguration()
+    setIntegrations(prev => ({
+      ...prev,
+      brevo: {
+        connected: config.apiKey ? true : false,
+        status: config.apiKey ? 'connected' : 'disconnected',
+        lastSync: config.apiKey ? new Date().toISOString() : null,
+        testMode: config.testMode
+      }
+    }))
+  }, [])
 
   // Función para conectar Google Drive
   const handleConnectGoogleDrive = async () => {
@@ -338,12 +364,6 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }))
   }
 
-  const handlePushNotificationChange = (key, value) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      push: { ...prev.push, [key]: value }
-    }))
-  }
 
   const handleReportsSettingsChange = (key, value) => {
     setNotificationSettings(prev => ({
@@ -364,20 +384,6 @@ const Settings = ({ activeTab: propActiveTab }) => {
     await saveNotificationSettings(notificationSettings)
   }
 
-  const configurePushNotifications = async () => {
-    // Simular configuración de push notifications
-    if ('Notification' in window) {
-      const permission = await Notification.requestPermission()
-      if (permission === 'granted') {
-        toast.success('Notificaciones push configuradas correctamente')
-        await saveNotificationSettings(notificationSettings)
-      } else {
-        toast.error('Permiso de notificaciones denegado')
-      }
-    } else {
-      toast.error('Este navegador no soporta notificaciones push')
-    }
-  }
 
   // Funciones para manejar múltiples emails
   const addEmailRecipient = () => {
@@ -462,7 +468,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   }
 
-  const loadCompanies = async () => {
+  const loadCompanies = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -506,7 +512,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user.id])
 
   const handleCreateCompany = () => {
     setEditingCompany(null)
@@ -1139,13 +1145,214 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   };
 
+  const configureBrevo = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Configurar Brevo - SMS y Email Masivo',
+      html: `
+        <div style="text-align: left;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">API Key v3:</label>
+            <input type="password" id="brevo-api-key" class="swal2-input" placeholder="Ingresa tu API Key v3 de Brevo">
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Nombre del remitente SMS:</label>
+            <input type="text" id="brevo-sms-sender" class="swal2-input" placeholder="Ej: BrifyAI" maxlength="11">
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Email del remitente:</label>
+            <input type="email" id="brevo-email-sender" class="swal2-input" placeholder="noreply@tuempresa.com">
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Nombre del remitente Email:</label>
+            <input type="text" id="brevo-email-name" class="swal2-input" placeholder="Ej: Brify AI">
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="checkbox" id="brevo-test-mode" style="margin-right: 8px;" checked>
+              <span style="font-weight: 600;">Modo de prueba</span>
+            </label>
+            <p style="font-size: 12px; color: #666; margin-top: 4px; margin-left: 20px;">
+              En modo prueba, los mensajes se enviarán solo a números de prueba
+            </p>
+          </div>
+          <div style="font-size: 12px; color: #666; margin-top: 16px; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <strong style="color: #0066ff;">📋 Instrucciones para obtener API Key:</strong><br>
+            1. Ve a <a href="https://app.brevo.com" target="_blank" style="color: #0066ff;">app.brevo.com</a><br>
+            2. Ve a Configuración → Claves API<br>
+            3. Crea una nueva clave v3 con permisos de SMS y Email<br>
+            4. Copia y pega la clave aquí
+          </div>
+          <div style="font-size: 12px; color: #666; margin-top: 12px; background-color: #e8f4fd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #0066ff;">🚀 Funcionalidades incluidas:</strong><br>
+            • SMS masivo (hasta 1000 por lote)<br>
+            • Email masivo (hasta 2000 por lote)<br>
+            • Estadísticas en tiempo real<br>
+            • Plantillas personalizadas<br>
+            • Programación de envíos<br>
+            • Modo prueba para desarrollo
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const apiKey = document.getElementById('brevo-api-key').value;
+        const smsSender = document.getElementById('brevo-sms-sender').value;
+        const emailSender = document.getElementById('brevo-email-sender').value;
+        const emailName = document.getElementById('brevo-email-name').value;
+        const testMode = document.getElementById('brevo-test-mode').checked;
+
+        if (!apiKey) {
+          Swal.showValidationMessage('La API Key es obligatoria');
+          return false;
+        }
+
+        if (!smsSender || smsSender.length < 3) {
+          Swal.showValidationMessage('El nombre del remitente SMS debe tener al menos 3 caracteres');
+          return false;
+        }
+
+        if (!emailSender || !emailSender.includes('@')) {
+          Swal.showValidationMessage('El email del remitente es inválido');
+          return false;
+        }
+
+        if (!emailName || emailName.length < 2) {
+          Swal.showValidationMessage('El nombre del remitente email debe tener al menos 2 caracteres');
+          return false;
+        }
+
+        return { apiKey, smsSender, emailSender, emailName, testMode };
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Conectar y Probar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0066ff',
+      width: '600px'
+    });
+
+    if (formValues) {
+      // Mostrar estado de conexión
+      setIntegrations(prev => ({ ...prev, brevo: { ...prev.brevo, status: 'connecting' } }));
+
+      try {
+        // Configurar el servicio de Brevo
+        const config = {
+          apiKey: formValues.apiKey,
+          smsSender: formValues.smsSender,
+          emailSender: formValues.emailSender,
+          emailName: formValues.emailName,
+          testMode: formValues.testMode
+        };
+
+        // Guardar configuración
+        brevoService.saveConfiguration(config);
+
+        // Probar conexión
+        const testResult = await brevoService.testConnection();
+
+        if (testResult.success) {
+          // Actualizar estado
+          setIntegrations(prev => ({
+            ...prev,
+            brevo: {
+              connected: true,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              testMode: formValues.testMode
+            }
+          }));
+
+          // Mostrar éxito
+          await Swal.fire({
+            title: '🎉 Brevo Configurado Exitosamente',
+            html: `
+              <div style="text-align: left;">
+                <div style="background-color: #d4edda; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #155724;">✅ Conexión exitosa</h4>
+                  <p style="margin: 0; font-size: 14px;">La API Key es válida y todas las funcionalidades están activas.</p>
+                </div>
+                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Configuración guardada:</h4>
+                  <p style="margin: 4px 0; font-size: 14px;">
+                    <strong>Remitente SMS:</strong> ${formValues.smsSender}<br>
+                    <strong>Remitente Email:</strong> ${formValues.emailName} <${formValues.emailSender}><br>
+                    <strong>Modo:</strong> ${formValues.testMode ? 'Prueba 🧪' : 'Producción 🚀'}
+                  </p>
+                </div>
+                <div style="background-color: #e8f4fd; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #0066ff;">📊 Estadísticas disponibles:</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>• SMS enviados: ${testResult.data?.sms?.sent || 0}</li>
+                    <li>• Emails enviados: ${testResult.data?.email?.sent || 0}</li>
+                    <li>• Créditos SMS: ${testResult.data?.sms?.credits || 'N/A'}</li>
+                    <li>• Créditos Email: ${testResult.data?.email?.credits || 'N/A'}</li>
+                  </ul>
+                </div>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '¡Perfecto!',
+            confirmButtonColor: '#0066ff',
+            width: '500px'
+          });
+
+          toast.success('Brevo configurado exitosamente');
+        } else {
+          throw new Error(testResult.error || 'Error al conectar con Brevo');
+        }
+      } catch (error) {
+        console.error('Error configuring Brevo:', error);
+        
+        // Restaurar estado
+        setIntegrations(prev => ({
+          ...prev,
+          brevo: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null,
+            testMode: false
+          }
+        }));
+
+        // Mostrar error
+        await Swal.fire({
+          title: '❌ Error de Conexión',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f8d7da; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #721c24;">No se pudo conectar con Brevo</h4>
+                <p style="margin: 0; font-size: 14px;"><strong>Error:</strong> ${error.message}</p>
+              </div>
+              <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">🔍 Posibles soluciones:</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                  <li>• Verifica que la API Key sea correcta</li>
+                  <li>• Asegúrate de que la API Key tenga permisos de SMS y Email</li>
+                  <li>• Revisa que tu cuenta de Brevo esté activa</li>
+                  <li>• Verifica tu conexión a internet</li>
+                </ul>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
+        });
+
+        toast.error('Error al configurar Brevo');
+      }
+    }
+  };
+
   const disconnectIntegration = async (integration) => {
     const integrationNames = {
       google: 'Google Workspace',
       slack: 'Slack',
       teams: 'Microsoft Teams',
       hubspot: 'HubSpot',
-      salesforce: 'Salesforce'
+      salesforce: 'Salesforce',
+      brevo: 'Brevo'
     };
 
     const result = await Swal.fire({
@@ -1160,12 +1367,18 @@ const Settings = ({ activeTab: propActiveTab }) => {
     });
 
     if (result.isConfirmed) {
+      // Si es Brevo, limpiar la configuración guardada
+      if (integration === 'brevo') {
+        brevoService.clearConfiguration();
+      }
+
       setIntegrations(prev => ({
         ...prev,
         [integration]: {
           connected: false,
           status: 'disconnected',
-          lastSync: null
+          lastSync: null,
+          testMode: false
         }
       }));
 
@@ -1191,7 +1404,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
 
     // Validar teléfono (solo números y algunos caracteres especiales)
-    const phoneRegex = /^[\+]?[0-9\s\-\(\)]+$/;
+    const phoneRegex = /^[\+]?[0-9\s\-()]+$/;
     if (!phoneRegex.test(integrationForm.telefono)) {
       toast.error('Por favor ingresa un teléfono válido');
       return;
@@ -2623,6 +2836,124 @@ const Settings = ({ activeTab: propActiveTab }) => {
                   className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {integrations.salesforce.status === 'connecting' ? 'Conectando...' : 'Configurar Salesforce'}
+                </button>
+              )}
+            </div>
+
+            {/* Brevo - SMS y Email Masivo */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Brevo</h3>
+                    <p className="text-sm text-gray-600">SMS y Email Masivo</p>
+                  </div>
+                </div>
+                {getStatusBadge('brevo')}
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Envío masivo de SMS y emails con estadísticas en tiempo real, plantillas personalizadas y programación de envíos.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  {integrations.brevo.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.brevo.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                  {integrations.brevo.testMode && (
+                    <div className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full inline-block">
+                      🧪 Modo prueba activo
+                    </div>
+                  )}
+                </div>
+
+                {integrations.brevo.connected && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-green-800">Brevo configurado</span>
+                    </div>
+                    <div className="text-xs text-green-600">
+                      <p>• SMS masivo activado (hasta 1000 por lote)</p>
+                      <p>• Email masivo activado (hasta 2000 por lote)</p>
+                      <p>• Estadísticas en tiempo real</p>
+                      <p>• Plantillas personalizadas</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {integrations.brevo.connected ? (
+                <div className="space-y-2">
+                  <Link
+                    to="/estadisticas-brevo"
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center"
+                  >
+                    📊 Ver Estadísticas
+                  </Link>
+                  <Link
+                    to="/plantillas-brevo"
+                    className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center"
+                  >
+                    📝 Gestionar Plantillas
+                  </Link>
+                  <button
+                    onClick={() => disconnectIntegration('brevo')}
+                    className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Desconectar Brevo
+                  </button>
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: '📊 Información de Brevo',
+                        html: `
+                          <div style="text-align: left;">
+                            <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                              <h4 style="margin: 0 0 8px 0; color: #0066ff;">Funcionalidades Activas</h4>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                                <li>✅ Envío masivo de SMS</li>
+                                <li>✅ Envío masivo de Email</li>
+                                <li>✅ Estadísticas en tiempo real</li>
+                                <li>✅ Plantillas personalizadas</li>
+                                <li>✅ Programación de envíos</li>
+                                <li>✅ Modo prueba ${integrations.brevo.testMode ? 'activado' : 'desactivado'}</li>
+                              </ul>
+                            </div>
+                            <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                              <h4 style="margin: 0 0 8px 0; color: #333;">Configuración</h4>
+                              <p style="margin: 4px 0; font-size: 14px;">
+                                <strong>Estado:</strong> <span style="color: #28a745;">Conectado</span><br>
+                                <strong>Modo:</strong> ${integrations.brevo.testMode ? 'Prueba 🧪' : 'Producción 🚀'}<br>
+                                <strong>Última sincronización:</strong> ${new Date(integrations.brevo.lastSync).toLocaleString('es-ES')}
+                              </p>
+                            </div>
+                          </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#0066ff',
+                        width: '500px'
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold rounded-xl transition-all duration-300"
+                  >
+                    ℹ️ Ver Información
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={configureBrevo}
+                  disabled={integrations.brevo.status === 'connecting'}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {integrations.brevo.status === 'connecting' ? 'Conectando...' : 'Configurar Brevo'}
                 </button>
               )}
             </div>

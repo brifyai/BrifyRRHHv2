@@ -1,40 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { db, supabase } from '../../lib/supabase'
-import { GoogleDriveService } from '../../lib/googleDrive'
 import {
   UserIcon,
   KeyIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   EyeIcon,
   EyeSlashIcon,
-  CloudIcon,
   CreditCardIcon,
-  CalendarIcon,
-  ChartBarIcon
+  CalendarIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
 import toast from 'react-hot-toast'
 
 const Profile = () => {
-  const { user, userProfile, updateUserProfile, loadUserProfile, signOut } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const { user, userProfile, updateUserProfile, signOut } = useAuth()
   const [saving, setSaving] = useState(false)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [payments, setPayments] = useState([])
-  const [stats, setStats] = useState({
-    totalFolders: 0,
-    totalFiles: 0,
-    storageUsed: 0,
-    tokensUsed: 0
-  })
   
   const [formData, setFormData] = useState({
-    full_name: '',
+    name: '',
     telegram_id: ''
   })
   
@@ -43,19 +30,7 @@ const Profile = () => {
     newPassword: '',
     confirmPassword: ''
   })
-  
-  const [googleDriveService] = useState(new GoogleDriveService())
 
-  useEffect(() => {
-    if (userProfile) {
-      setFormData({
-        full_name: userProfile.full_name || '',
-        telegram_id: userProfile.telegram_id || ''
-      })
-    }
-    loadPaymentHistory()
-    loadUserStats()
-  }, [userProfile])
 
   const loadPaymentHistory = async () => {
     try {
@@ -73,48 +48,16 @@ const Profile = () => {
     }
   }
 
-  const loadUserStats = async () => {
-    try {
-      // Usar datos del perfil de usuario para evitar consultas excesivas
-      const basicStats = {
-        totalFolders: 0, // Se puede obtener de userProfile si está disponible
-        totalFiles: 0,   // Se puede obtener de userProfile si está disponible
-        storageUsed: userProfile?.used_storage_bytes || 0,
-        tokensUsed: 0
-      }
-      
-      setStats(basicStats)
-      
-      // Cargar solo tokens usados con manejo de errores mejorado
-      try {
-        const { data: tokenUsage, error } = await supabase
-          .from('user_tokens_usage')
-          .select('total_tokens')
-          .eq('user_id', user.id)
-          .maybeSingle()
-        
-        if (!error && tokenUsage) {
-          setStats(prevStats => ({
-            ...prevStats,
-            tokensUsed: tokenUsage.total_tokens || 0
-          }))
-        }
-      } catch (tokenError) {
-        console.error('Error loading token usage:', tokenError)
-        // No hacer nada, mantener tokensUsed en 0
-      }
-      
-    } catch (error) {
-      console.error('Error loading user stats:', error)
-      // Establecer estadísticas básicas en caso de error
-      setStats({
-        totalFolders: 0,
-        totalFiles: 0,
-        storageUsed: userProfile?.used_storage_bytes || 0,
-        tokensUsed: 0
+  useEffect(() => {
+    if (userProfile) {
+      setFormData({
+        name: userProfile.name || userProfile.full_name || '',
+        telegram_id: userProfile.telegram_id || ''
       })
     }
-  }
+    loadPaymentHistory()
+  }, [userProfile])
+
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault()
@@ -123,6 +66,11 @@ const Profile = () => {
     try {
       await updateUserProfile(formData)
       toast.success('Perfil actualizado exitosamente')
+      
+      // Forzar recarga de la página para que el dashboard refleje los cambios
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
     } catch (error) {
       console.error('Error updating profile:', error)
       toast.error('Error actualizando el perfil')
@@ -147,6 +95,18 @@ const Profile = () => {
     setSaving(true)
     
     try {
+      // Primero verificar la contraseña actual
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordData.currentPassword
+      })
+      
+      if (signInError) {
+        toast.error('La contraseña actual es incorrecta')
+        setSaving(false)
+        return
+      }
+      
       // Cambiar contraseña con Supabase
       const { error } = await supabase.auth.updateUser({
         password: passwordData.newPassword
@@ -161,7 +121,7 @@ const Profile = () => {
         } else if (error.message && error.message.includes('Password should be at least')) {
           toast.error('La contraseña debe cumplir con los requisitos mínimos')
         } else {
-          toast.error('Error al actualizar la contraseña')
+          toast.error('Error al actualizar la contraseña: ' + error.message)
         }
         return
       }
@@ -175,61 +135,13 @@ const Profile = () => {
       setShowPasswordForm(false)
     } catch (error) {
       console.error('Error changing password:', error)
-      toast.error('Error cambiando la contraseña')
+      toast.error('Error cambiando la contraseña: ' + error.message)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleGoogleDriveConnect = async () => {
-    try {
-      setLoading(true)
-      
-      // Generar URL de autorización de Google
-      const authUrl = await googleDriveService.generateAuthUrl()
-      
-      // Abrir ventana de autorización
-      window.open(authUrl, '_blank', 'width=500,height=600')
-      
-      toast.success('Redirigiendo a Google para autorización...')
-    } catch (error) {
-      console.error('Error connecting to Google Drive:', error)
-      toast.error('Error conectando con Google Drive')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleGoogleDriveDisconnect = async () => {
-    if (window.confirm('¿Estás seguro de que quieres desconectar Google Drive?')) {
-      return
-    }
-    
-    try {
-      setLoading(true)
-      
-      // Limpiar tokens de Google Drive
-      await updateUserProfile({
-        google_refresh_token: null,
-        google_access_token: null
-      })
-      
-      toast.success('Google Drive desconectado exitosamente')
-    } catch (error) {
-      console.error('Error disconnecting Google Drive:', error)
-      toast.error('Error desconectando Google Drive')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A'
@@ -264,9 +176,6 @@ const Profile = () => {
     )
   }
 
-  if (loading) {
-    return <LoadingSpinner text="Cargando perfil..." />
-  }
 
   return (
     <div className="space-y-6">
@@ -295,8 +204,8 @@ const Profile = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Tu nombre completo"
                 />
@@ -524,74 +433,6 @@ const Profile = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Google Drive */}
-          <div className="bg-white shadow-sm rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <CloudIcon className="h-5 w-5 mr-2" />
-              Google Drive
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center">
-                {userProfile?.google_refresh_token ? (
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
-                ) : (
-                  <XCircleIcon className="h-5 w-5 text-red-500 mr-2" />
-                )}
-                <span className="text-sm text-gray-700">
-                  {userProfile?.google_refresh_token ? 'Conectado' : 'No conectado'}
-                </span>
-              </div>
-              
-              {userProfile?.google_refresh_token ? (
-                <button
-                  onClick={handleGoogleDriveDisconnect}
-                  disabled={loading}
-                  className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Desconectando...' : 'Desconectar'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleGoogleDriveConnect}
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Conectando...' : 'Conectar Google Drive'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Estadísticas */}
-          <div className="bg-white shadow-sm rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <ChartBarIcon className="h-5 w-5 mr-2" />
-              Estadísticas
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Carpetas</span>
-                <span className="text-sm font-medium text-gray-900">{stats.totalFolders}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Archivos</span>
-                <span className="text-sm font-medium text-gray-900">{stats.totalFiles}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Almacenamiento</span>
-                <span className="text-sm font-medium text-gray-900">{formatFileSize(stats.storageUsed)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Tokens usados</span>
-                <span className="text-sm font-medium text-gray-900">{stats.tokensUsed.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
 
           {/* Información de la Cuenta */}
           <div className="bg-white shadow-sm rounded-lg p-6">
