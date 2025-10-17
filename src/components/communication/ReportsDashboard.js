@@ -727,7 +727,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-orange-100 text-sm font-medium mb-1">Tasa de Apertura</p>
-                  <p className="text-3xl font-bold">{reports.engagementMetrics?.avgOpenRate || 0}%</p>
+                  <p className="text-3xl font-bold">{reports?.engagementMetrics?.avgOpenRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-orange-200 mt-1">Mensajes abiertos</p>
                 </div>
@@ -745,7 +745,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-cyan-100 text-sm font-medium mb-1">Tasa de Clic</p>
-                  <p className="text-3xl font-bold">{reports.engagementMetrics?.avgClickRate || 0}%</p>
+                  <p className="text-3xl font-bold">{reports?.engagementMetrics?.avgClickRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-cyan-200 mt-1">Interacciones</p>
                 </div>
@@ -763,7 +763,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-emerald-100 text-sm font-medium mb-1">Tasa de Respuesta</p>
-                  <p className="text-3xl font-bold">{reports.engagementMetrics?.avgResponseRate || 0}%</p>
+                  <p className="text-3xl font-bold">{reports?.engagementMetrics?.avgResponseRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-emerald-200 mt-1">Respuestas recibidas</p>
                 </div>
