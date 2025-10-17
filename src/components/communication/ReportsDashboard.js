@@ -653,7 +653,7 @@ const ReportsDashboard = () => {
                <div className="flex justify-between items-start">
                  <div>
                    <p className="text-indigo-100 text-sm font-medium mb-1">Mensajes Totales</p>
-                   <p className="text-3xl font-bold">{reports.totalMessages || 0}</p>
+                   <p className="text-3xl font-bold">{reports?.totalMessages || 0}</p>
                    <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                    <p className="text-xs text-indigo-200 mt-1">En período seleccionado</p>
                  </div>
