@@ -28,6 +28,7 @@ import {
 import employeeData from './employeeData';
 import enhancedCommunicationService from '../../services/enhancedCommunicationService';
 import ReportsDashboard from './ReportsDashboard';
+import PredictiveAnalyticsDashboard from '../analytics/PredictiveAnalyticsDashboard';
 
 const WebrifyCommunicationDashboard = () => {
   const { userProfile } = useAuth();
@@ -427,6 +428,7 @@ const WebrifyCommunicationDashboard = () => {
     { id: 'database', name: 'Base de Datos', icon: UsersIcon },
     { id: 'send', name: 'Enviar Mensajes', icon: ChatBubbleLeftRightIcon },
     { id: 'templates', name: 'Plantillas', icon: DocumentTextIcon },
+    { id: 'analytics', name: 'Analíticas IA', icon: ChartBarIcon },
     { id: 'reports', name: 'Informes', icon: ChartBarIcon }
   ];
 
@@ -687,3 +689,28 @@ const WebrifyCommunicationDashboard = () => {
                           onChange={() => handleFilterChange('company', company)}
                           className="h-4 w-4 text-engage-blue border-gray-300 rounded focus:ring-engage-blue"
                         />
+                        <label htmlFor={`company-${company}`} className="ml-2 text-sm text-gray-700">
+                          {company}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <PredictiveAnalyticsDashboard companyId={userProfile?.company_id || 'default'} />
+        )}
+
+        {activeTab === 'reports' && (
+          <ReportsDashboard />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default WebrifyCommunicationDashboard;
