@@ -671,7 +671,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-green-100 text-sm font-medium mb-1">Tasa de Entrega</p>
-                  <p className="text-3xl font-bold">{reports.deliveryRate || 0}%</p>
+                  <p className="text-3xl font-bold">{reports?.deliveryRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-green-200 mt-1">Mensajes entregados</p>
                 </div>
@@ -691,7 +691,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-blue-100 text-sm font-medium mb-1">Tasa de Lectura</p>
-                  <p className="text-3xl font-bold">{reports.readRate || 0}%</p>
+                  <p className="text-3xl font-bold">{reports?.readRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-blue-200 mt-1">Mensajes leídos</p>
                 </div>
@@ -709,7 +709,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-purple-100 text-sm font-medium mb-1">Tiempo Respuesta</p>
-                  <p className="text-3xl font-bold">{reports.avgResponseTime || 0}min</p>
+                  <p className="text-3xl font-bold">{reports?.avgResponseTime || 0}min</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-purple-200 mt-1">Promedio general</p>
                 </div>
@@ -781,7 +781,7 @@ const ReportsDashboard = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-rose-100 text-sm font-medium mb-1">Tasa de Rebote</p>
-                  <p className="text-3xl font-bold">{reports.bounceRate || 0}%</p>
+                  <p className="text-3xl font-bold">{reports?.bounceRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-rose-200 mt-1">Mensajes fallidos</p>
                 </div>
@@ -1222,11 +1222,11 @@ const ReportsDashboard = () => {
             <div className="h-80">
               <Line
                 data={{
-                  labels: Object.keys(reports.sentimentMetrics?.sentimentTrends || {}).sort(),
+                  labels: Object.keys(reports?.sentimentMetrics?.sentimentTrends || {}).sort(),
                   datasets: [{
                     label: 'Sentimiento Promedio',
-                    data: Object.keys(reports.sentimentMetrics?.sentimentTrends || {}).sort().map(date =>
-                      reports.sentimentMetrics.sentimentTrends[date]?.average || 0
+                    data: Object.keys(reports?.sentimentMetrics?.sentimentTrends || {}).sort().map(date =>
+                      reports?.sentimentMetrics?.sentimentTrends[date]?.average || 0
                     ),
                     borderColor: 'rgb(34, 197, 94)',
                     backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -1278,10 +1278,10 @@ const ReportsDashboard = () => {
             <div className="h-80">
               <Bar
                 data={{
-                  labels: Object.keys(reports.sentimentMetrics?.sentimentByCompany || {}),
+                  labels: Object.keys(reports?.sentimentMetrics?.sentimentByCompany || {}),
                   datasets: [{
                     label: 'Sentimiento Promedio',
-                    data: Object.values(reports.sentimentMetrics?.sentimentByCompany || {}).map(company => company.average || 0),
+                    data: Object.values(reports?.sentimentMetrics?.sentimentByCompany || {}).map(company => company.average || 0),
                     backgroundColor: 'rgba(59, 130, 246, 0.8)',
                     borderColor: 'rgb(59, 130, 246)',
                     borderWidth: 1,
