@@ -447,7 +447,7 @@ const ModernDashboardRedesigned = () => {
                   className="text-xl font-light text-gray-900"
                 >
                   {getGreeting()}, <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    {userProfile?.name || userProfile?.email || 'Usuario'}
+                    {userProfile?.name || user?.user_metadata?.name || user?.user_metadata?.full_name || userProfile?.email?.split('@')[0] || 'Usuario'}
                   </span>
                 </motion.h1>
                 <motion.p 
