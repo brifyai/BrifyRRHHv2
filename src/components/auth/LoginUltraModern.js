@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-hot-toast'
+import { Helmet } from 'react-helmet-async'
 
 const LoginUltraModern = () => {
   const [email, setEmail] = useState('')
@@ -44,6 +45,18 @@ const LoginUltraModern = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white overflow-hidden relative">
+      {/* SEO Meta Tags para Login */}
+      <Helmet>
+        <title>Iniciar Sesión - StaffHub | Plataforma de Comunicación Interna</title>
+        <meta name="description" content="Accede a tu cuenta de StaffHub. Gestiona la comunicación interna de tu empresa con IA avanzada." />
+        <meta name="keywords" content="login, iniciar sesión, StaffHub, comunicación interna, empresa" />
+        <meta property="og:title" content="Iniciar Sesión - StaffHub" />
+        <meta property="og:description" content="Accede a tu cuenta de StaffHub para gestionar empleados y comunicaciones." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://staffhub.cl/login" />
+        <meta name="robots" content="noindex, nofollow" />
+        <link rel="canonical" href="https://staffhub.cl/login" />
+      </Helmet>
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div 
