@@ -387,54 +387,31 @@ const HomeStaffHubSEO = () => {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-            {/* Left Column - Why Choose Us */}
-            <div className="lg:col-span-7 space-y-8">
-              {/* Why Choose Us Card */}
-              <div className="bg-white rounded-3xl shadow-xl p-8 border border-white/50 backdrop-blur-sm">
-                <div className="text-center mb-8">
-                  <h3 className="text-3xl font-bold text-gray-900 mb-3">¿Por qué elegir StaffHub?</h3>
-                  <p className="text-gray-600">Descubre lo que nos hace diferentes</p>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-start group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <span className="text-white font-bold text-lg">1</span>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Tecnología de Vanguardia</h4>
-                      <p className="text-gray-600 leading-relaxed">IA avanzada y automatización inteligente para resultados excepcionales que superan las expectativas.</p>
-                    </div>
+            {/* Left Column - CTA Only */}
+            <div className="lg:col-span-7 flex items-center justify-center">
+              {/* CTA Card */}
+              <div className="relative bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 rounded-3xl p-8 text-white shadow-2xl overflow-hidden max-w-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-indigo-600/20"></div>
+                <div className="relative">
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold mb-3">¿Listo para transformar tu comunicación?</h3>
+                    <p className="text-blue-100 leading-relaxed">
+                      Únete a las empresas que ya revolucionaron su comunicación interna con StaffHub.
+                    </p>
                   </div>
 
-                  <div className="flex items-start group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <span className="text-white font-bold text-lg">2</span>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Escalabilidad Total</h4>
-                      <p className="text-gray-600 leading-relaxed">Desde 10 hasta 100.000 empleados, crecemos con tu empresa sin comprometer el rendimiento.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <span className="text-white font-bold text-lg">3</span>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Soporte Especializado</h4>
-                      <p className="text-gray-600 leading-relaxed">Equipo dedicado de expertos para garantizar tu éxito en cada paso del camino.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <span className="text-white font-bold text-lg">4</span>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Resultados Comprobados</h4>
-                      <p className="text-gray-600 leading-relaxed">Más de 500 empresas ya transformaron su comunicación interna con resultados medibles.</p>
-                    </div>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                      onClick={() => setActiveTab('register')}
+                      className="bg-white text-gray-900 px-8 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      🚀 Comenzar Ahora
+                    </button>
+                    <button className="border-2 border-white text-white px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all duration-300">
+                      <Link to="/landing-prueba" className="flex items-center justify-center">
+                        🎬 Ver Demo
+                      </Link>
+                    </button>
                   </div>
                 </div>
               </div>
