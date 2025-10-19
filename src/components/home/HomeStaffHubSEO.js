@@ -160,6 +160,148 @@ const HomeStaffHubSEO = () => {
         )}
       </nav>
 
+      {/* About Section - Somos */}
+      <section id="about" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              Somos <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">StaffHub</span>
+            </h2>
+            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+              La plataforma que revoluciona la comunicación interna de las empresas modernas
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mr-4">
+                    <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Nuestra Misión</h3>
+                </div>
+                <p className="text-gray-700 leading-relaxed">
+                  Democratizar la comunicación interna de calidad para todas las empresas, desde startups hasta corporaciones multinacionales. Creemos que una comunicación efectiva es la base del éxito organizacional.
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mr-4">
+                    <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Nuestra Visión</h3>
+                </div>
+                <p className="text-gray-700 leading-relaxed">
+                  Ser la plataforma líder mundial en comunicación interna inteligente, empoderando a las organizaciones para que conecten profundamente con sus equipos a través de tecnología innovadora y IA avanzada.
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-8 border border-purple-100">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mr-4">
+                    <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Nuestros Valores</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="font-semibold text-gray-900">Innovación</div>
+                    <div className="text-sm text-gray-600">Siempre a la vanguardia</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-gray-900">Confianza</div>
+                    <div className="text-sm text-gray-600">Seguridad y privacidad</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-gray-900">Excelencia</div>
+                    <div className="text-sm text-gray-600">Calidad en cada detalle</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-gray-900">Empatía</div>
+                    <div className="text-sm text-gray-600">Entendemos tus necesidades</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 border border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">¿Por qué elegir StaffHub?</h3>
+                <div className="space-y-6">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
+                      <span className="text-blue-600 font-bold text-sm">1</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Tecnología de Vanguardia</h4>
+                      <p className="text-gray-600 text-sm">IA avanzada y automatización inteligente para resultados excepcionales.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
+                      <span className="text-blue-600 font-bold text-sm">2</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Escalabilidad Total</h4>
+                      <p className="text-gray-600 text-sm">Desde 10 hasta 100.000 empleados, crecemos con tu empresa.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
+                      <span className="text-blue-600 font-bold text-sm">3</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Soporte Especializado</h4>
+                      <p className="text-gray-600 text-sm">Equipo dedicado para garantizar tu éxito en cada paso.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
+                      <span className="text-blue-600 font-bold text-sm">4</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Resultados Comprobados</h4>
+                      <p className="text-gray-600 text-sm">Más de 500 empresas ya transformaron su comunicación interna.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white">
+                <h3 className="text-xl font-bold mb-4">Únete a la Revolución Digital</h3>
+                <p className="mb-6 opacity-90">
+                  Miles de empresas ya han transformado su forma de comunicarse con sus equipos. ¿Estás listo para ser el siguiente?
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => setActiveTab('register')}
+                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300"
+                  >
+                    Comenzar Ahora
+                  </button>
+                  <button className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-all duration-300">
+                    <Link to="/landing-prueba" className="flex items-center justify-center">
+                      Ver Demo
+                    </Link>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Hero Section - StaffHub Focus */}
       <div className="pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-40 lg:pb-32 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -493,6 +635,151 @@ const HomeStaffHubSEO = () => {
                 </div>
               </div>
               
+              <div className="mt-8 text-center">
+                <div className="inline-flex items-center bg-white/20 rounded-full px-4 py-2">
+                  <svg className="h-5 w-5 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className="font-semibold">Resultados comprobados en tiempo real</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Solution Section */}
+      <section id="solution" className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              La solución para comunicaciones internas a gran escala
+            </h2>
+            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+              Simplifica la gestión de comunicaciones a miles de empleados con tecnología inteligente
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <svg className="h-6 w-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  El desafío actual
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                      <span className="text-red-600 font-bold">1</span>
+                    </div>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Carga manual de documentos:</span> Subir archivos individuales para cada empleado consume horas de trabajo.
+                    </p>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                      <span className="text-red-600 font-bold">2</span>
+                    </div>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Comunicación sin personalización:</span> Los mensajes masivos no llegan al punto correcto.
+                    </p>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                      <span className="text-red-600 font-bold">3</span>
+                    </div>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Gestión de preguntas manual:</span> Responder a cientos de empleados consume tiempo valioso.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
+                <h3 className="text-xl font-bold mb-4 flex items-center">
+                  <svg className="h-6 w-6 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  La solución StaffHub
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                      <span className="text-white font-bold">1</span>
+                    </div>
+                    <p>
+                      <span className="font-semibold">Carga automatizada:</span> Arrastra un archivo y se distribuye a miles de empleados en segundos.
+                    </p>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                      <span className="text-white font-bold">2</span>
+                    </div>
+                    <p>
+                      <span className="font-semibold">Comunicación personalizada:</span> Envía mensajes segmentados por cargo, región, sucursal o contrato.
+                    </p>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                      <span className="text-white font-bold">3</span>
+                    </div>
+                    <p>
+                      <span className="font-semibold">Asistente de IA:</span> Respuestas automáticas basadas en la base de conocimiento de cada empleado.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-xl">
+              <h3 className="text-2xl font-bold mb-6 text-center">Visualización del impacto</h3>
+
+              <div className="space-y-6">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">Tiempo de carga de documentos</span>
+                    <span className="font-bold text-lg">90% ↓</span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-3">
+                    <div className="bg-white h-3 rounded-full" style={{width: '90%'}}></div>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Antes: 8 horas</span>
+                    <span>Ahora: 48 minutos</span>
+                  </div>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">Alcance de empleados</span>
+                    <span className="font-bold text-lg">20x ↑</span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-3">
+                    <div className="bg-white h-3 rounded-full" style={{width: '95%'}}></div>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Antes: 500 empleados</span>
+                    <span>Ahora: 10,000 empleados</span>
+                  </div>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">Satisfacción de empleados</span>
+                    <span className="font-bold text-lg">85% ↑</span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-3">
+                    <div className="bg-white h-3 rounded-full" style={{width: '85%'}}></div>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Antes: 45%</span>
+                    <span>Ahora: 83%</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="mt-8 text-center">
                 <div className="inline-flex items-center bg-white/20 rounded-full px-4 py-2">
                   <svg className="h-5 w-5 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
