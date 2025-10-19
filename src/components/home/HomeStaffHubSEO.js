@@ -361,141 +361,189 @@ const HomeStaffHubSEO = () => {
         </div>
       </div>
 
-      {/* About Section - Somos */}
-      <section id="about" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              Somos <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">StaffHub</span>
+      {/* About Section - Somos - Rediseño Moderno */}
+      <section id="about" className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse animation-delay-2000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-1000"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          {/* Header Section */}
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20 shadow-lg mb-8">
+              <div className="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+              <span className="text-gray-700 font-medium">Conoce nuestra historia</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6">
+              Somos <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">StaffHub</span>
             </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              La plataforma que revoluciona la comunicación interna de las empresas modernas
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              La plataforma que revoluciona la comunicación interna de las empresas modernas con tecnología de vanguardia y resultados comprobados
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mr-4">
-                    <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+            {/* Left Column - Mission, Vision, Values */}
+            <div className="lg:col-span-7 space-y-8">
+              {/* Mission Card */}
+              <div className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-white/50 backdrop-blur-sm">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative p-8">
+                  <div className="flex items-center mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Nuestra Misión</h3>
+                      <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"></div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">Nuestra Misión</h3>
+                  <p className="text-gray-700 text-lg leading-relaxed">
+                    Democratizar la comunicación interna de calidad para todas las empresas, desde startups hasta corporaciones multinacionales. Creemos que una comunicación efectiva es la base del éxito organizacional y el bienestar de los empleados.
+                  </p>
                 </div>
-                <p className="text-gray-700 leading-relaxed">
-                  Democratizar la comunicación interna de calidad para todas las empresas, desde startups hasta corporaciones multinacionales. Creemos que una comunicación efectiva es la base del éxito organizacional.
-                </p>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mr-4">
-                    <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+              {/* Vision Card */}
+              <div className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-white/50 backdrop-blur-sm">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative p-8">
+                  <div className="flex items-center mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mr-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Nuestra Visión</h3>
+                      <div className="w-12 h-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full"></div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">Nuestra Visión</h3>
+                  <p className="text-gray-700 text-lg leading-relaxed">
+                    Ser la plataforma líder mundial en comunicación interna inteligente, empoderando a las organizaciones para que conecten profundamente con sus equipos a través de tecnología innovadora, IA avanzada y experiencias excepcionales.
+                  </p>
                 </div>
-                <p className="text-gray-700 leading-relaxed">
-                  Ser la plataforma líder mundial en comunicación interna inteligente, empoderando a las organizaciones para que conecten profundamente con sus equipos a través de tecnología innovadora y IA avanzada.
-                </p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-8 border border-purple-100">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mr-4">
-                    <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
+              {/* Values Card */}
+              <div className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-white/50 backdrop-blur-sm">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative p-8">
+                  <div className="flex items-center mb-8">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mr-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Nuestros Valores</h3>
+                      <div className="w-12 h-1 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full"></div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">Nuestros Valores</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="font-semibold text-gray-900">Innovación</div>
-                    <div className="text-sm text-gray-600">Siempre a la vanguardia</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-semibold text-gray-900">Confianza</div>
-                    <div className="text-sm text-gray-600">Seguridad y privacidad</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-semibold text-gray-900">Excelencia</div>
-                    <div className="text-sm text-gray-600">Calidad en cada detalle</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-semibold text-gray-900">Empatía</div>
-                    <div className="text-sm text-gray-600">Entendemos tus necesidades</div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors duration-300">
+                      <div className="font-bold text-gray-900 text-lg mb-1">Innovación</div>
+                      <div className="text-sm text-gray-600">Siempre a la vanguardia tecnológica</div>
+                    </div>
+                    <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors duration-300">
+                      <div className="font-bold text-gray-900 text-lg mb-1">Confianza</div>
+                      <div className="text-sm text-gray-600">Seguridad y privacidad primero</div>
+                    </div>
+                    <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-100 group-hover:from-purple-100 group-hover:to-violet-100 transition-colors duration-300">
+                      <div className="font-bold text-gray-900 text-lg mb-1">Excelencia</div>
+                      <div className="text-sm text-gray-600">Calidad en cada detalle</div>
+                    </div>
+                    <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-100 group-hover:from-pink-100 group-hover:to-rose-100 transition-colors duration-300">
+                      <div className="font-bold text-gray-900 text-lg mb-1">Empatía</div>
+                      <div className="text-sm text-gray-600">Entendemos tus necesidades</div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-8">
-              <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">¿Por qué elegir StaffHub?</h3>
+            {/* Right Column - Why Choose Us & CTA */}
+            <div className="lg:col-span-5 space-y-8">
+              {/* Why Choose Us Card */}
+              <div className="bg-white rounded-3xl shadow-xl p-8 border border-white/50 backdrop-blur-sm">
+                <div className="text-center mb-8">
+                  <h3 className="text-3xl font-bold text-gray-900 mb-3">¿Por qué elegir StaffHub?</h3>
+                  <p className="text-gray-600">Descubre lo que nos hace diferentes</p>
+                </div>
+
                 <div className="space-y-6">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
-                      <span className="text-blue-600 font-bold text-sm">1</span>
+                  <div className="flex items-start group">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <span className="text-white font-bold text-lg">1</span>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Tecnología de Vanguardia</h4>
-                      <p className="text-gray-600 text-sm">IA avanzada y automatización inteligente para resultados excepcionales.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
-                      <span className="text-blue-600 font-bold text-sm">2</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Escalabilidad Total</h4>
-                      <p className="text-gray-600 text-sm">Desde 10 hasta 100.000 empleados, crecemos con tu empresa.</p>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Tecnología de Vanguardia</h4>
+                      <p className="text-gray-600 leading-relaxed">IA avanzada y automatización inteligente para resultados excepcionales que superan las expectativas.</p>
                     </div>
                   </div>
 
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
-                      <span className="text-blue-600 font-bold text-sm">3</span>
+                  <div className="flex items-start group">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <span className="text-white font-bold text-lg">2</span>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Soporte Especializado</h4>
-                      <p className="text-gray-600 text-sm">Equipo dedicado para garantizar tu éxito en cada paso.</p>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Escalabilidad Total</h4>
+                      <p className="text-gray-600 leading-relaxed">Desde 10 hasta 100.000 empleados, crecemos con tu empresa sin comprometer el rendimiento.</p>
                     </div>
                   </div>
 
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-4 mt-1">
-                      <span className="text-blue-600 font-bold text-sm">4</span>
+                  <div className="flex items-start group">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <span className="text-white font-bold text-lg">3</span>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Resultados Comprobados</h4>
-                      <p className="text-gray-600 text-sm">Más de 500 empresas ya transformaron su comunicación interna.</p>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Soporte Especializado</h4>
+                      <p className="text-gray-600 leading-relaxed">Equipo dedicado de expertos para garantizar tu éxito en cada paso del camino.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start group">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <span className="text-white font-bold text-lg">4</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-2 text-lg">Resultados Comprobados</h4>
+                      <p className="text-gray-600 leading-relaxed">Más de 500 empresas ya transformaron su comunicación interna con resultados medibles.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white">
-                <h3 className="text-xl font-bold mb-4">Únete a la Revolución Digital</h3>
-                <p className="mb-6 opacity-90">
-                  Miles de empresas ya han transformado su forma de comunicarse con sus equipos. ¿Estás listo para ser el siguiente?
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={() => setActiveTab('register')}
-                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300"
-                  >
-                    Comenzar Ahora
-                  </button>
-                  <button className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-all duration-300">
-                    <Link to="/landing-prueba" className="flex items-center justify-center">
-                      Ver Demo
-                    </Link>
-                  </button>
+              {/* CTA Card */}
+              <div className="relative bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 rounded-3xl p-8 text-white shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-indigo-600/20"></div>
+                <div className="relative">
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold mb-3">Únete a la Revolución Digital</h3>
+                    <p className="text-blue-100 leading-relaxed">
+                      Miles de empresas ya han transformado su forma de comunicarse con sus equipos. ¿Estás listo para ser el siguiente?
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                      onClick={() => setActiveTab('register')}
+                      className="bg-white text-gray-900 px-8 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      🚀 Comenzar Ahora
+                    </button>
+                    <button className="border-2 border-white text-white px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all duration-300">
+                      <Link to="/landing-prueba" className="flex items-center justify-center">
+                        🎬 Ver Demo
+                      </Link>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
