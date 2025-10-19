@@ -233,7 +233,7 @@ const ModernDashboardRedesigned = () => {
         clearTimeout(loadTimeout)
       }
     }
-  }, [user, userProfile, loadDashboardData])
+  }, [user, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualizar tiempo cada segundo
   useEffect(() => {
@@ -287,7 +287,7 @@ const ModernDashboardRedesigned = () => {
         console.warn('⚠️ ModernDashboard: Error al desuscribirse:', error.message)
       }
     }
-  }, [user, userProfile, loadDashboardData]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 Bytes'

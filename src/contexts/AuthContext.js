@@ -367,7 +367,7 @@ export const AuthProvider = ({ children }) => {
     }
     
     initializeAuth()
-  }, [loadUserProfile])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Efecto para manejar cambios de autenticación
   useEffect(() => {
@@ -442,7 +442,7 @@ export const AuthProvider = ({ children }) => {
       if (profileLoadTimeout) clearTimeout(profileLoadTimeout)
       if (visibilityTimeout) clearTimeout(visibilityTimeout)
     }
-  }, [user, loading, loadUserProfile, userProfile])
+  }, [user, loading, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     user,
