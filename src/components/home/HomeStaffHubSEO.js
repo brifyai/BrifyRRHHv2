@@ -87,6 +87,9 @@ const HomeStaffHubSEO = () => {
                 <a href="#benefits" className="text-gray-600 hover:text-blue-600 font-medium">
                   Beneficios
                 </a>
+                <a href="#about" className="text-gray-600 hover:text-blue-600 font-medium">
+                  Somos
+                </a>
                 <Link
                   to="/login"
                   className="text-gray-600 hover:text-blue-600 font-medium"
@@ -132,6 +135,9 @@ const HomeStaffHubSEO = () => {
               </a>
               <a href="#benefits" className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50">
                 Beneficios
+              </a>
+              <a href="#about" className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50">
+                Somos
               </a>
               <Link
                 to="/login"
