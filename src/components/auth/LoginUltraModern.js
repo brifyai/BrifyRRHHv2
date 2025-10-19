@@ -28,12 +28,21 @@ const LoginUltraModern = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    
+
+    console.log('Intentando login con:', email)
+
     try {
       const result = await signIn(email, password)
-      if (!result.error) {
+      console.log('Resultado del login:', result)
+
+      if (result && !result.error) {
+        console.log('Login exitoso, redirigiendo...')
         toast.success('¡Bienvenido de nuevo!')
         navigate('/panel-principal')
+      } else {
+        console.error('Error de autenticación:', result?.error)
+        const errorMessage = result?.error?.message || 'Credenciales inválidas. Por favor, verifica tu email y contraseña.'
+        toast.error(errorMessage)
       }
     } catch (error) {
       console.error('Error de inicio de sesión:', error)
@@ -44,7 +53,7 @@ const LoginUltraModern = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white overflow-hidden relative">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white overflow-hidden relative">
       {/* SEO Meta Tags para Login */}
       <Helmet>
         <title>Iniciar Sesión - StaffHub | Plataforma de Comunicación Interna</title>
@@ -97,7 +106,7 @@ const LoginUltraModern = () => {
         ))}
       </div>
 
-      <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
             <div className="flex justify-center mb-6">
@@ -224,21 +233,21 @@ const LoginUltraModern = () => {
               </div>
             </div>
           </div>
-
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-400">
-              Al iniciar sesión, aceptas nuestros{' '}
-              <button className="font-medium text-blue-400 hover:text-blue-300 transition-colors">
-                Términos de Servicio
-              </button>{' '}
-              y{' '}
-              <button className="font-medium text-blue-400 hover:text-blue-300 transition-colors">
-                Política de Privacidad
-              </button>
-            </p>
-          </div>
         </div>
       </div>
+
+      <footer className="text-center p-4">
+        <p className="text-sm text-gray-400">
+          Al iniciar sesión, aceptas nuestros{' '}
+          <button className="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+            Términos de Servicio
+          </button>{' '}
+          y{' '}
+          <button className="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+            Política de Privacidad
+          </button>
+        </p>
+      </footer>
 
       {/* Global Styles */}
       <style jsx>{`

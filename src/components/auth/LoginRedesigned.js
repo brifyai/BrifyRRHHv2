@@ -7,6 +7,7 @@ const LoginRedesigned = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { signIn } = useAuth()
   const navigate = useNavigate()
 
@@ -29,7 +30,7 @@ const LoginRedesigned = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
       {/* SEO Section */}
       <div className="hidden">
         <h1>StaffHub - Iniciar Sesión</h1>
@@ -38,7 +39,7 @@ const LoginRedesigned = () => {
         <p>iniciar sesión, cuenta, comunicación interna, gestión de empleados, plataforma empresarial, StaffHub</p>
       </div>
       
-      {/* Navigation */}
+      {/* Navigation (idéntico al Home) */}
       <nav className="fixed top-0 w-full bg-white border-b border-gray-200 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -50,11 +51,12 @@ const LoginRedesigned = () => {
                 <span className="ml-2 text-xl font-bold text-gray-900">StaffHub</span>
               </Link>
             </div>
-            
+
+            {/* Desktop Navigation */}
             <div className="hidden md:block">
               <div className="ml-10 flex items-center space-x-8">
-                <Link to="/" className="text-gray-600 hover:text-blue-600 font-medium">
-                  Inicio
+                <Link to="/#about" className="text-gray-600 hover:text-blue-600 font-medium">
+                  Somos
                 </Link>
                 <Link to="/#solution" className="text-gray-600 hover:text-blue-600 font-medium">
                   Solución
@@ -65,23 +67,92 @@ const LoginRedesigned = () => {
                 <Link to="/#benefits" className="text-gray-600 hover:text-blue-600 font-medium">
                   Beneficios
                 </Link>
+                <Link
+                  to="/login"
+                  className="text-gray-600 hover:text-blue-600 font-medium"
+                >
+                  Iniciar Sesión
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-300"
+                >
+                  Comenzar
+                </Link>
               </div>
             </div>
-            
-            <div className="hidden md:block">
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-blue-600 focus:outline-none"
+              >
+                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                  {isMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+              <Link
+                to="/#about"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+              >
+                Somos
+              </Link>
+              <Link
+                to="/#solution"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+              >
+                Solución
+              </Link>
+              <Link
+                to="/#features"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+              >
+                Características
+              </Link>
+              <Link
+                to="/#benefits"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+              >
+                Beneficios
+              </Link>
+              <Link
+                to="/login"
+                onClick={() => setIsMenuOpen(false)}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+              >
+                Iniciar Sesión
+              </Link>
               <Link
                 to="/register"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-300"
+                onClick={() => setIsMenuOpen(false)}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
                 Comenzar
               </Link>
             </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {/* Login Section */}
-      <div className="pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-40 lg:pb-32">
+      <main className="flex-1 pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-40 lg:pb-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-12 lg:gap-16 items-center">
             <div className="lg:col-span-6">
@@ -193,10 +264,10 @@ const LoginRedesigned = () => {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white">
+      <footer className="mt-auto bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>

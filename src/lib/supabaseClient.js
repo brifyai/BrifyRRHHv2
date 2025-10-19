@@ -6,11 +6,8 @@ if (!SUPABASE_CONFIG.URL || !SUPABASE_CONFIG.ANON_KEY) {
   throw new Error('Missing Supabase configuration. Please check your environment variables.')
 }
 
-// En desarrollo, usar la clave de servicio para evitar problemas de RLS
-// En producción, se debería usar la clave anónima
-const keyToUse = APP_CONFIG.NODE_ENV === 'development' && SUPABASE_CONFIG.SERVICE_KEY
-  ? SUPABASE_CONFIG.SERVICE_KEY
-  : SUPABASE_CONFIG.ANON_KEY
+// Usar siempre la clave anónima para evitar problemas de RLS
+const keyToUse = SUPABASE_CONFIG.ANON_KEY
 
 // Create and export the Supabase client con opciones optimizadas
 export const supabase = createClient(SUPABASE_CONFIG.URL, keyToUse, {

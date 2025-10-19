@@ -57,9 +57,9 @@ const HomeStaffHubSEO = () => {
       {/* Sección de SEO y Metadatos */}
       <div className="hidden">
         <h1>StaffHub - Plataforma de Comunicación Interna para Empresas</h1>
-        <h2>Automatiza la comunicación con tus empleados. Carga masiva de documentos, comunicación multicanal y asistente de IA.</h2>
-        <p>StaffHub es la solución definitiva para agencias de comunicación interna y empresas con miles de empleados. Simplifica la gestión de comunicaciones masivas con IA personalizada y carga automatizada de documentos. Mejora la productividad y la satisfacción de los empleados con nuestra plataforma integral.</p>
-        <p>comunicación interna, carga masiva, automatización, IA, WhatsApp, email, SMS, gestión de empleados, base de conocimiento, comunicación corporativa, productividad empresarial, plataforma de RRHH</p>
+        <h2>Automatiza la comunicación con tus trabajadores. Carga masiva de documentos, comunicación multicanal y asistente de IA.</h2>
+        <p>StaffHub es la solución definitiva para agencias de comunicación interna y empresas con miles de trabajadores. Simplifica la gestión de comunicaciones masivas con IA personalizada y carga automatizada de documentos. Mejora la productividad y la satisfacción de los trabajadores con nuestra plataforma integral.</p>
+        <p>comunicación interna, carga masiva, automatización, IA, WhatsApp, email, SMS, gestión de trabajadores, base de conocimiento, comunicación corporativa, productividad empresarial, plataforma de RRHH</p>
       </div>
 
       {/* Navigation */}
@@ -172,7 +172,7 @@ const HomeStaffHubSEO = () => {
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
                   <span className="block">Simplifica la comunicación</span>
                   <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mt-2">
-                    a miles de empleados
+                    a miles de trabajadores
                   </span>
                 </h1>
                 <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
@@ -362,13 +362,7 @@ const HomeStaffHubSEO = () => {
       </div>
 
       {/* About Section - Somos - Rediseño Moderno */}
-      <section id="about" className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-1000"></div>
-        </div>
+      <section id="about" className="py-12 bg-white relative overflow-hidden">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           {/* Header Section */}
@@ -387,38 +381,8 @@ const HomeStaffHubSEO = () => {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-            {/* Left Column - CTA Only */}
-            <div className="lg:col-span-7 flex items-center justify-center">
-              {/* CTA Card */}
-              <div className="relative bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 rounded-3xl p-8 text-white shadow-2xl overflow-hidden max-w-lg">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-indigo-600/20"></div>
-                <div className="relative">
-                  <div className="text-center mb-6">
-                    <h3 className="text-2xl font-bold mb-3">¿Listo para transformar tu comunicación?</h3>
-                    <p className="text-blue-100 leading-relaxed">
-                      Únete a las empresas que ya revolucionaron su comunicación interna con StaffHub.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button
-                      onClick={() => setActiveTab('register')}
-                      className="bg-white text-gray-900 px-8 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                    >
-                      🚀 Comenzar Ahora
-                    </button>
-                    <button className="border-2 border-white text-white px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all duration-300">
-                      <Link to="/landing-prueba" className="flex items-center justify-center">
-                        🎬 Ver Demo
-                      </Link>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Right Column - Why Choose Us & CTA */}
-            <div className="lg:col-span-5 space-y-8">
+            <div className="lg:col-span-12 space-y-8">
               {/* Why Choose Us Card */}
               <div className="bg-white rounded-3xl shadow-xl p-8 border border-white/50 backdrop-blur-sm">
                 <div className="text-center mb-8">
@@ -443,7 +407,7 @@ const HomeStaffHubSEO = () => {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold text-gray-900 mb-2 text-lg">Escalabilidad Total</h4>
-                      <p className="text-gray-600 leading-relaxed">Desde 10 hasta 100.000 empleados, crecemos con tu empresa sin comprometer el rendimiento.</p>
+                      <p className="text-gray-600 leading-relaxed">Desde 10 hasta 100.000 trabajadores, crecemos con tu empresa sin comprometer el rendimiento.</p>
                     </div>
                   </div>
 
@@ -510,7 +474,7 @@ const HomeStaffHubSEO = () => {
               La solución para comunicaciones internas a gran escala
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Simplifica la gestión de comunicaciones a miles de empleados con tecnología inteligente
+              Simplifica la gestión de comunicaciones a miles de trabajadores con tecnología inteligente
             </p>
           </div>
 
@@ -545,7 +509,7 @@ const HomeStaffHubSEO = () => {
                       <span className="text-red-600 font-bold">3</span>
                     </div>
                     <p className="text-gray-700">
-                      <span className="font-semibold">Gestión de preguntas manual:</span> Responder a cientos de empleados consume tiempo valioso.
+                      <span className="font-semibold">Gestión de preguntas manual:</span> Responder a cientos de trabajadores consume tiempo valioso.
                     </p>
                   </div>
                 </div>
@@ -564,7 +528,7 @@ const HomeStaffHubSEO = () => {
                       <span className="text-white font-bold">1</span>
                     </div>
                     <p>
-                      <span className="font-semibold">Carga automatizada:</span> Arrastra un archivo y se distribuye a miles de empleados en segundos.
+                      <span className="font-semibold">Carga automatizada:</span> Arrastra un archivo y se distribuye a miles de trabajadores en segundos.
                     </p>
                   </div>
                   <div className="flex items-start">
@@ -607,21 +571,21 @@ const HomeStaffHubSEO = () => {
 
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">Alcance de empleados</span>
+                    <span className="font-medium">Alcance de trabajadores</span>
                     <span className="font-bold text-lg">20x ↑</span>
                   </div>
                   <div className="w-full bg-white/20 rounded-full h-3">
                     <div className="bg-white h-3 rounded-full" style={{width: '95%'}}></div>
                   </div>
                   <div className="flex justify-between text-sm mt-2">
-                    <span>Antes: 500 empleados</span>
-                    <span>Ahora: 10,000 empleados</span>
+                    <span>Antes: 500 trabajadores</span>
+                    <span>Ahora: 10,000 trabajadores</span>
                   </div>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">Satisfacción de empleados</span>
+                    <span className="font-medium">Satisfacción de trabajadores</span>
                     <span className="font-bold text-lg">85% ↑</span>
                   </div>
                   <div className="w-full bg-white/20 rounded-full h-3">
@@ -655,7 +619,7 @@ const HomeStaffHubSEO = () => {
               Características que transforman la comunicación interna
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Herramientas diseñadas específicamente para agencias y empresas con miles de empleados
+              Herramientas diseñadas específicamente para agencias y empresas con miles de trabajadores
             </p>
           </div>
 
@@ -729,7 +693,7 @@ const HomeStaffHubSEO = () => {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-300">Carga Masiva Automatizada</h3>
                 <p className="text-gray-600 mb-6 group-hover:text-white/90 transition-colors duration-300">
-                  Arrastra un archivo y se distribuye automáticamente a las carpetas de miles de empleados. Sin necesidad de subir documentos uno por uno.
+                  Arrastra un archivo y se distribuye automáticamente a las carpetas de miles de trabajadores. Sin necesidad de subir documentos uno por uno.
                 </p>
               </div>
               <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
@@ -754,7 +718,7 @@ const HomeStaffHubSEO = () => {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-300">Comunicación Multicanal</h3>
                 <p className="text-gray-600 mb-6 group-hover:text-white/90 transition-colors duration-300">
-                  Envía mensajes masivos por WhatsApp, SMS, email o Telegram con personalización avanzada según perfiles de empleados.
+                  Envía mensajes masivos por WhatsApp, SMS, email o Telegram con personalización avanzada según perfiles de trabajadores.
                 </p>
               </div>
               <div className="relative bg-gradient-to-r from-green-500 to-emerald-600 p-6">
@@ -905,14 +869,14 @@ const HomeStaffHubSEO = () => {
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-6">
               <div className="text-4xl font-bold mb-2">85%</div>
               <div className="text-blue-100">Mejora en satisfacción</div>
-              <div className="text-sm text-blue-200 mt-2">De empleados</div>
+              <div className="text-sm text-blue-200 mt-2">De trabajadores</div>
             </div>
           </div>
 
           <div className="mt-16 bg-white/10 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto">
             <blockquote className="text-xl text-center">
               <p className="mb-4">
-                "StaffHub nos permitió escalar nuestra operación de 500 a 5000 empleados sin aumentar nuestro equipo de comunicación. La automatización de documentos y el asistente de IA han sido game changers para nuestra agencia."
+                "StaffHub nos permitió escalar nuestra operación de 500 a 5000 trabajadores sin aumentar nuestro equipo de comunicación. La automatización de documentos y el asistente de IA han sido game changers para nuestra agencia."
               </p>
               <footer className="text-blue-100">
                 <div className="font-bold">Carlos Ramírez</div>
@@ -931,7 +895,7 @@ const HomeStaffHubSEO = () => {
               Transforma la comunicación de tu agencia hoy
             </h2>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-10">
-              Únete a las agencias que ya están simplificando la gestión de miles de empleados con StaffHub
+              Únete a las agencias que ya están simplificando la gestión de miles de trabajadores con StaffHub
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
