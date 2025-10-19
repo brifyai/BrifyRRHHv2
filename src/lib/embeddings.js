@@ -1,53 +1,38 @@
 // Servicio de embeddings y tracking de tokens
-import { supabase } from './supabase';
+import { supabase } from './supabase.js';
+import groqService from '../services/groqService.js';
 
 class EmbeddingsService {
   constructor() {
-    this.geminiApiKey = process.env.REACT_APP_GEMINI_API_KEY;
-    if (!this.geminiApiKey) {
-      console.warn('Gemini API key not found in environment variables');
-    }
+    // Inicializar groqService de forma diferida para evitar dependencia circular
+    this._groq = null;
     // Cache para evitar consultas excesivas
     this.cache = new Map();
     this.cacheTimeout = 30000; // 30 segundos
   }
 
+  // Getter para obtener groqService de forma diferida
+  get groq() {
+    if (!this._groq) {
+      this._groq = require('../services/groqService.js').default;
+    }
+    return this._groq;
+  }
+
   // Generar embeddings para texto
   async generateEmbedding(text, userId) {
-    // Verificar si la API key está configurada
-    if (!this.geminiApiKey) {
-      throw new Error('Servicio de embeddings no disponible. Configure la API key de Gemini.');
-    }
-
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${this.geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'models/embedding-001',
-          content: {
-            parts: [{
-              text: text
-            }]
-          }
-        })
-      });
+      // Usar el servicio de embeddings actualizado que usa Groq
+      const { default: embeddingService } = await import('../services/embeddingService');
+      const embedding = await embeddingService.generateEmbedding(text);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'Error generando embedding');
-      }
-
-      const tokensUsed = Math.ceil(text.length / 4); // Approximate token count for Gemini
+      const tokensUsed = Math.ceil(text.length / 4); // Approximate token count
 
       // Registrar uso de tokens
       await this.trackTokenUsage(userId, tokensUsed, 'embedding');
 
       return {
-        embedding: data.embedding.values,
+        embedding: embedding,
         tokens_used: tokensUsed
       };
     } catch (error) {

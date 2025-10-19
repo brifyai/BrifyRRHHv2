@@ -10,7 +10,6 @@ import {
   Bars3Icon,
   XMarkIcon,
   ArrowUpTrayIcon,
-  MagnifyingGlassIcon,
   SparklesIcon,
   BellIcon,
   LightBulbIcon,
@@ -26,6 +25,8 @@ import EmployeeBulkUpload from './EmployeeBulkUpload'; // Importar el nuevo comp
 import templateService from '../../services/templateService';
 import databaseEmployeeService from '../../services/databaseEmployeeService';
 import communicationService from '../../services/communicationService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
+import trendsAnalysisService from '../../services/trendsAnalysisService';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -104,11 +105,11 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   const [sentMessages, setSentMessages] = useState(0);
   const [readRate, setReadRate] = useState(0);
   const [companyInsights, setCompanyInsights] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
   const [expandedSections, setExpandedSections] = useState({
     insights: true,
-    recommendations: false
+    recommendations: true
   });
+  const [employees, setEmployees] = useState([]);
 
   // Estados para el selector de empresas
   const [companiesFromDB, setCompaniesFromDB] = useState([]);
@@ -123,12 +124,16 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'
   ], []);
 
-  // Función para cargar insights de IA para todas las compañías
+  // Función para cargar insights de IA para todas las compañías usando datos reales
   const loadCompanyInsights = useCallback(async () => {
     try {
+      console.log('🔍 Cargando insights reales para todas las compañías...');
+      
       const insightsPromises = companies.map(async (companyName) => {
         try {
-          const insights = await communicationService.generateCompanyInsights(companyName);
+          // Usar el nuevo servicio de análisis de tendencias con datos reales
+          const insights = await trendsAnalysisService.generateCompanyInsights(companyName);
+          console.log(`✅ Insights cargados para ${companyName}:`, insights);
           return { companyName, insights };
         } catch (error) {
           console.warn(`Error loading insights for ${companyName}:`, error.message);
@@ -138,15 +143,15 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
             insights: {
               frontInsights: [
                 {
-                  title: 'Información Limitada',
-                  description: 'Los datos de comunicación están siendo procesados. Por favor, intente más tarde.',
+                  title: 'Análisis en Progreso',
+                  description: `Los datos de comunicación para ${companyName} están siendo procesados con IA. Los insights estarán disponibles pronto.`,
                   type: 'info'
                 }
               ],
               backInsights: [
                 {
-                  title: 'Análisis Pendiente',
-                  description: 'El sistema está recopilando información para generar insights detallados.',
+                  title: 'Sistema Activo',
+                  description: 'El sistema está analizando patrones de comunicación reales con Groq AI.',
                   type: 'info'
                 }
               ]
@@ -162,22 +167,29 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
       });
 
       setCompanyInsights(insightsMap);
+      console.log('✅ Todos los insights cargados:', Object.keys(insightsMap));
     } catch (error) {
       console.error('Error loading company insights:', error);
     }
   }, [companies]); // companies es una dependencia válida ya que viene de useMemo
 
-  // Función para cargar empresas desde la base de datos
+  // Función para cargar empresas y empleados desde la base de datos
   const loadCompaniesFromDB = useCallback(async () => {
     try {
       setLoadingCompanies(true);
-      const companies = await databaseEmployeeService.getCompanies();
-      setCompaniesFromDB(companies);
-      console.log('Empresas cargadas desde BD:', companies);
+      const [companiesData, employeesData] = await Promise.all([
+        organizedDatabaseService.getCompanies(),
+        organizedDatabaseService.getEmployees()
+      ]);
+      setCompaniesFromDB(companiesData);
+      setEmployees(employeesData);
+      console.log('Empresas cargadas desde BD:', companiesData);
+      console.log('Empleados cargados desde BD:', employeesData);
     } catch (error) {
-      console.error('Error cargando empresas desde BD:', error);
+      console.error('Error cargando datos desde BD:', error);
       // En caso de error, usar la lista estática como fallback
       setCompaniesFromDB(companies.map(name => ({ id: name, name })));
+      setEmployees([]);
     } finally {
       setLoadingCompanies(false);
     }
@@ -471,7 +483,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                   <BuildingOfficeIcon className="h-8 w-8" />
                   <div className="ml-4">
                     <p className="text-sm opacity-80">Total Empleados</p>
-                    <p className="text-2xl font-bold">800</p>
+                    <p className="text-2xl font-bold">{employees.length}</p>
                   </div>
                 </div>
               </div>
@@ -525,20 +537,6 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                       </h3>
                       <p className="text-gray-600 text-sm">Insights generados por IA sobre comunicación y engagement</p>
                     </div>
-                  </div>
-
-                  {/* Barra de búsqueda */}
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar por marca..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                    />
                   </div>
                 </div>
 

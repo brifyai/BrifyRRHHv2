@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
 import googleDriveService from '../../lib/googleDrive'
 import brevoService from '../../services/brevoService'
+import companySyncService from '../../services/companySyncService'
+import organizedDatabaseService from '../../services/organizedDatabaseService'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -29,7 +29,7 @@ import UserManagement from './UserManagement'
 import DatabaseSettings from './DatabaseSettings'
 
 const Settings = ({ activeTab: propActiveTab }) => {
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
   const navigate = useNavigate()
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -45,7 +45,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
     teams: { connected: false, status: 'disconnected', lastSync: null },
     hubspot: { connected: false, status: 'disconnected', lastSync: null },
     salesforce: { connected: false, status: 'disconnected', lastSync: null },
-    brevo: { connected: false, status: 'disconnected', lastSync: null }
+    brevo: { connected: false, status: 'disconnected', lastSync: null },
+    groq: { connected: false, status: 'disconnected', lastSync: null, model: 'gemma2-9b-it' }
   })
 
   const [activeTab, setActiveTab] = useState(propActiveTab || 'companies')
@@ -145,7 +146,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
           loadSecurityLogs(),
           loadBackupSettings(),
           checkGoogleDriveConnection(),
-          checkBrevoConfiguration()
+          checkBrevoConfiguration(),
+          checkGroqConfiguration()
         ])
       } catch (error) {
         console.error('Error loading settings data:', error)
@@ -159,7 +161,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
     return () => {
       isMounted = false
     }
-  }, [user?.id]) // Solo depender del ID del usuario para evitar ciclos infinitos
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]) // Mantener solo la dependencia esencial para evitar ciclos infinitos
 
   // Eliminado el useEffect que causaba parpadeo - ahora el tab se maneja de forma estática
 
@@ -308,11 +311,21 @@ const Settings = ({ activeTab: propActiveTab }) => {
 
   // Función para verificar conexión de Google Drive
   const checkGoogleDriveConnection = useCallback(() => {
-    // Usar la información ya disponible en user desde AuthContext
+    // Usar la información ya disponible en userProfile desde AuthContext
     // que incluye las credenciales de Google Drive
-    const isConnected = !!(user?.google_refresh_token && user.google_refresh_token.trim() !== '')
+    const isConnected = !!(userProfile?.google_refresh_token && userProfile.google_refresh_token.trim() !== '')
     setIsGoogleDriveConnected(isConnected)
-  }, [user?.google_refresh_token])
+    
+    // También actualizar el estado de integraciones para Google Drive
+    setIntegrations(prev => ({
+      ...prev,
+      google: {
+        connected: isConnected,
+        status: isConnected ? 'connected' : 'disconnected',
+        lastSync: isConnected ? new Date().toISOString() : null
+      }
+    }))
+  }, [userProfile])
 
   // Función para verificar configuración de Brevo
   const checkBrevoConfiguration = useCallback(() => {
@@ -324,6 +337,22 @@ const Settings = ({ activeTab: propActiveTab }) => {
         status: config.apiKey ? 'connected' : 'disconnected',
         lastSync: config.apiKey ? new Date().toISOString() : null,
         testMode: config.testMode
+      }
+    }))
+  }, [])
+
+  // Función para verificar configuración de Groq
+  const checkGroqConfiguration = useCallback(() => {
+    const apiKey = process.env.REACT_APP_GROQ_API_KEY
+    const model = localStorage.getItem('groq_model') || 'gemma2-9b-it'
+    
+    setIntegrations(prev => ({
+      ...prev,
+      groq: {
+        connected: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui'),
+        status: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? 'connected' : 'disconnected',
+        lastSync: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? new Date().toISOString() : null,
+        model: model
       }
     }))
   }, [])
@@ -472,47 +501,18 @@ const Settings = ({ activeTab: propActiveTab }) => {
     try {
       setLoading(true)
 
-      // Intentar cargar desde Supabase primero (sin mostrar errores)
-      try {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .order('name')
-
-        if (!error && data && data.length > 0) {
-          setCompanies(data)
-          return
-        }
-      } catch (supabaseError) {
-        // Silenciar errores de Supabase
-      }
-
-      // Fallback: usar datos locales
-      const localCompanies = await inMemoryEmployeeService.getCompanies()
-      // Agregar campos de contacto a las empresas locales
-      const companiesWithContacts = localCompanies.map(company => ({
-        ...company,
-        user_id: user.id,
-        telegram_bot: `https://t.me/${company.name.toLowerCase().replace(/\s+/g, '')}_bot`,
-        whatsapp_number: `+5698765432${Math.floor(Math.random() * 10)}`,
-        description: `Empresa ${company.name}`,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }))
-
-      setCompanies(companiesWithContacts)
+      // Usar el servicio de base de datos organizada para cargar empresas reales
+      const companiesData = await organizedDatabaseService.getCompanies()
+      setCompanies(companiesData || [])
 
     } catch (error) {
       console.error('Error loading companies:', error)
-      // En caso de error total, usar datos mínimos
+      // En caso de error, usar datos mínimos
       setCompanies([])
     } finally {
       setLoading(false)
     }
-  }, [user.id])
+  }, [])
 
   const handleCreateCompany = () => {
     setEditingCompany(null)
@@ -531,7 +531,6 @@ const Settings = ({ activeTab: propActiveTab }) => {
     // Usar toast para confirmar eliminación
     const confirmed = await new Promise((resolve) => {
       const confirmDelete = () => {
-        toast.success('Empresa eliminada exitosamente')
         resolve(true)
       }
       const cancelDelete = () => resolve(false)
@@ -568,22 +567,10 @@ const Settings = ({ activeTab: propActiveTab }) => {
     if (!confirmed) return
 
     try {
-      // Intentar eliminar de Supabase primero (sin mostrar errores)
-      try {
-        const { error } = await supabase
-          .from('companies')
-          .delete()
-          .eq('id', companyId)
-
-        if (!error) {
-          setCompanies(prev => prev.filter(c => c.id !== companyId))
-          return
-        }
-      } catch (supabaseError) {
-        // Silenciar errores de Supabase
-      }
-
-      // Fallback: eliminar localmente
+      // Usar el servicio de sincronización para eliminar la empresa
+      await companySyncService.deleteCompany(companyId)
+      
+      // Actualizar estado local
       setCompanies(prev => prev.filter(c => c.id !== companyId))
       toast.success('Empresa eliminada exitosamente')
 
@@ -601,29 +588,20 @@ const Settings = ({ activeTab: propActiveTab }) => {
 
   const toggleCompanyStatus = async (company) => {
     try {
-      // Intentar actualizar en Supabase primero (sin mostrar errores)
-      try {
-        const { error } = await supabase
-          .from('companies')
-          .update({ is_active: !company.is_active })
-          .eq('id', company.id)
-
-        if (!error) {
-          toast.success(`Empresa ${!company.is_active ? 'activada' : 'desactivada'}`)
-          loadCompanies()
-          return
-        }
-      } catch (supabaseError) {
-        // Silenciar errores de Supabase
-      }
-
-      // Fallback: actualizar localmente
+      const newStatus = company.status === 'active' ? 'inactive' : 'active'
+      
+      // Usar el servicio de sincronización para actualizar el estado
+      await companySyncService.updateCompany(company.id, {
+        status: newStatus
+      })
+      
+      // Actualizar estado local
       setCompanies(prev => prev.map(c =>
         c.id === company.id
-          ? { ...c, is_active: !c.is_active, updated_at: new Date().toISOString() }
+          ? { ...c, status: newStatus, updated_at: new Date().toISOString() }
           : c
       ))
-      toast.success(`Empresa ${!company.is_active ? 'activada' : 'desactivada'}`)
+      toast.success(`Empresa ${newStatus === 'active' ? 'activada' : 'desactivada'}`)
 
     } catch (error) {
       console.error('Error toggling company status:', error)
@@ -696,6 +674,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   };
 
+  /*
   const configureMicrosoft365 = async () => {
     const { value: formValues } = await Swal.fire({
       title: 'Configurar Microsoft 365 / Google Calendar',
@@ -866,6 +845,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
       toast.success('Slack conectado exitosamente');
     }
   };
+  */
 
   const configureTeams = async () => {
     const { value: formValues } = await Swal.fire({
@@ -1156,7 +1136,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
           </div>
           <div style="margin-bottom: 16px;">
             <label style="display: block; margin-bottom: 8px; font-weight: 600;">Nombre del remitente SMS:</label>
-            <input type="text" id="brevo-sms-sender" class="swal2-input" placeholder="Ej: BrifyAI" maxlength="11">
+            <input type="text" id="brevo-sms-sender" class="swal2-input" placeholder="Ej: StaffHub" maxlength="11">
           </div>
           <div style="margin-bottom: 16px;">
             <label style="display: block; margin-bottom: 8px; font-weight: 600;">Email del remitente:</label>
@@ -1164,7 +1144,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
           </div>
           <div style="margin-bottom: 16px;">
             <label style="display: block; margin-bottom: 8px; font-weight: 600;">Nombre del remitente Email:</label>
-            <input type="text" id="brevo-email-name" class="swal2-input" placeholder="Ej: Brify AI">
+            <input type="text" id="brevo-email-name" class="swal2-input" placeholder="Ej: StaffHub">
           </div>
           <div style="margin-bottom: 16px;">
             <label style="display: flex; align-items: center; cursor: pointer;">
@@ -1345,6 +1325,277 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   };
 
+  const configureGroq = async () => {
+    // Lista de modelos disponibles de Groq (actualizada con modelos reales)
+    const availableModels = [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Modelo de Meta de 70B parámetros, versátil para múltiples tareas' },
+      { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', name: 'Llama 4 Maverick 17B', description: 'Modelo de última generación de Meta, 17B parámetros' },
+      { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B', description: 'Modelo optimizado de Meta, 17B parámetros' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Modelo rápido de Meta, 8B parámetros, respuestas instantáneas' },
+      { id: 'allam-2-7b', name: 'Allam 2 7B', description: 'Modelo especializado en árabe, 7B parámetros' },
+      { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Modelo de Alibaba Cloud, 32B parámetros' },
+      { id: 'moonshotai/kimi-k2-instruct', name: 'Kimi K2 Instruct', description: 'Modelo de Moonshot AI optimizado para instrucciones' },
+      { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct v0905', description: 'Versión mejorada de Kimi K2' },
+      { id: 'groq/compound', name: 'Groq Compound', description: 'Modelo especializado de Groq' },
+      { id: 'groq/compound-mini', name: 'Groq Compound Mini', description: 'Versión compacta del modelo Groq Compound' },
+      { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', description: 'Modelo OpenAI de código abierto, 120B parámetros' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', description: 'Modelo OpenAI de código abierto, 20B parámetros' }
+    ];
+
+    const { value: formValues } = await Swal.fire({
+      title: 'Configurar Groq AI',
+      html: `
+        <div style="text-align: left;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">API Key de Groq:</label>
+            <input type="password" id="groq-api-key" class="swal2-input" placeholder="gsk_...">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Obtén tu API Key en <a href="https://console.groq.com/keys" target="_blank" style="color: #0066ff;">console.groq.com</a>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Modelo seleccionado:</label>
+            <select id="groq-model" class="swal2-input">
+              ${availableModels.map(model =>
+                `<option value="${model.id}">${model.name} - ${model.description}</option>`
+              ).join('')}
+            </select>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Temperatura (0-1):</label>
+            <input type="range" id="groq-temperature" class="swal2-input" min="0" max="1" step="0.1" value="0.7">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+              <span>0 (Preciso)</span>
+              <span id="temp-value">0.7</span>
+              <span>1 (Creativo)</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Tokens máximos:</label>
+            <input type="number" id="groq-max-tokens" class="swal2-input" value="800" min="100" max="4000">
+          </div>
+
+          <div style="font-size: 12px; color: #666; margin-top: 16px; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <strong style="color: #0066ff;">📋 Instrucciones para obtener API Key:</strong><br>
+            1. Ve a <a href="https://console.groq.com" target="_blank" style="color: #0066ff;">console.groq.com</a><br>
+            2. Regístrate o inicia sesión<br>
+            3. Ve a la sección "API Keys"<br>
+            4. Crea una nueva API Key<br>
+            5. Copia y pega la clave aquí
+          </div>
+          
+          <div style="font-size: 12px; color: #666; margin-top: 12px; background-color: #e8f4fd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #0066ff;">🚀 Funcionalidades incluidas:</strong><br>
+            • Chat inteligente con contexto<br>
+            • Análisis de sentimientos<br>
+            • Resumen de documentos<br>
+            • Generación de contenido<br>
+            • Soporte para español optimizado<br>
+            • Tracking de uso de tokens
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const apiKey = document.getElementById('groq-api-key').value;
+        const model = document.getElementById('groq-model').value;
+        const temperature = parseFloat(document.getElementById('groq-temperature').value);
+        const maxTokens = parseInt(document.getElementById('groq-max-tokens').value);
+
+        if (!apiKey) {
+          Swal.showValidationMessage('La API Key de Groq es obligatoria');
+          return false;
+        }
+
+        if (!apiKey.startsWith('gsk_')) {
+          Swal.showValidationMessage('La API Key de Groq debe comenzar con "gsk_"');
+          return false;
+        }
+
+        return { apiKey, model, temperature, maxTokens };
+      },
+      didOpen: () => {
+        // Actualizar el valor de temperatura cuando se mueve el slider
+        const tempSlider = document.getElementById('groq-temperature');
+        const tempValue = document.getElementById('temp-value');
+        if (tempSlider && tempValue) {
+          tempSlider.addEventListener('input', (e) => {
+            tempValue.textContent = e.target.value;
+          });
+        }
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Conectar y Probar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#00a67e',
+      width: '600px'
+    });
+
+    if (formValues) {
+      // Mostrar estado de conexión
+      setIntegrations(prev => ({ ...prev, groq: { ...prev.groq, status: 'connecting' } }));
+
+      try {
+        // Guardar configuración en localStorage
+        localStorage.setItem('groq_api_key', formValues.apiKey);
+        localStorage.setItem('groq_model', formValues.model);
+        localStorage.setItem('groq_temperature', formValues.temperature.toString());
+        localStorage.setItem('groq_max_tokens', formValues.maxTokens.toString());
+
+        // Probar conexión con Groq
+        const testResult = await testGroqConnection(formValues.apiKey, formValues.model);
+
+        if (testResult.success) {
+          // Actualizar estado
+          setIntegrations(prev => ({
+            ...prev,
+            groq: {
+              connected: true,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              model: formValues.model,
+              temperature: formValues.temperature,
+              maxTokens: formValues.maxTokens
+            }
+          }));
+
+          // Mostrar éxito
+          await Swal.fire({
+            title: '🎉 Groq AI Configurado Exitosamente',
+            html: `
+              <div style="text-align: left;">
+                <div style="background-color: #d4edda; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #155724;">✅ Conexión exitosa</h4>
+                  <p style="margin: 0; font-size: 14px;">La API Key es válida y todas las funcionalidades están activas.</p>
+                </div>
+                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Configuración guardada:</h4>
+                  <p style="margin: 4px 0; font-size: 14px;">
+                    <strong>Modelo:</strong> ${availableModels.find(m => m.id === formValues.model)?.name}<br>
+                    <strong>Temperatura:</strong> ${formValues.temperature}<br>
+                    <strong>Tokens máximos:</strong> ${formValues.maxTokens}<br>
+                    <strong>Respuesta de prueba:</strong> "${testResult.testResponse}"
+                  </p>
+                </div>
+                <div style="background-color: #e8f4fd; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #0066ff;">📊 Estadísticas de la prueba:</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>• Tokens de entrada: ${testResult.inputTokens || 'N/A'}</li>
+                    <li>• Tokens de salida: ${testResult.outputTokens || 'N/A'}</li>
+                    <li>• Tiempo de respuesta: ${testResult.responseTime || 'N/A'}ms</li>
+                  </ul>
+                </div>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '¡Perfecto!',
+            confirmButtonColor: '#00a67e',
+            width: '500px'
+          });
+
+          toast.success('Groq AI configurado exitosamente');
+        } else {
+          throw new Error(testResult.error || 'Error al conectar con Groq');
+        }
+      } catch (error) {
+        console.error('Error configuring Groq:', error);
+        
+        // Restaurar estado
+        setIntegrations(prev => ({
+          ...prev,
+          groq: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null,
+            model: 'gemma2-9b-it'
+          }
+        }));
+
+        // Limpiar configuración guardada
+        localStorage.removeItem('groq_api_key');
+        localStorage.removeItem('groq_model');
+        localStorage.removeItem('groq_temperature');
+        localStorage.removeItem('groq_max_tokens');
+
+        // Mostrar error
+        await Swal.fire({
+          title: '❌ Error de Conexión',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f8d7da; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #721c24;">No se pudo conectar con Groq</h4>
+                <p style="margin: 0; font-size: 14px;"><strong>Error:</strong> ${error.message}</p>
+              </div>
+              <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">🔍 Posibles soluciones:</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                  <li>• Verifica que la API Key sea correcta</li>
+                  <li>• Asegúrate de que la API Key comience con "gsk_"</li>
+                  <li>• Revisa que tu cuenta de Groq esté activa</li>
+                  <li>• Verifica tu conexión a internet</li>
+                  <li>• Confirma que tienes créditos disponibles</li>
+                </ul>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
+        });
+
+        toast.error('Error al configurar Groq AI');
+      }
+    }
+  };
+
+  // Función para probar la conexión con Groq
+  const testGroqConnection = async (apiKey, model) => {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'user',
+              content: 'Responde con "Conexión exitosa" si puedes leer este mensaje.'
+            }
+          ],
+          max_tokens: 10,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const testResponse = data.choices?.[0]?.message?.content || 'No response';
+      
+      return {
+        success: true,
+        testResponse: testResponse,
+        inputTokens: data.usage?.prompt_tokens,
+        outputTokens: data.usage?.completion_tokens,
+        responseTime: data.response_time || 'N/A'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  };
+
   const disconnectIntegration = async (integration) => {
     const integrationNames = {
       google: 'Google Workspace',
@@ -1352,7 +1603,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
       teams: 'Microsoft Teams',
       hubspot: 'HubSpot',
       salesforce: 'Salesforce',
-      brevo: 'Brevo'
+      brevo: 'Brevo',
+      groq: 'Groq AI'
     };
 
     const result = await Swal.fire({
@@ -1370,6 +1622,14 @@ const Settings = ({ activeTab: propActiveTab }) => {
       // Si es Brevo, limpiar la configuración guardada
       if (integration === 'brevo') {
         brevoService.clearConfiguration();
+      }
+
+      // Si es Groq, limpiar la configuración guardada
+      if (integration === 'groq') {
+        localStorage.removeItem('groq_api_key');
+        localStorage.removeItem('groq_model');
+        localStorage.removeItem('groq_temperature');
+        localStorage.removeItem('groq_max_tokens');
       }
 
       setIntegrations(prev => ({
@@ -1635,13 +1895,13 @@ const Settings = ({ activeTab: propActiveTab }) => {
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">{company.name}</h3>
                         <div className="flex items-center mt-1">
-                          {company.is_active ? (
+                          {company.status === 'active' ? (
                             <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
                           ) : (
                             <XCircleIcon className="h-4 w-4 text-red-500 mr-1" />
                           )}
-                          <span className={`text-xs font-medium ${company.is_active ? 'text-green-700' : 'text-red-700'}`}>
-                            {company.is_active ? 'Activa' : 'Inactiva'}
+                          <span className={`text-xs font-medium ${company.status === 'active' ? 'text-green-700' : 'text-red-700'}`}>
+                            {company.status === 'active' ? 'Activa' : 'Inactiva'}
                           </span>
                         </div>
                       </div>
@@ -1649,13 +1909,13 @@ const Settings = ({ activeTab: propActiveTab }) => {
                     <button
                       onClick={() => toggleCompanyStatus(company)}
                       className={`p-1 rounded-full ${
-                        company.is_active
+                        company.status === 'active'
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-red-600 hover:bg-red-50'
                       }`}
-                      title={company.is_active ? 'Desactivar empresa' : 'Activar empresa'}
+                      title={company.status === 'active' ? 'Desactivar empresa' : 'Activar empresa'}
                     >
-                      {company.is_active ? (
+                      {company.status === 'active' ? (
                         <CheckCircleIcon className="h-5 w-5" />
                       ) : (
                         <XCircleIcon className="h-5 w-5" />
@@ -2477,7 +2737,7 @@ const Settings = ({ activeTab: propActiveTab }) => {
               <p className="text-gray-600 mt-1">Conecta tu sistema con otras plataformas</p>
             </div>
             <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full">
-              7 integraciones disponibles
+              8 integraciones disponibles
             </span>
           </div>
 
@@ -2690,7 +2950,10 @@ const Settings = ({ activeTab: propActiveTab }) => {
                 </button>
               ) : (
                 <button
-                  onClick={configureSlack}
+                  onClick={() => {
+                    // Placeholder para configuración de Slack
+                    toast.info('Configuración de Slack próximamente')
+                  }}
                   disabled={integrations.slack.status === 'connecting'}
                   className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -2954,6 +3217,112 @@ const Settings = ({ activeTab: propActiveTab }) => {
                   className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {integrations.brevo.status === 'connecting' ? 'Conectando...' : 'Configurar Brevo'}
+                </button>
+              )}
+            </div>
+
+            {/* Groq AI */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-600 to-green-700 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Groq AI</h3>
+                    <p className="text-sm text-gray-600">Inteligencia Artificial</p>
+                  </div>
+                </div>
+                {getStatusBadge('groq')}
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Motor de IA con modelos avanzados para chat, análisis de sentimientos, resumen de documentos y más.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  {integrations.groq.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.groq.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                  {integrations.groq.model && (
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
+                      Modelo: {integrations.groq.model}
+                    </div>
+                  )}
+                </div>
+
+                {integrations.groq.connected && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-green-800">Groq AI configurado</span>
+                    </div>
+                    <div className="text-xs text-green-600">
+                      <p>• Chat inteligente activo</p>
+                      <p>• Análisis de sentimientos disponible</p>
+                      <p>• Resumen de documentos activo</p>
+                      <p>• Modelo: {integrations.groq.model}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {integrations.groq.connected ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: '🤖 Información de Groq AI',
+                        html: `
+                          <div style="text-align: left;">
+                            <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                              <h4 style="margin: 0 0 8px 0; color: #00a67e;">Funcionalidades Activas</h4>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                                <li>✅ Chat inteligente con contexto</li>
+                                <li>✅ Análisis de sentimientos</li>
+                                <li>✅ Resumen de documentos</li>
+                                <li>✅ Generación de contenido</li>
+                                <li>✅ Soporte para español optimizado</li>
+                                <li>✅ Tracking de uso de tokens</li>
+                              </ul>
+                            </div>
+                            <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                              <h4 style="margin: 0 0 8px 0; color: #333;">Configuración</h4>
+                              <p style="margin: 4px 0; font-size: 14px;">
+                                <strong>Estado:</strong> <span style="color: #28a745;">Conectado</span><br>
+                                <strong>Modelo:</strong> ${integrations.groq.model}<br>
+                                <strong>Última sincronización:</strong> ${new Date(integrations.groq.lastSync).toLocaleString('es-ES')}
+                              </p>
+                            </div>
+                          </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#00a67e',
+                        width: '500px'
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    ℹ️ Ver Información
+                  </button>
+                  <button
+                    onClick={() => disconnectIntegration('groq')}
+                    className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Desconectar Groq
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={configureGroq}
+                  disabled={integrations.groq.status === 'connecting'}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {integrations.groq.status === 'connecting' ? 'Conectando...' : 'Configurar Groq AI'}
                 </button>
               )}
             </div>

@@ -1,9 +1,13 @@
 import Groq from 'groq-sdk'
-import embeddingsService from '../lib/embeddings'
+import embeddingsService from '../lib/embeddings.js'
 
 class GroqService {
   constructor() {
-    const apiKey = process.env.REACT_APP_GROQ_API_KEY
+    // Priorizar la API key de localStorage sobre la de environment variables
+    const localStorageApiKey = localStorage.getItem('groq_api_key')
+    const envApiKey = process.env.REACT_APP_GROQ_API_KEY
+    const apiKey = localStorageApiKey || envApiKey
+    
     if (!apiKey || apiKey === 'tu_groq_api_key_aqui') {
       console.warn('GROQ API key not configured. AI chat features will not be available.')
       this.groq = null
@@ -13,7 +17,11 @@ class GroqService {
         dangerouslyAllowBrowser: true // Permitir uso en el navegador
       })
     }
-    this.model = 'gemma2-9b-it'
+    
+    // Cargar configuración desde localStorage o usar valores por defecto
+    this.model = localStorage.getItem('groq_model') || 'llama-3.3-70b-versatile'
+    this.temperature = parseFloat(localStorage.getItem('groq_temperature') || '0.7')
+    this.maxTokens = parseInt(localStorage.getItem('groq_max_tokens') || '800')
   }
 
   /**
@@ -215,8 +223,8 @@ Instrucciones:
       const completion = await this.groq.chat.completions.create({
         messages: messages,
         model: this.model,
-        temperature: 0.7,
-        max_tokens: 800, // Reducido para dejar más espacio al input
+        temperature: this.temperature,
+        max_tokens: this.maxTokens, // Usar el valor configurado
         top_p: 1,
         stream: false
       })
@@ -288,8 +296,8 @@ Instrucciones:
       const completion = await this.groq.chat.completions.create({
         messages: messages,
         model: this.model,
-        temperature: 0.5,
-        max_tokens: 512,
+        temperature: this.temperature,
+        max_tokens: Math.min(this.maxTokens, 512), // Limitar para resúmenes
         top_p: 1,
         stream: false
       })
@@ -370,7 +378,7 @@ Criterios para confidence:
         messages: messages,
         model: this.model,
         temperature: 0.3, // Baja temperatura para consistencia en análisis
-        max_tokens: 200,
+        max_tokens: Math.min(this.maxTokens, 200), // Limitar para análisis
         top_p: 1,
         stream: false
       })
@@ -464,4 +472,49 @@ Criterios para confidence:
   }
 }
 
-export default new GroqService()
+// Métodos para obtener la configuración actual
+GroqService.prototype.getConfig = function() {
+  return {
+    apiKey: !!localStorage.getItem('groq_api_key'),
+    model: this.model,
+    temperature: this.temperature,
+    maxTokens: this.maxTokens
+  }
+}
+
+// Método para actualizar la configuración
+GroqService.prototype.updateConfig = function(config) {
+  if (config.model) {
+    this.model = config.model
+    localStorage.setItem('groq_model', config.model)
+  }
+  if (config.temperature !== undefined) {
+    this.temperature = config.temperature
+    localStorage.setItem('groq_temperature', config.temperature.toString())
+  }
+  if (config.maxTokens) {
+    this.maxTokens = config.maxTokens
+    localStorage.setItem('groq_max_tokens', config.maxTokens.toString())
+  }
+}
+
+// Método para obtener todos los modelos disponibles
+GroqService.prototype.getAvailableModels = function() {
+  return [
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Modelo de Meta de 70B parámetros, versátil para múltiples tareas' },
+    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', name: 'Llama 4 Maverick 17B', description: 'Modelo de última generación de Meta, 17B parámetros' },
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B', description: 'Modelo optimizado de Meta, 17B parámetros' },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Modelo rápido de Meta, 8B parámetros, respuestas instantáneas' },
+    { id: 'allam-2-7b', name: 'Allam 2 7B', description: 'Modelo especializado en árabe, 7B parámetros' },
+    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Modelo de Alibaba Cloud, 32B parámetros' },
+    { id: 'moonshotai/kimi-k2-instruct', name: 'Kimi K2 Instruct', description: 'Modelo de Moonshot AI optimizado para instrucciones' },
+    { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct v0905', description: 'Versión mejorada de Kimi K2' },
+    { id: 'groq/compound', name: 'Groq Compound', description: 'Modelo especializado de Groq' },
+    { id: 'groq/compound-mini', name: 'Groq Compound Mini', description: 'Versión compacta del modelo Groq Compound' },
+    { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', description: 'Modelo OpenAI de código abierto, 120B parámetros' },
+    { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', description: 'Modelo OpenAI de código abierto, 20B parámetros' }
+  ]
+}
+
+const groqService = new GroqService()
+export default groqService

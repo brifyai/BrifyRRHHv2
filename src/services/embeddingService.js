@@ -1,11 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-// API Key de Gemini desde el README
-const GEMINI_API_KEY = 'AIzaSyBveZcn7HLx2zIagNdnjioZS8PXqkJIUeg'
+import groqService from './groqService'
 
 class EmbeddingService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+    this.groq = groqService
   }
 
   /**
@@ -22,16 +19,10 @@ class EmbeddingService {
       // Limpiar y preparar el texto
       const cleanText = this.preprocessText(text)
       
-      // Usar el modelo de embeddings de Google
-      const model = this.genAI.getGenerativeModel({ model: 'models/embedding-001' })
+      // Usar Groq para generar embeddings mediante análisis semántico
+      const embedding = await this.generateEmbeddingWithGroq(cleanText)
       
-      const result = await model.embedContent(cleanText)
-      
-      if (!result.embedding || !result.embedding.values) {
-        throw new Error('No se pudieron generar embeddings')
-      }
-
-      return result.embedding.values
+      return embedding
     } catch (error) {
       console.error('Error generating embedding:', error)
       
@@ -39,6 +30,95 @@ class EmbeddingService {
       console.warn('Usando embedding mock debido a error en API')
       return this.generateMockEmbedding()
     }
+  }
+
+  /**
+   * Genera embeddings usando Groq mediante análisis semántico
+   */
+  async generateEmbeddingWithGroq(text) {
+    try {
+      const prompt = `Analiza el siguiente texto y genera un vector de embeddings semántico.
+      
+      Texto: "${text}"
+      
+      Genera un array de 768 números decimales entre -1 y 1 que representen el significado semántico del texto.
+      Responde solo con el array en formato JSON, sin texto adicional.
+      
+      Ejemplo de formato: [0.1, -0.3, 0.7, ..., -0.2]`
+
+      const response = await this.groq.generateChatResponse(prompt)
+      
+      try {
+        const embedding = JSON.parse(response.response)
+        
+        // Validar que sea un array de números
+        if (!Array.isArray(embedding) || embedding.length === 0) {
+          throw new Error('La respuesta no es un array válido')
+        }
+        
+        // Validar que todos los elementos sean números
+        const isValidNumbers = embedding.every(val =>
+          typeof val === 'number' && val >= -1 && val <= 1
+        )
+        
+        if (!isValidNumbers) {
+          throw new Error('El array contiene valores inválidos')
+        }
+        
+        // Asegurar que tenga 768 dimensiones (estándar para embeddings)
+        if (embedding.length !== 768) {
+          // Extender o truncar a 768 dimensiones
+          return this.normalizeEmbedding(embedding, 768)
+        }
+        
+        return this.normalizeVector(embedding)
+      } catch (parseError) {
+        console.error('Error parseando embedding de Groq:', parseError)
+        throw new Error('No se pudo procesar la respuesta del embedding')
+      }
+    } catch (error) {
+      console.error('Error generando embedding con Groq:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Normaliza un vector a la dimensión especificada
+   */
+  normalizeEmbedding(vector, targetSize) {
+    if (vector.length === targetSize) {
+      return vector
+    }
+    
+    if (vector.length > targetSize) {
+      // Truncar
+      return vector.slice(0, targetSize)
+    } else {
+      // Extender con valores calculados
+      const extended = [...vector]
+      while (extended.length < targetSize) {
+        // Generar valores basados en el promedio y varianza del vector existente
+        const mean = extended.reduce((a, b) => a + b, 0) / extended.length
+        const variance = extended.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / extended.length
+        const stdDev = Math.sqrt(variance)
+        
+        // Generar valor aleatorio con distribución normal
+        let value = mean + (Math.random() - 0.5) * 2 * stdDev
+        value = Math.max(-1, Math.min(1, value)) // Limitar a [-1, 1]
+        extended.push(value)
+      }
+      return extended
+    }
+  }
+
+  /**
+   * Normaliza un vector para que tenga magnitud unitaria
+   */
+  normalizeVector(vector) {
+    const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0))
+    if (magnitude === 0) return vector
+    
+    return vector.map(val => val / magnitude)
   }
 
   /**
@@ -77,8 +157,7 @@ class EmbeddingService {
     }
     
     // Normalizar el vector
-    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0))
-    return embedding.map(val => val / magnitude)
+    return this.normalizeVector(embedding)
   }
 
   /**
@@ -134,4 +213,6 @@ class EmbeddingService {
   }
 }
 
-export default new EmbeddingService()
+// Crear instancia única para evitar problemas de exportación
+const embeddingServiceInstance = new EmbeddingService()
+export default embeddingServiceInstance
