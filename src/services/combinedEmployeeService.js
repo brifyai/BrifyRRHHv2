@@ -80,7 +80,7 @@ export const getEmployeeFolders = async (page = 1, limit = 50) => {
       ...(companies || []).map(company => ({
         id: company.id,
         name: company.name,
-        email: company.email || `${company.name.toLowerCase().replace(/\s+/g, '.')}@brify.com`,
+        email: company.email || `${company.name.toLowerCase().replace(/\s+/g, '.')}@staffhub.com`,
         type: 'virtual',
         department: company.department || 'Sin departamento',
         position: company.position || 'Sin posición',
@@ -126,7 +126,7 @@ export const getEmployeeById = async (id) => {
       return {
         ...company,
         type: 'virtual',
-        email: company.email || `${company.name.toLowerCase().replace(/\s+/g, '.')}@brify.com`
+        email: company.email || `${company.name.toLowerCase().replace(/\s+/g, '.')}@staffhub.com`
       };
     }
     

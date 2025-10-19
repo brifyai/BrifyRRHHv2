@@ -32,7 +32,7 @@ import { Line, Bar } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import enhancedCommunicationService from '../../services/enhancedCommunicationService';
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
 
 // Register Chart.js components
 ChartJS.register(
@@ -530,11 +530,11 @@ const ReportsDashboard = () => {
 
   const loadEmployees = async () => {
     try {
-      const employeeData = await inMemoryEmployeeService.getEmployees();
+      const employeeData = await organizedDatabaseService.getEmployees();
       setEmployees(employeeData);
 
       // Extract unique values for filters
-      const companies = [...new Set(employeeData.map(emp => emp.company?.name || emp.company).filter(Boolean))];
+      const companies = [...new Set(employeeData.map(emp => emp.company_name || emp.company).filter(Boolean))];
       const departments = [...new Set(employeeData.map(emp => emp.department).filter(Boolean))];
       const regions = [...new Set(employeeData.map(emp => emp.region).filter(Boolean))];
       const levels = [...new Set(employeeData.map(emp => emp.level).filter(Boolean))];

@@ -150,8 +150,8 @@ class MultiChannelCommunicationService {
             subject: subject,
             htmlContent: body,
             sender: {
-              name: brevoConfig.emailName || 'Brify AI',
-              email: brevoConfig.emailSender || 'noreply@brify.ai'
+              name: brevoConfig.emailName || 'StaffHub',
+              email: brevoConfig.emailSender || 'noreply@staffhub.com'
             },
             testMode: brevoConfig.testMode || false
           })
@@ -162,8 +162,8 @@ class MultiChannelCommunicationService {
             type: 'email',
             subject: subject,
             content: body,
-            senderName: brevoConfig.emailName || 'Brify AI',
-            senderEmail: brevoConfig.emailSender || 'noreply@brify.ai',
+            senderName: brevoConfig.emailName || 'StaffHub',
+            senderEmail: brevoConfig.emailSender || 'noreply@staffhub.com',
             recipients: recipients.map(email => ({ email })),
             testMode: brevoConfig.testMode || false
           })
@@ -272,7 +272,7 @@ class MultiChannelCommunicationService {
           const result = await brevoService.sendBulkSMS({
             to: recipients,
             message: message,
-            sender: brevoConfig.smsSender || 'BrifyAI',
+            sender: brevoConfig.smsSender || 'StaffHub',
             testMode: brevoConfig.testMode || false
           })
           
@@ -281,7 +281,7 @@ class MultiChannelCommunicationService {
             name: `SMS: ${message.substring(0, 50)}...`,
             type: 'sms',
             content: message,
-            senderName: brevoConfig.smsSender || 'BrifyAI',
+            senderName: brevoConfig.smsSender || 'StaffHub',
             recipients: recipients.map(phone => ({ phoneNumber: phone })),
             testMode: brevoConfig.testMode || false
           })

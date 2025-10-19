@@ -51,7 +51,7 @@ const Profile = () => {
   useEffect(() => {
     if (userProfile) {
       setFormData({
-        name: userProfile.name || userProfile.full_name || '',
+        name: userProfile.full_name || userProfile.name || '',
         telegram_id: userProfile.telegram_id || ''
       })
     }

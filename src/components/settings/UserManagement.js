@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import inMemoryUserService from '../../services/inMemoryUserService'
+import organizedDatabaseService from '../../services/organizedDatabaseService'
 import {
   UserGroupIcon,
   PlusIcon,
@@ -31,13 +31,15 @@ const UserManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true)
+      
+      // Cargar usuarios y roles desde la base de datos organizada
       const [usersData, rolesData] = await Promise.all([
-        inMemoryUserService.getUsers(),
-        inMemoryUserService.getRoles()
+        organizedDatabaseService.getUsers(),
+        organizedDatabaseService.getRoles()
       ])
 
-      setUsers(usersData)
-      setRoles(rolesData)
+      setUsers(usersData || [])
+      setRoles(rolesData || [])
     } catch (error) {
       console.error('Error loading data:', error)
       toast.error('Error al cargar los datos')
@@ -92,7 +94,7 @@ const UserManagement = () => {
     if (!confirmed) return
 
     try {
-      await inMemoryUserService.deleteUser(userId)
+      await organizedDatabaseService.deleteUser(userId)
       toast.success('Usuario eliminado exitosamente')
       loadData()
     } catch (error) {
@@ -103,7 +105,7 @@ const UserManagement = () => {
 
   const handleToggleUserStatus = async (userId) => {
     try {
-      await inMemoryUserService.toggleUserStatus(userId)
+      await organizedDatabaseService.toggleUserStatus(userId)
       toast.success('Estado del usuario actualizado')
       loadData()
     } catch (error) {

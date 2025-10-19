@@ -1,9 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BuildingOfficeIcon, UsersIcon, PaperAirplaneIcon, EyeIcon, FaceSmileIcon, FaceFrownIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
-  const navigate = useNavigate();
   
   // Usar los datos que ya vienen del componente padre
   const scheduledMessages = company.scheduledMessages || 0;
@@ -124,58 +122,6 @@ const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
 
             <div className="mt-4 text-center">
               <span className="text-xs text-gray-500">Haz clic para ver mensajes pendientes</span>
-              <button
-                className="mt-2 px-3 py-1.5 pb-[15px] text-black text-xs font-medium rounded-md hover:text-[#5F3DE4] transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 z-10 relative"
-                onClick={(e) => {
-                  e.stopPropagation(); // Evitar que se propague el click al contenedor
-                  e.preventDefault(); // Prevenir cualquier comportamiento por defecto
-
-                  console.log('Botón Tendencias clickeado para:', company.name);
-
-                  // Mapeo de nombres de empresas para asegurar coincidencia exacta
-                  const companyNameMapping = {
-                    'Corporación Chilena - Alemana': 'Corporación Chilena',
-                    'Corporación Chilena': 'Corporación Chilena',
-                    'Hogar Alemán': 'Hogar Alemán',
-                    'Empresas SB': 'Empresas SB',
-                    'Antofagasta Minerals': 'Antofagasta Minerals',
-                    'Vida Cámara': 'Vida Cámara',
-                    'AFP Habitat': 'AFP Habitat',
-                    'Grupo Saesa': 'Grupo Saesa',
-                    'Arcoprime': 'Arcoprime',
-                    'Achs': 'Achs',
-                    'CMPC': 'CMPC',
-                    'Copec': 'Copec',
-                    'Inchcape': 'Inchcape',
-                    'Ariztia': 'Ariztia',
-                    'Colbun': 'Colbun',
-                    'Enaex': 'Enaex',
-                    'SQM': 'SQM'
-                  };
-
-                  // Usar el nombre mapeado o el original si no hay mapeo
-                  const mappedCompanyName = companyNameMapping[company.name] || company.name;
-
-                  console.log('Nombre mapeado:', mappedCompanyName);
-
-                  // Navegar con el estado a la página de base de datos (Tendencias)
-                  navigate('/base-de-datos', {
-                    state: { selectedCompany: mappedCompanyName }
-                  });
-
-                  console.log('Navegación ejecutada hacia:', '/base-de-datos');
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
-                onMouseUp={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
-              >
-                Tendencias
-              </button>
             </div>
           </div>
 

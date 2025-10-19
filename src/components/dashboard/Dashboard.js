@@ -253,7 +253,7 @@ const Dashboard = () => {
           </div>
           <div className="ml-6">
             <a
-              href="https://t.me/brifybeta_bot"
+              href="https://t.me/staffhubbeta_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-4 py-2 bg-engage-blue hover:bg-engage-yellow text-white font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"

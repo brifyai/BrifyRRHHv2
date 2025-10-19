@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CircleStackIcon, CloudIcon, ServerIcon, ArrowPathIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
-import databaseAdapter from '../../lib/databaseAdapter.js';
-import localDatabase from '../../lib/localDatabase.js';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
+import { supabase } from '../../lib/supabase';
 
 const DatabaseSettings = () => {
   const [currentMode, setCurrentMode] = useState('supabase');
@@ -12,12 +12,12 @@ const DatabaseSettings = () => {
 
   useEffect(() => {
     loadStats();
-    setCurrentMode(databaseAdapter.mode);
   }, []);
 
   const loadStats = async () => {
     try {
-      const statsData = await databaseAdapter.getStats();
+      // Usar el servicio organizado para obtener estadísticas reales
+      const statsData = await organizedDatabaseService.getDashboardStats();
       setStats(statsData);
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
@@ -25,8 +25,8 @@ const DatabaseSettings = () => {
   };
 
   const handleSwitchToLocal = () => {
-    setSwitchTarget('local');
-    setShowConfirmSwitch(true);
+    // Siempre usar Supabase como modo principal
+    alert('El sistema está configurado para usar Supabase como base de datos principal.');
   };
 
   const handleSwitchToSupabase = () => {
@@ -35,18 +35,35 @@ const DatabaseSettings = () => {
   };
 
   const confirmSwitch = () => {
-    if (switchTarget === 'local') {
-      databaseAdapter.switchToLocal();
-    } else {
-      databaseAdapter.switchToSupabase();
+    if (switchTarget === 'supabase') {
+      setCurrentMode('supabase');
+      loadStats(); // Recargar estadísticas
     }
+    setShowConfirmSwitch(false);
   };
 
   const exportData = async () => {
     setLoading(true);
     try {
-      const data = await databaseAdapter.exportData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      // Exportar datos reales desde Supabase
+      const [companies, employees, folders, documents, communicationLogs] = await Promise.all([
+        supabase.from('companies').select('*'),
+        supabase.from('employees').select('*'),
+        supabase.from('folders').select('*'),
+        supabase.from('documents').select('*'),
+        supabase.from('communication_logs').select('*')
+      ]);
+
+      const exportData = {
+        companies: companies.data || [],
+        employees: employees.data || [],
+        folders: folders.data || [],
+        documents: documents.data || [],
+        communication_logs: communicationLogs.data || [],
+        exportDate: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -57,97 +74,37 @@ const DatabaseSettings = () => {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exportando datos:', error);
+      alert('Error al exportar datos: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const importData = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setLoading(true);
-        try {
-          const text = await file.text();
-          const data = JSON.parse(text);
-          await databaseAdapter.importData(data);
-          await loadStats();
-          alert('Datos importados correctamente');
-        } catch (error) {
-          console.error('Error importando datos:', error);
-          alert('Error al importar datos: ' + error.message);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    input.click();
-  };
-
-  const clearLocalData = async () => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar todos los datos locales? Esta acción no se puede deshacer.')) {
+  const clearCache = async () => {
+    if (window.confirm('¿Estás seguro de que quieres limpiar el caché del servicio?')) {
       setLoading(true);
       try {
-        await databaseAdapter.clearData();
+        organizedDatabaseService.clearCache();
         await loadStats();
-        alert('Datos locales eliminados');
+        alert('Caché limpiado correctamente');
       } catch (error) {
-        console.error('Error eliminando datos:', error);
-        alert('Error al eliminar datos: ' + error.message);
+        console.error('Error limpiando caché:', error);
+        alert('Error al limpiar caché: ' + error.message);
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const initializeSampleData = async () => {
-    if (!window.confirm('¿Quieres cargar datos de ejemplo en la base de datos local?')) return;
-
+  const refreshStats = async () => {
     setLoading(true);
     try {
-      // Datos de ejemplo
-      const sampleCompanies = [
-        { id: '1', name: 'Ariztia', is_active: true, created_at: new Date().toISOString() },
-        { id: '2', name: 'Inchcape', is_active: true, created_at: new Date().toISOString() },
-        { id: '3', name: 'Achs', is_active: true, created_at: new Date().toISOString() },
-        { id: '4', name: 'Arcoprime', is_active: true, created_at: new Date().toISOString() },
-        { id: '5', name: 'Grupo Saesa', is_active: true, created_at: new Date().toISOString() }
-      ];
-
-      const sampleEmployees = [];
-      sampleCompanies.forEach(company => {
-        for (let i = 1; i <= 10; i++) {
-          sampleEmployees.push({
-            id: `${company.id}_${i}`,
-            name: `Empleado ${i} de ${company.name}`,
-            email: `empleado${i}@${company.name.toLowerCase().replace(/\s+/g, '')}.com`,
-            company_id: company.id,
-            position: 'Empleado',
-            department: 'General',
-            workMode: 'Presencial',
-            contractType: 'Indefinido',
-            level: 'Staff'
-          });
-        }
-      });
-
-      // Insertar datos
-      for (const company of sampleCompanies) {
-        await localDatabase.create('companies', company);
-      }
-
-      for (const employee of sampleEmployees) {
-        await localDatabase.create('employees', employee);
-      }
-
+      organizedDatabaseService.clearCache();
       await loadStats();
-      alert('Datos de ejemplo cargados correctamente');
+      alert('Estadísticas actualizadas correctamente');
     } catch (error) {
-      console.error('Error cargando datos de ejemplo:', error);
-      alert('Error al cargar datos de ejemplo: ' + error.message);
+      console.error('Error actualizando estadísticas:', error);
+      alert('Error al actualizar estadísticas: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -220,21 +177,39 @@ const DatabaseSettings = () => {
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
           <div className="flex items-center mb-6">
             <ArrowPathIcon className="h-8 w-8 text-purple-600 mr-3" />
-            <h3 className="text-2xl font-bold text-gray-900">Estadísticas</h3>
+            <h3 className="text-2xl font-bold text-gray-900">Estadísticas de Base de Datos</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-              <p className="text-sm font-medium text-purple-600">Proveedor</p>
-              <p className="text-xl font-bold text-purple-700">{stats.provider}</p>
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+              <p className="text-sm font-medium text-blue-600">Empresas</p>
+              <p className="text-xl font-bold text-blue-700">{stats.companies}</p>
             </div>
 
-            {stats.stores.map((store, index) => (
-              <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                <p className="text-sm font-medium text-blue-600">{store.name}</p>
-                <p className="text-xl font-bold text-blue-700">{store.count}</p>
-              </div>
-            ))}
+            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+              <p className="text-sm font-medium text-green-600">Empleados</p>
+              <p className="text-xl font-bold text-green-700">{stats.employees}</p>
+            </div>
+
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+              <p className="text-sm font-medium text-purple-600">Carpetas</p>
+              <p className="text-xl font-bold text-purple-700">{stats.folders}</p>
+            </div>
+
+            <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-100">
+              <p className="text-sm font-medium text-yellow-600">Documentos</p>
+              <p className="text-xl font-bold text-yellow-700">{stats.documents}</p>
+            </div>
+
+            <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100">
+              <p className="text-sm font-medium text-red-600">Comunicaciones</p>
+              <p className="text-xl font-bold text-red-700">{stats.communication_logs}</p>
+            </div>
+
+            <div className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+              <p className="text-sm font-medium text-gray-600">Proveedor</p>
+              <p className="text-xl font-bold text-gray-700">Supabase</p>
+            </div>
           </div>
         </div>
       )}
@@ -258,54 +233,41 @@ const DatabaseSettings = () => {
             </button>
 
             <button
-              onClick={importData}
+              onClick={refreshStats}
               disabled={loading}
               className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50"
             >
-              <ArrowUpTrayIcon className="h-5 w-5 mr-3" />
-              {loading ? 'Importando...' : 'Importar Datos'}
+              <ArrowPathIcon className="h-5 w-5 mr-3" />
+              {loading ? 'Actualizando...' : 'Actualizar Estadísticas'}
             </button>
           </div>
 
           <div className="space-y-4">
             <button
-              onClick={initializeSampleData}
-              disabled={loading || currentMode === 'supabase'}
+              onClick={clearCache}
+              disabled={loading}
               className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50"
             >
               <CircleStackIcon className="h-5 w-5 mr-3" />
-              {loading ? 'Cargando...' : 'Cargar Datos de Ejemplo'}
-            </button>
-
-            <button
-              onClick={clearLocalData}
-              disabled={loading || currentMode === 'supabase'}
-              className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              <TrashIcon className="h-5 w-5 mr-3" />
-              {loading ? 'Eliminando...' : 'Limpiar Datos Locales'}
+              {loading ? 'Limpiando...' : 'Limpiar Caché'}
             </button>
           </div>
         </div>
 
-        {currentMode === 'supabase' && (
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-            <p className="text-sm text-yellow-800">
-              <strong>Nota:</strong> Las herramientas de importación, datos de ejemplo y limpieza solo están disponibles en modo base de datos local.
-            </p>
-          </div>
-        )}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <p className="text-sm text-blue-800">
+            <strong>Información:</strong> El sistema utiliza Supabase como base de datos principal. Todas las operaciones se realizan en tiempo real con la base de datos en la nube.
+          </p>
+        </div>
       </div>
 
       {/* Modal de Confirmación */}
       {showConfirmSwitch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmar Cambio</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmar Configuración</h3>
             <p className="text-gray-600 mb-6">
-              ¿Estás seguro de que quieres cambiar al modo {
-                switchTarget === 'local' ? 'base de datos local' : 'Supabase'
-              }? La página se recargará automáticamente.
+              ¿Estás seguro de que quieres configurar el sistema para usar Supabase como base de datos principal?
             </p>
             <div className="flex space-x-4">
               <button

@@ -99,7 +99,7 @@ const Folders = () => {
       console.log('📁 Subcarpetas encontradas:', subFolders)
       
       // Crear mapeo de extensiones activas para mejor rendimiento
-      const activeExtensionTypes = new Set(['brify']) // Brify siempre disponible
+      const activeExtensionTypes = new Set(['staffhub']) // StaffHub siempre disponible
       
       userExtensions?.forEach(ext => {
         const extensionName = ext.extensiones?.name_es || ext.extensiones?.name
@@ -120,8 +120,8 @@ const Folders = () => {
       console.log('✅ Subcarpetas disponibles finales:', availableSubFolders)
       setAvailableSubFolders(availableSubFolders)
       
-      // Seleccionar Brify por defecto si está disponible
-      const defaultFolder = availableSubFolders.find(f => f.tipo_extension === 'brify') || availableSubFolders[0]
+      // Seleccionar StaffHub por defecto si está disponible
+      const defaultFolder = availableSubFolders.find(f => f.tipo_extension === 'staffhub') || availableSubFolders[0]
       console.log('🎯 Carpeta por defecto seleccionada:', defaultFolder)
       setSelectedParentFolder(defaultFolder)
     } catch (error) {
@@ -143,13 +143,13 @@ const Folders = () => {
         // Establecer la carpeta administrador como carpeta actual
         setCurrentFolder({
           ...adminFolder,
-          folder_name: 'Master - Brify',
+          folder_name: 'Master - StaffHub',
           google_folder_id: adminFolder.id_drive_carpeta,
           type: 'admin'
         })
         setBreadcrumb([
           { name: 'Inicio', id: null },
-          { name: 'Master - Brify', id: adminFolder.id }
+          { name: 'Master - StaffHub', id: adminFolder.id }
         ])
         
         // Cargar las carpetas de usuario dentro de la carpeta administrador
@@ -192,7 +192,7 @@ const Folders = () => {
         // Combinar carpetas admin y de usuario
         const adminFolders = (adminData || []).map(folder => ({
           ...folder,
-          folder_name: 'Master - Brify',
+          folder_name: 'Master - StaffHub',
           google_folder_id: folder.id_drive_carpeta,
           type: 'admin'
         }))
@@ -298,7 +298,7 @@ const Folders = () => {
           }
           
           // Determinar la carpeta padre según la selección
-          let parentFolderId = adminFolderData.id_drive_carpeta // Por defecto, carpeta Master - Brify
+          let parentFolderId = adminFolderData.id_drive_carpeta // Por defecto, carpeta Master - StaffHub
           
           if (selectedParentFolder && selectedParentFolder.file_id_subcarpeta) {
             parentFolderId = selectedParentFolder.file_id_subcarpeta // Usar subcarpeta seleccionada
@@ -324,14 +324,14 @@ const Folders = () => {
       }
       
       // Determinar la extensión basada en la carpeta padre seleccionada
-      let extension = 'Brify' // Por defecto
+      let extension = 'StaffHub' // Por defecto
       console.log('🎯 Carpeta padre seleccionada para determinar extensión:', selectedParentFolder)
       
       if (selectedParentFolder) {
         if (selectedParentFolder.tipo_extension) {
           // Mapear tipo_extension a nombre de extensión correcto
           const extensionMapping = {
-            'brify': 'Brify',
+            'staffhub': 'StaffHub',
             'entrenador': 'Entrenador',
             'abogados': 'Abogados',
             'veterinarios': 'Veterinarios'
@@ -347,8 +347,8 @@ const Folders = () => {
             extension = 'Abogados'
           } else if (nombreLower.includes('veterinario')) {
             extension = 'Veterinarios'
-          } else if (nombreLower.includes('brify')) {
-            extension = 'Brify'
+          } else if (nombreLower.includes('staffhub')) {
+            extension = 'StaffHub'
           }
           console.log(`📋 Extensión determinada por nombre_subcarpeta: ${selectedParentFolder.nombre_subcarpeta} -> ${extension}`)
         }
@@ -555,7 +555,7 @@ const Folders = () => {
 
 
   const handleBreadcrumbClick = (index) => {
-    // Prevenir navegación fuera de la carpeta administrador (índice 0 es "Inicio", índice 1 es "Entrenador - Brify")
+    // Prevenir navegación fuera de la carpeta administrador (índice 0 es "Inicio", índice 1 es "Entrenador - StaffHub")
     if (index < 1) {
       return // No permitir ir más atrás que la carpeta administrador
     }

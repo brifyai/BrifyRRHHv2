@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { 
-  ArrowUpTrayIcon, 
-  DocumentTextIcon, 
-  CheckCircleIcon, 
+import React, { useState, useEffect } from 'react';
+import {
+  ArrowUpTrayIcon,
+  DocumentTextIcon,
+  CheckCircleIcon,
   XCircleIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
 
 const MySwal = withReactContent(Swal);
 
@@ -20,6 +20,20 @@ const EmployeeBulkUpload = () => {
   const [previewData, setPreviewData] = useState([]);
   const [validationResults, setValidationResults] = useState([]);
   const [uploadResults, setUploadResults] = useState(null);
+  const [companies, setCompanies] = useState([]);
+
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const companiesData = await organizedDatabaseService.getCompanies();
+      setCompanies(companiesData || []);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+    }
+  };
 
   // Estructura esperada del Excel
   const expectedColumns = [
@@ -107,8 +121,7 @@ const EmployeeBulkUpload = () => {
       }
       
       // Validar que la empresa exista
-      const companies = inMemoryEmployeeService.companies;
-      const companyExists = companies.some(comp => 
+      const companyExists = companies.some(comp =>
         comp.name.toLowerCase() === (row.company || '').toLowerCase()
       );
       
@@ -171,11 +184,37 @@ const EmployeeBulkUpload = () => {
       let successCount = 0;
       let errorCount = 0;
       
-      // En un sistema real, aquí se llamaría a un servicio para guardar los empleados
-      // Por ahora simulamos el proceso
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      successCount = employeesToCreate.length;
+      // Guardar empleados en la base de datos real
+      for (const employeeData of employeesToCreate) {
+        try {
+          // Buscar la empresa por nombre
+          const company = companies.find(comp =>
+            comp.name.toLowerCase() === employeeData.company.toLowerCase()
+          );
+          
+          if (company) {
+            // Crear empleado con datos reales
+            await organizedDatabaseService.createEmployee({
+              name: employeeData.name,
+              email: employeeData.email,
+              phone: employeeData.phone || '',
+              position: employeeData.position || 'Empleado',
+              department: employeeData.department || 'General',
+              level: employeeData.level || 'Staff',
+              workMode: employeeData.workMode || 'Presencial',
+              contractType: employeeData.contractType || 'Indefinido',
+              company_id: company.id,
+              is_active: true
+            });
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (error) {
+          console.error('Error creating employee:', error);
+          errorCount++;
+        }
+      }
       
       clearInterval(interval);
       setUploadProgress(100);
@@ -652,7 +691,7 @@ const EmployeeBulkUpload = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {inMemoryEmployeeService.companies.map(company => (
+            {companies.map(company => (
               <div key={company.id} className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <div className="flex items-center mb-4">
                   <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-2 rounded-lg mr-3">

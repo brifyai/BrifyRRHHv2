@@ -124,7 +124,7 @@ const TemplateDownload = () => {
         <h4 className="font-semibold text-gray-900 mb-2">🚀 Próximos pasos:</h4>
         <ol className="text-sm text-gray-600 space-y-1">
           <li>1. Descarga y completa la plantilla con tu información</li>
-          <li>2. Sube el archivo a una de tus carpetas en Brify</li>
+          <li>2. Sube el archivo a una de tus carpetas en StaffHub</li>
           <li>3. Activa los recordatorios automáticos</li>
           <li>4. ¡Comienza a recibir recordatorios diarios!</li>
         </ol>

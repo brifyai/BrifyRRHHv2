@@ -332,7 +332,7 @@ const InnovativeDashboard = () => {
           </div>
           <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
             <a
-              href="https://t.me/brifybeta_bot"
+              href="https://t.me/staffhubbeta_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { BuildingOfficeIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
-// Cambiar el servicio de comunicación por el nuevo servicio en memoria
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
 import { supabase } from '../../lib/supabase'
 import CompanyCard from './CompanyCard'
+import organizedDatabaseService from '../../services/organizedDatabaseService'
 
 const DatabaseCompanySummary = () => {
   const [companies, setCompanies] = useState([])
@@ -18,123 +17,25 @@ const DatabaseCompanySummary = () => {
   }, [])
 
   const loadCompanyData = async () => {
-    console.log('🚀 DatabaseCompanySummary: Iniciando carga optimizada')
+    console.log('🚀 DatabaseCompanySummary: Cargando datos desde base de datos organizada')
     try {
       setLoading(true)
       setError(null)
       const startTime = performance.now()
 
-      // 🚀 OPTIMIZACIÓN: Obtener empresas y datos de comunicación en paralelo
-      const [companiesData] = await Promise.all([
-        inMemoryEmployeeService.getCompanies()
-      ])
+      // Usar el servicio organizado para obtener empresas con estadísticas
+      const companiesWithStats = await organizedDatabaseService.getCompaniesWithStats()
+      
+      console.log(`📊 DatabaseCompanySummary: ${companiesWithStats.length} empresas cargadas con estadísticas`)
+      console.log('📊 Empresas encontradas:', companiesWithStats)
 
-      console.log(`📊 DatabaseCompanySummary: ${companiesData.length} empresas cargadas`)
-
-      if (companiesData.length === 0) {
+      if (companiesWithStats.length === 0) {
+        console.log('⚠️ No se encontraron empresas, mostrando mensaje de depuración')
+        setError('No se encontraron empresas en la base de datos. Por favor, crea algunas empresas desde la sección de Configuración.')
         setCompanies([])
         setLoading(false)
         return
       }
-
-      // 🚀 OPTIMIZACIÓN: Obtener todas las estadísticas de comunicación en una sola consulta
-      const companyIds = companiesData.map(company => company.id)
-      
-      // Consulta única para obtener todos los conteos de mensajes por empresa y estado
-      const { data: communicationStats, error: commError } = await supabase
-        .from('communication_logs')
-        .select('company_id, status, scheduled_date')
-        .in('company_id', companyIds)
-
-      if (commError) {
-        console.error('Error loading communication stats:', commError)
-      }
-
-      // 🚀 OPTIMIZACIÓN: Procesar datos en memoria en lugar de múltiples consultas
-      const statsByCompany = {}
-      const nextScheduledByCompany = {}
-
-      if (communicationStats) {
-        const now = new Date().toISOString()
-        
-        communicationStats.forEach(record => {
-          const companyId = record.company_id
-          
-          // Inicializar si no existe
-          if (!statsByCompany[companyId]) {
-            statsByCompany[companyId] = {
-              sent: 0,
-              scheduled: 0,
-              draft: 0
-            }
-          }
-          
-          // Contar por estado
-          statsByCompany[companyId][record.status] = (statsByCompany[companyId][record.status] || 0) + 1
-          
-          // Guardar próxima fecha programada
-          if (record.status === 'scheduled' && record.scheduled_date >= now) {
-            if (!nextScheduledByCompany[companyId] || record.scheduled_date < nextScheduledByCompany[companyId]) {
-              nextScheduledByCompany[companyId] = record.scheduled_date
-            }
-          }
-        })
-      }
-
-      // 🚀 OPTIMIZACIÓN: Obtener datos de sentimiento una sola vez desde localStorage
-      let sentimentData = {}
-      try {
-        const storedSentimentData = localStorage.getItem('reportsSentimentData')
-        if (storedSentimentData) {
-          const parsed = JSON.parse(storedSentimentData)
-          sentimentData = parsed?.sentimentByCompany || {}
-        }
-      } catch (error) {
-        console.log('No sentiment data available in localStorage')
-      }
-
-      // 🚀 OPTIMIZACIÓN: Procesar empresas en paralelo usando los datos ya cargados
-      const companiesWithStats = await Promise.all(
-        companiesData.map(async (company) => {
-          try {
-            // Obtener conteo de empleados
-            const employeeCount = await inMemoryEmployeeService.getEmployeeCountByCompany(company.id)
-            
-            // Usar datos ya procesados de comunicación
-            const commStats = statsByCompany[company.id] || { sent: 0, scheduled: 0, draft: 0 }
-            const nextScheduledDate = nextScheduledByCompany[company.id] || null
-            
-            // Engagement del 100%: todos los enviados se consideran leídos
-            const readMessages = commStats.sent
-            
-            // Obtener sentimiento desde datos cacheados
-            const sentimentScore = sentimentData[company.name]?.average || 0
-
-            return {
-              ...company,
-              employeeCount,
-              sentMessages: commStats.sent,
-              readMessages,
-              sentimentScore,
-              scheduledMessages: commStats.scheduled,
-              draftMessages: commStats.draft,
-              nextScheduledDate
-            }
-          } catch (error) {
-            console.error(`Error processing company ${company.id}:`, error)
-            return {
-              ...company,
-              employeeCount: 0,
-              sentMessages: 0,
-              readMessages: 0,
-              sentimentScore: 0,
-              scheduledMessages: 0,
-              draftMessages: 0,
-              nextScheduledDate: null
-            }
-          }
-        })
-      )
 
       // Ordenar alfabéticamente
       const sortedCompanies = companiesWithStats.sort((a, b) => a.name.localeCompare(b.name))
@@ -142,7 +43,7 @@ const DatabaseCompanySummary = () => {
 
       const loadTime = performance.now() - startTime
       console.log(`✅ DatabaseCompanySummary: Carga completada en ${loadTime.toFixed(2)}ms`)
-      
+       
     } catch (error) {
       console.error('❌ Error loading company data:', error)
       setError('Error al cargar los datos de las empresas')
@@ -155,8 +56,8 @@ const DatabaseCompanySummary = () => {
     try {
       setSyncing(true)
       setError(null)
-      // Usar el servicio en memoria para sincronizar
-      await inMemoryEmployeeService.ensure50EmployeesPerCompany()
+      // Limpiar caché y recargar datos
+      organizedDatabaseService.clearCache()
       await loadCompanyData()
     } catch (error) {
       console.error('Error syncing with dashboard:', error)
@@ -165,6 +66,7 @@ const DatabaseCompanySummary = () => {
       setSyncing(false)
     }
   }
+
 
   // Función para voltear tarjetas
   const toggleFlip = (companyId) => {

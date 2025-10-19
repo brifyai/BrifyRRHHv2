@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
+import organizedDatabaseService from '../../services/organizedDatabaseService'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -21,7 +21,7 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
     description: '',
     telegram_bot: '',
     whatsapp_number: '',
-    is_active: true
+    status: 'active'
   })
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(false)
@@ -35,7 +35,7 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
         description: company.description || '',
         telegram_bot: company.telegram_bot || '',
         whatsapp_number: company.whatsapp_number || '',
-        is_active: company.is_active !== false
+        status: company.status || 'active'
       })
       loadEmployees()
     } else {
@@ -56,24 +56,8 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
     if (!company) return
 
     try {
-      // Intentar cargar desde Supabase primero
-      try {
-        const { data, error } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('company_id', company.id)
-          .order('name')
-
-        if (!error && data && data.length > 0) {
-          setEmployees(data)
-          return
-        }
-      } catch (supabaseError) {
-        // Silenciar errores de Supabase
-      }
-
-      // Fallback: cargar empleados desde el servicio local
-      const allEmployees = await inMemoryEmployeeService.getEmployees()
+      // Usar el servicio de base de datos organizada para cargar empleados reales
+      const allEmployees = await organizedDatabaseService.getEmployees()
       const companyEmployees = allEmployees.filter(emp => emp.company_id === company.id)
       setEmployees(companyEmployees)
 
@@ -167,7 +151,7 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
             description: formData.description,
             telegram_bot: formData.telegram_bot,
             whatsapp_number: formData.whatsapp_number,
-            is_active: formData.is_active,
+            status: formData.status,
             updated_at: new Date().toISOString()
           })
           .eq('id', company.id)
@@ -182,7 +166,7 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
             description: formData.description,
             telegram_bot: formData.telegram_bot,
             whatsapp_number: formData.whatsapp_number,
-            is_active: formData.is_active,
+            status: formData.status,
             user_id: user.id
           })
           .select()
@@ -295,9 +279,9 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
                 <label className="flex items-center">
                   <input
                     type="radio"
-                    name="is_active"
-                    checked={formData.is_active}
-                    onChange={() => handleInputChange('is_active', true)}
+                    name="status"
+                    checked={formData.status === 'active'}
+                    onChange={() => handleInputChange('status', 'active')}
                     className="text-blue-600 focus:ring-blue-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">Activa</span>
@@ -305,9 +289,9 @@ const CompanyForm = ({ company, onSuccess, onCancel }) => {
                 <label className="flex items-center">
                   <input
                     type="radio"
-                    name="is_active"
-                    checked={!formData.is_active}
-                    onChange={() => handleInputChange('is_active', false)}
+                    name="status"
+                    checked={formData.status === 'inactive'}
+                    onChange={() => handleInputChange('status', 'inactive')}
                     className="text-blue-600 focus:ring-blue-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">Inactiva</span>

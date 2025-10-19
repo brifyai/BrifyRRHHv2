@@ -25,7 +25,7 @@ const HomeModern = () => {
     try {
       const result = await signIn(email, password);
       if (!result.error) {
-        toast.success('¡Bienvenido a BrifyRRHH!');
+        toast.success('¡Bienvenido a StaffHub!');
         navigate('/panel-principal');
       }
     } catch (error) {
@@ -81,7 +81,7 @@ const HomeModern = () => {
       position: 'HR Manager',
       company: 'TechCorp',
       image: '👩‍💼',
-      comment: 'BrifyRRHH transformó completamente nuestra gestión de talento. El ahorro de tiempo es increíble.'
+      comment: 'StaffHub transformó completamente nuestra gestión de talento. El ahorro de tiempo es increíble.'
     },
     {
       name: 'Carlos Rodríguez',
@@ -114,7 +114,7 @@ const HomeModern = () => {
                 <span className="text-white font-bold text-xl">B</span>
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                BrifyRRHH
+                StaffHub
               </span>
             </div>
             
@@ -398,7 +398,7 @@ const HomeModern = () => {
             ¿Listo para transformar tu gestión de RRHH?
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            Únete a cientos de empresas que ya están optimizando sus procesos con BrifyRRHH
+            Únete a cientos de empresas que ya están optimizando sus procesos con StaffHub
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
@@ -423,7 +423,7 @@ const HomeModern = () => {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold">B</span>
                 </div>
-                <span className="text-xl font-bold">BrifyRRHH</span>
+                <span className="text-xl font-bold">StaffHub</span>
               </div>
               <p className="text-gray-400">
                 La plataforma moderna para la gestión de recursos humanos.
@@ -462,7 +462,7 @@ const HomeModern = () => {
           </div>
           
           <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>&copy; 2025 BrifyRRHH. Todos los derechos reservados.</p>
+            <p>&copy; 2025 StaffHub. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BuildingOfficeIcon, UserIcon, FunnelIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
 
 const MySwal = withReactContent(Swal);
 
@@ -58,7 +58,7 @@ const EmployeeSelector = () => {
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      const employeeData = await inMemoryEmployeeService.getEmployees();
+      const employeeData = await organizedDatabaseService.getEmployees();
       setEmployees(employeeData);
       setFilteredEmployees(employeeData);
     } catch (error) {
@@ -70,7 +70,7 @@ const EmployeeSelector = () => {
 
   const loadCompanies = async () => {
     try {
-      const companyData = await inMemoryEmployeeService.getCompanies();
+      const companyData = await organizedDatabaseService.getCompanies();
       setCompanies(companyData);
     } catch (error) {
       console.error('Error loading companies:', error);
@@ -186,7 +186,8 @@ const EmployeeSelector = () => {
   const handleSyncEmployees = async () => {
     try {
       setLoading(true);
-      await inMemoryEmployeeService.ensure50EmployeesPerCompany();
+      // Ya no necesitamos sincronizar empleados ya que usamos datos reales de la BD
+      await organizedDatabaseService.getEmployees();
       await loadEmployees();
       
       // Mostrar alerta de éxito
@@ -514,13 +515,17 @@ const EmployeeSelector = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-r from-engage-blue to-blue-600 flex items-center justify-center shadow-lg">
                           <span className="text-white font-bold text-sm">
-                            {employee.name.charAt(0)}
+                            {employee.first_name ? employee.first_name.charAt(0) : '?'}
                           </span>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-semibold text-gray-900">{employee.name}</div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {employee.first_name && employee.last_name
+                              ? `${employee.first_name} ${employee.last_name}`
+                              : employee.first_name || employee.last_name || 'Sin nombre'}
+                          </div>
                           <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block mt-1">
-                            {employee.position}
+                            {employee.position || 'Sin posición'}
                           </div>
                         </div>
                       </div>
@@ -532,16 +537,16 @@ const EmployeeSelector = () => {
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="text-sm text-gray-900 bg-blue-50 text-blue-700 px-3 py-1 rounded-full inline-block font-medium">
-                        {employee.department}
+                        {employee.department || 'Sin departamento'}
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium">{employee.email}</div>
-                      <div className="text-xs text-gray-500">{employee.phone}</div>
+                      <div className="text-sm text-gray-900 font-medium">{employee.email || 'Sin email'}</div>
+                      <div className="text-xs text-gray-500">{employee.phone || 'Sin teléfono'}</div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">{employee.phone}</div>
+                        <div className="text-sm font-medium text-gray-900">{employee.phone || 'Sin teléfono'}</div>
                         {selectedEmployees.has(employee.id) && (
                           <div className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                             ✓ Seleccionado

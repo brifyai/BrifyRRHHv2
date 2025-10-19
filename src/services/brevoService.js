@@ -126,7 +126,7 @@ class BrevoService {
     const {
       recipients, // Array de { phone: string, name?: string }
       message,
-      sender = 'Brify',
+      sender = 'StaffHub',
       scheduledAt = null
     } = params
 
@@ -225,7 +225,7 @@ class BrevoService {
       subject,
       htmlContent,
      textContent,
-      sender = { name: 'Brify', email: 'noreply@brify.ai' },
+      sender = { name: 'StaffHub', email: 'noreply@staffhub.com' },
       scheduledAt = null,
       attachment = null
     } = params
@@ -456,14 +456,14 @@ class BrevoService {
    * @param {string} message - Mensaje de prueba
    * @returns {Promise<Object>} Resultado del envío
    */
-  async sendTestSMS(phoneNumber, message = 'Este es un mensaje de prueba desde Brify AI') {
+  async sendTestSMS(phoneNumber, message = 'Este es un mensaje de prueba desde StaffHub') {
     if (!this.isConfigured) {
       throw new Error('Brevo no está configurado')
     }
 
     try {
       const payload = {
-        sender: 'Brify',
+        sender: 'StaffHub',
         recipient: phoneNumber,
         content: message,
         type: 'transactional'
@@ -511,7 +511,7 @@ class BrevoService {
    * @param {string} htmlContent - Contenido HTML
    * @returns {Promise<Object>} Resultado del envío
    */
-  async sendTestEmail(emailAddress, subject = 'Email de prueba desde Brify AI', htmlContent = null) {
+  async sendTestEmail(emailAddress, subject = 'Email de prueba desde StaffHub', htmlContent = null) {
     if (!this.isConfigured) {
       throw new Error('Brevo no está configurado')
     }
@@ -519,13 +519,13 @@ class BrevoService {
     const defaultContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Email de Prueba</h2>
-        <p>Este es un email de prueba enviado desde la plataforma Brify AI utilizando Brevo.</p>
+        <p>Este es un email de prueba enviado desde la plataforma StaffHub utilizando Brevo.</p>
         <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #007bff; margin-top: 0;">✅ Configuración Exitosa</h3>
           <p>Tu integración con Brevo está funcionando correctamente.</p>
         </div>
         <p style="color: #666; font-size: 14px;">
-          Enviado desde: <strong>Brify AI</strong><br>
+          Enviado desde: <strong>StaffHub</strong><br>
           Fecha: ${new Date().toLocaleString('es-ES')}
         </p>
       </div>
@@ -533,7 +533,7 @@ class BrevoService {
 
     try {
       const payload = {
-        sender: { name: 'Brify', email: 'noreply@brify.ai' },
+        sender: { name: 'StaffHub', email: 'noreply@staffhub.com' },
         to: [{ email: emailAddress, name: 'Usuario de Prueba' }],
         subject: subject,
         htmlContent: htmlContent || defaultContent,

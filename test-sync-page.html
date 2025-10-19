@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Sincronización de Empresas</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .header h1 {
+            color: #1f2937;
+            margin: 0;
+            font-size: 2rem;
+        }
+        .header p {
+            color: #6b7280;
+            margin: 8px 0 0 0;
+        }
+        .section {
+            margin-bottom: 24px;
+        }
+        .section h2 {
+            color: #374151;
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .button {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            margin: 4px;
+            transition: all 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        .button.secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        .button.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .button.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .log {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 12px;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .card h3 {
+            margin: 0 0 8px 0;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+        .card p {
+            margin: 4px 0;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Prueba de Sincronización de Empresas</h1>
+            <p>Valida el funcionamiento del servicio centralizado de sincronización</p>
+        </div>
+
+        <div class="section">
+            <h2>📊 Estado del Servicio</h2>
+            <div id="serviceStatus">
+                <div class="status info">Verificando servicio...</div>
+            </div>
+            <button class="button" onclick="checkServiceStatus()">Verificar Estado</button>
+            <button class="button secondary" onclick="clearLog()">Limpiar Log</button>
+        </div>
+
+        <div class="section">
+            <h2>🏢 Operaciones de Empresas</h2>
+            <button class="button" onclick="loadCompanies()">Cargar Empresas</button>
+            <button class="button success" onclick="createTestCompany()">Crear Empresa Test</button>
+            <button class="button secondary" onclick="updateTestCompany()">Actualizar Empresa</button>
+            <button class="button danger" onclick="deleteTestCompany()">Eliminar Empresa</button>
+            <button class="button secondary" onclick="testCache()">Probar Caché</button>
+        </div>
+
+        <div class="section">
+            <h2>📡 Prueba de Eventos</h2>
+            <button class="button" onclick="subscribeToEvents()">Suscribirse a Eventos</button>
+            <button class="button secondary" onclick="unsubscribeFromEvents()">Cancelar Suscripción</button>
+            <button class="button" onclick="triggerManualEvent()">Disparar Evento Manual</button>
+        </div>
+
+        <div class="section">
+            <h2>📈 Empresas Actuales</h2>
+            <div id="companiesList" class="grid">
+                <div class="card">
+                    <h3>Cargando...</h3>
+                    <p>Esperando carga de empresas</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📝 Log de Eventos</h2>
+            <div id="eventLog" class="log">Iniciando sistema de sincronización...\n</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://tmqglnycivlcjijoymwe.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcWdsbnljaXZsY2ppam95bXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTQ1NDYsImV4cCI6MjA3NjEzMDU0Nn0.ILwxm7pKdFZtG-Xz8niMSHaTwMvE4S7VlU8yDSgxOpE';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Servicio de sincronización simplificado para prueba
+        const companySyncService = {
+            cache: new Map(),
+            listeners: new Map(),
+            
+            async getCompanies() {
+                try {
+                    if (this.cache.has('companies')) {
+                        log('✅ Obteniendo empresas desde caché');
+                        return this.cache.get('companies');
+                    }
+                    
+                    log('📡 Cargando empresas desde base de datos...');
+                    const { data, error } = await supabase
+                        .from('employees')
+                        .select('*')
+                        .eq('is_company', true);
+                    
+                    if (error) throw error;
+                    
+                    this.cache.set('companies', data);
+                    log(`✅ ${data.length} empresas cargadas`);
+                    return data;
+                } catch (error) {
+                    log(`❌ Error al cargar empresas: ${error.message}`);
+                    throw error;
+                }
+            },
+            
+            async createCompany(companyData) {
+                try {
+                    log('➕ Creando nueva empresa...');
+                    const { data, error } = await supabase
+                        .from('employees')
+                        .insert([{
+                            ...companyData,
+                            is_company: true,
+                            created_at: new Date().toISOString()
+                        }])
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    this.cache.delete('companies');
+                    this.broadcastEvent('company-created', data[0]);
+                    this.broadcastEvent('companies-updated', { action: 'created', company: data[0] });
+                    
+                    log(`✅ Empresa creada: ${data[0].name}`);
+                    return data[0];
+                } catch (error) {
+                    log(`❌ Error al crear empresa: ${error.message}`);
+                    throw error;
+                }
+            },
+            
+            async updateCompany(id, updateData) {
+                try {
+                    log(`✏️ Actualizando empresa ${id}...`);
+                    const { data, error } = await supabase
+                        .from('employees')
+                        .update({
+                            ...updateData,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', id)
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    this.cache.delete('companies');
+                    this.broadcastEvent('company-updated', data[0]);
+                    this.broadcastEvent('companies-updated', { action: 'updated', company: data[0] });
+                    
+                    log(`✅ Empresa actualizada: ${data[0].name}`);
+                    return data[0];
+                } catch (error) {
+                    log(`❌ Error al actualizar empresa: ${error.message}`);
+                    throw error;
+                }
+            },
+            
+            async deleteCompany(id) {
+                try {
+                    log(`🗑️ Eliminando empresa ${id}...`);
+                    const { data, error } = await supabase
+                        .from('employees')
+                        .delete()
+                        .eq('id', id)
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    this.cache.delete('companies');
+                    this.broadcastEvent('company-deleted', { id, company: data[0] });
+                    this.broadcastEvent('companies-updated', { action: 'deleted', company: data[0] });
+                    
+                    log(`✅ Empresa eliminada: ${data[0]?.name || id}`);
+                    return data[0];
+                } catch (error) {
+                    log(`❌ Error al eliminar empresa: ${error.message}`);
+                    throw error;
+                }
+            },
+            
+            subscribe(eventType, callback) {
+                if (!this.listeners.has(eventType)) {
+                    this.listeners.set(eventType, new Set());
+                }
+                const id = Date.now().toString();
+                this.listeners.get(eventType).set(id, callback);
+                log(`📡 Suscripción creada: ${eventType} (${id})`);
+                return id;
+            },
+            
+            unsubscribe(eventType, id) {
+                if (this.listeners.has(eventType)) {
+                    this.listeners.get(eventType).delete(id);
+                    log(`📡 Suscripción cancelada: ${eventType} (${id})`);
+                }
+            },
+            
+            broadcastEvent(eventType, data) {
+                if (this.listeners.has(eventType)) {
+                    this.listeners.get(eventType).forEach(callback => {
+                        try {
+                            callback(data);
+                        } catch (error) {
+                            log(`❌ Error en callback de evento: ${error.message}`);
+                        }
+                    });
+                    log(`📡 Evento emitido: ${eventType}`, data);
+                }
+            },
+            
+            clearCache() {
+                this.cache.clear();
+                log('🧹 Caché limpiado');
+            }
+        };
+
+        let testCompanyId = null;
+        let subscriptions = [];
+
+        function log(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('eventLog');
+            const logMessage = `[${timestamp}] ${message}${data ? ` ${JSON.stringify(data)}` : ''}\n`;
+            logElement.textContent += logMessage;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('eventLog').textContent = 'Log limpiado...\n';
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('serviceStatus');
+            statusElement.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function checkServiceStatus() {
+            try {
+                updateStatus('Verificando conexión...', 'info');
+                const { data, error } = await supabase.from('employees').select('count').single();
+                
+                if (error) throw error;
+                
+                updateStatus('✅ Servicio conectado y funcionando', 'success');
+                log('✅ Verificación de servicio exitosa');
+            } catch (error) {
+                updateStatus(`❌ Error de conexión: ${error.message}`, 'error');
+                log(`❌ Error de verificación: ${error.message}`);
+            }
+        }
+
+        async function loadCompanies() {
+            try {
+                updateStatus('Cargando empresas...', 'info');
+                const companies = await companySyncService.getCompanies();
+                displayCompanies(companies);
+                updateStatus(`✅ ${companies.length} empresas cargadas`, 'success');
+            } catch (error) {
+                updateStatus(`❌ Error al cargar: ${error.message}`, 'error');
+            }
+        }
+
+        function displayCompanies(companies) {
+            const container = document.getElementById('companiesList');
+            
+            if (companies.length === 0) {
+                container.innerHTML = '<div class="card"><h3>No hay empresas</h3><p>No se encontraron empresas en la base de datos</p></div>';
+                return;
+            }
+            
+            container.innerHTML = companies.map(company => `
+                <div class="card">
+                    <h3>${company.name}</h3>
+                    <p><strong>RUT:</strong> ${company.rut || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${company.email || 'N/A'}</p>
+                    <p><strong>Teléfono:</strong> ${company.phone || 'N/A'}</p>
+                    <p><strong>Estado:</strong> ${company.active ? '✅ Activa' : '❌ Inactiva'}</p>
+                    <p><strong>ID:</strong> ${company.id}</p>
+                </div>
+            `).join('');
+        }
+
+        async function createTestCompany() {
+            try {
+                const companyData = {
+                    name: `Empresa Test ${Date.now()}`,
+                    rut: `11.111.111-${Math.floor(Math.random() * 999)}`,
+                    email: `test${Date.now()}@empresa.com`,
+                    phone: '+56 9 1234 5678',
+                    active: true
+                };
+                
+                const company = await companySyncService.createCompany(companyData);
+                testCompanyId = company.id;
+                await loadCompanies();
+                updateStatus('✅ Empresa de prueba creada', 'success');
+            } catch (error) {
+                updateStatus(`❌ Error al crear: ${error.message}`, 'error');
+            }
+        }
+
+        async function updateTestCompany() {
+            if (!testCompanyId) {
+                updateStatus('⚠️ Primero crea una empresa de prueba', 'error');
+                return;
+            }
+            
+            try {
+                const updateData = {
+                    name: `Empresa Test Actualizada ${Date.now()}`,
+                    active: false
+                };
+                
+                await companySyncService.updateCompany(testCompanyId, updateData);
+                await loadCompanies();
+                updateStatus('✅ Empresa actualizada', 'success');
+            } catch (error) {
+                updateStatus(`❌ Error al actualizar: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteTestCompany() {
+            if (!testCompanyId) {
+                updateStatus('⚠️ Primero crea una empresa de prueba', 'error');
+                return;
+            }
+            
+            try {
+                await companySyncService.deleteCompany(testCompanyId);
+                testCompanyId = null;
+                await loadCompanies();
+                updateStatus('✅ Empresa eliminada', 'success');
+            } catch (error) {
+                updateStatus(`❌ Error al eliminar: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCache() {
+            try {
+                log('🧪 Probando sistema de caché...');
+                
+                // Limpiar caché
+                companySyncService.clearCache();
+                
+                // Primera carga (debe ir a BD)
+                log('📡 Primera carga (desde BD)...');
+                const start1 = performance.now();
+                await companySyncService.getCompanies();
+                const time1 = performance.now() - start1;
+                log(`⏱️ Primera carga: ${time1.toFixed(2)}ms`);
+                
+                // Segunda carga (debe usar caché)
+                log('📡 Segunda carga (desde caché)...');
+                const start2 = performance.now();
+                await companySyncService.getCompanies();
+                const time2 = performance.now() - start2;
+                log(`⏱️ Segunda carga: ${time2.toFixed(2)}ms`);
+                
+                const improvement = ((time1 - time2) / time1 * 100).toFixed(1);
+                log(`🚀 Mejora de rendimiento: ${improvement}%`);
+                
+                updateStatus(`✅ Caché probado (${improvement}% más rápido)`, 'success');
+            } catch (error) {
+                updateStatus(`❌ Error en prueba de caché: ${error.message}`, 'error');
+            }
+        }
+
+        function subscribeToEvents() {
+            // Limpiar suscripciones anteriores
+            subscriptions.forEach(({ eventType, id }) => {
+                companySyncService.unsubscribe(eventType, id);
+            });
+            subscriptions = [];
+            
+            // Suscribirse a todos los eventos
+            const events = ['companies-updated', 'company-created', 'company-updated', 'company-deleted'];
+            
+            events.forEach(eventType => {
+                const id = companySyncService.subscribe(eventType, (data) => {
+                    log(`📡 Evento recibido: ${eventType}`, data);
+                });
+                subscriptions.push({ eventType, id });
+            });
+            
+            updateStatus(`✅ Suscrito a ${events.length} eventos`, 'success');
+        }
+
+        function unsubscribeFromEvents() {
+            subscriptions.forEach(({ eventType, id }) => {
+                companySyncService.unsubscribe(eventType, id);
+            });
+            subscriptions = [];
+            
+            updateStatus('✅ Todas las suscripciones canceladas', 'success');
+        }
+
+        function triggerManualEvent() {
+            companySyncService.broadcastEvent('companies-updated', {
+                action: 'manual',
+                timestamp: new Date().toISOString(),
+                message: 'Evento disparado manualmente para prueba'
+            });
+            
+            updateStatus('✅ Evento manual disparado', 'success');
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('🚀 Página de prueba inicializada');
+            await checkServiceStatus();
+            await loadCompanies();
+            subscribeToEvents();
+        });
+    </script>
+</body>
+</html>

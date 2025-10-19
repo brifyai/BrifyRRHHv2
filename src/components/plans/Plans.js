@@ -199,10 +199,10 @@ const Plans = () => {
     try {
       const subFoldersToCreate = []
       
-      // Siempre crear la carpeta "Brify" (plan básico)
+      // Siempre crear la carpeta "StaffHub" (plan básico)
       subFoldersToCreate.push({
-        nombre: 'Brify',
-        tipo: 'brify'
+        nombre: 'StaffHub',
+        tipo: 'staffhub'
       })
       
       // Agregar subcarpetas según extensiones seleccionadas
@@ -282,7 +282,7 @@ const Plans = () => {
       }
       
       // Crear carpeta en Google Drive
-      const folderName = `Master - Brify`
+      const folderName = `Master - StaffHub`
       const driveFolder = await googleDriveService.createFolder(folderName)
       
       if (!driveFolder.id) {

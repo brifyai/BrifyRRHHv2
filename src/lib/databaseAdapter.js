@@ -1,5 +1,5 @@
 // Adaptador de Base de Datos - Exclusivamente Supabase
-// Conectado únicamente a la nueva base de datos BrifyRRHH
+// Conectado únicamente a la nueva base de datos StaffHub
 
 import { supabase } from './supabase.js';
 
@@ -14,7 +14,7 @@ class DatabaseAdapter {
     if (this.isInitialized) return;
 
     this.isInitialized = true;
-    console.log('Base de datos inicializada en modo: Supabase (BrifyRRHH)');
+    console.log('Base de datos inicializada en modo: Supabase (StaffHub)');
   }
 
   // Operaciones CRUD unificadas
@@ -423,7 +423,7 @@ class DatabaseAdapter {
   async getStats() {
     // Para Supabase, devolver info básica
     return {
-      provider: 'Supabase (BrifyRRHH)',
+      provider: 'Supabase (StaffHub)',
       stores: [
         { name: 'companies', count: 'Conectado' },
         { name: 'employees', count: 'Conectado' },

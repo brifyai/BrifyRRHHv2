@@ -64,10 +64,7 @@ const Navbar = () => {
               <Link to="/panel-principal" className="flex items-center">
                 <div className="flex items-center">
                   <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Brify
-                  </span>
-                  <span className="text-2xl font-bold text-gray-800 ml-1">
-                    AI
+                    StaffHub
                   </span>
                 </div>
               </Link>

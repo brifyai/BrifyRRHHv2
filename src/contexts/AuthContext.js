@@ -45,10 +45,24 @@ export const AuthProvider = ({ children }) => {
       if (!data && !error) {
         console.log('Usuario no encontrado en la tabla users, creando perfil...')
         
+        // Función para extraer nombre del email si no hay nombre disponible
+        const extractNameFromEmail = (email) => {
+          if (!email) return 'Usuario'
+          const parts = email.split('@')
+          const namePart = parts[0]
+          // Reemplazar puntos y guiones con espacios y capitalizar
+          return namePart.replace(/[.-]/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+        }
+        
         const userProfileData = {
           id: userId,
           email: user?.email || '',
-          name: user?.user_metadata?.name || user?.user_metadata?.full_name || 'Usuario',
+          full_name: user?.user_metadata?.name ||
+                    user?.user_metadata?.full_name ||
+                    extractNameFromEmail(user?.email),
           telegram_id: null,
           is_active: true,
           current_plan_id: null,
@@ -67,7 +81,7 @@ export const AuthProvider = ({ children }) => {
           // Establecer perfil básico si falla la creación
           const basicProfile = {
             id: userId,
-            name: 'Usuario',
+            full_name: 'Usuario',
             email: user?.email || '',
             current_plan_id: null,
             is_active: true,
@@ -101,7 +115,7 @@ export const AuthProvider = ({ children }) => {
           console.log('Error de conectividad detectado, usando perfil básico temporal')
           const basicProfile = {
             id: userId,
-            name: 'Usuario (Sin conexión)',
+            full_name: 'Usuario (Sin conexión)',
             email: user?.email || '',
             current_plan_id: null,
             is_active: false,
@@ -116,7 +130,7 @@ export const AuthProvider = ({ children }) => {
         // Para otros errores, establecer perfil básico
         const basicProfile = {
           id: userId,
-          name: 'Usuario',
+          full_name: 'Usuario',
           email: user?.email || '',
           current_plan_id: null,
           is_active: false,
@@ -141,7 +155,7 @@ export const AuthProvider = ({ children }) => {
       // En caso de error de conectividad, establecer un perfil básico
       const basicProfile = {
         id: userId,
-        name: 'Usuario',
+        full_name: 'Usuario',
         email: user?.email || '',
         current_plan_id: null,
         is_active: true,
@@ -178,7 +192,7 @@ export const AuthProvider = ({ children }) => {
         const userProfileData = {
           id: authData.user.id,
           email: email,
-          name: userData.name || '',
+          full_name: userData.name || '',
           telegram_id: userData.telegram_id || null,
           is_active: true,
           current_plan_id: null,

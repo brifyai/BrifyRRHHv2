@@ -32,6 +32,8 @@ import ModernDashboard from './components/dashboard/ModernDashboardRedesigned.js
 // import TestCompanyData from './components/dashboard/TestCompanyData'
 // import DebugCompanyData from './components/dashboard/DebugCompanyData'
 import CompanyEmployeeTest from './components/dashboard/CompanyEmployeeTest.js'
+// Componente de prueba de sincronización de empresas
+import CompanySyncTest from './components/test/CompanySyncTest.js'
 // Componente de verificación de estilos
 import VerificarEstilos from './components/layout/VerificarEstilos.js'
 // Componente de prueba de Tailwind
@@ -496,6 +498,18 @@ function App() {
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               } 
+            />
+            
+            {/* Ruta de prueba de sincronización de empresas */}
+            <Route
+              path="/test-company-sync"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <CompanySyncTest />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
             />
             
             {/* Ruta 404 */}

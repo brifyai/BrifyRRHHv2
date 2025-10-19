@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import embeddingsService from '../../lib/embeddings';
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
 import LoadingSpinner from '../common/LoadingSpinner';
 import SubtleSpinner from '../common/SubtleSpinner';
 import AIChat from './AIChat';
@@ -32,7 +32,7 @@ const SemanticSearch = () => {
   useEffect(() => {
     const loadCompanies = async () => {
       try {
-        const companyData = await inMemoryEmployeeService.getCompanies();
+        const companyData = await organizedDatabaseService.getCompanies();
         setCompanies(companyData);
         // Seleccionar la primera empresa por defecto
         if (companyData.length > 0 && !selectedCompany) {

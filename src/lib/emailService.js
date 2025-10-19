@@ -110,7 +110,7 @@ class EmailService {
   }
 
   // Enviar correo de bienvenida para carpetas compartidas
-  async sendWelcomeEmail(clientEmail, clientName, userId = null, extension = 'Brify') {
+  async sendWelcomeEmail(clientEmail, clientName, userId = null, extension = 'StaffHub') {
     try {
       const initialized = await this.init(userId)
       if (!initialized) {
@@ -167,10 +167,10 @@ class EmailService {
     }
   }
 
-  // Enviar correo de bienvenida post-compra desde la cuenta oficial de Brify
+  // Enviar correo de bienvenida post-compra desde la cuenta oficial de StaffHub
   async sendPostPurchaseWelcomeEmail(clientEmail, clientName, planName) {
     try {
-      // Usar la cuenta autenticada actual (que debe ser brifyaimaster@gmail.com)
+      // Usar la cuenta autenticada actual (que debe ser staffhubmaster@gmail.com)
       const initialized = await this.init()
       if (!initialized) {
         throw new Error('No se pudo inicializar Gmail API')
@@ -185,7 +185,7 @@ class EmailService {
         throw new Error('No se encontró un token de acceso válido para cuenta oficial')
       }
       
-      const subject = `🎉 ¡Bienvenido a Brify! Tu plan ${planName} está activo`
+      const subject = `🎉 ¡Bienvenido a StaffHub! Tu plan ${planName} está activo`
       const htmlContent = this.getPostPurchaseWelcomeEmailHTML(clientName, planName)
       
       // Codificar el asunto en UTF-8 usando RFC 2047
@@ -195,7 +195,7 @@ class EmailService {
       
       // Crear el mensaje en formato RFC 2822 con HTML y remitente oficial
       const email = [
-        `From: Equipo Brify <brifyaimaster@gmail.com>`,
+        `From: Equipo StaffHub <staffhubmaster@gmail.com>`,
         `To: ${clientEmail}`,
         `Subject: ${encodedSubject}`,
         'MIME-Version: 1.0',
@@ -232,9 +232,9 @@ class EmailService {
     return `
 ¡Hola ${clientName}! 🎉
 
-¡Te damos la bienvenida a Brify! 🚀
+¡Te damos la bienvenida a StaffHub! 🚀
 
-Te invitamos a que agregues a tu plataforma Telegram nuestro bot '@brifybeta_bot' 🤖
+Te invitamos a que agregues a tu plataforma Telegram nuestro bot '@staffhubbeta_bot' 🤖
 
 ¡Aquí podrás preguntar y ver todo el contenido que tiene tu entrenador disponible para ti! 💪
 
@@ -246,14 +246,14 @@ Te invitamos a que agregues a tu plataforma Telegram nuestro bot '@brifybeta_bot
 
 🔗 Para comenzar, simplemente:
 1. Abre Telegram
-2. Busca: @brifybeta_bot
+2. Busca: @staffhubbeta_bot
 3. Inicia una conversación
 4. ¡Disfruta de tu experiencia personalizada!
 
 ¡Esperamos que disfrutes de todo lo que tenemos preparado para ti! 🌟
 
 Saludos,
-El equipo de Brify 💙
+El equipo de StaffHub 💙
     `.trim()
   }
 
@@ -269,7 +269,7 @@ El equipo de Brify 💙
         },
         body: JSON.stringify({
           to: clientEmail,
-          subject: '¡Bienvenido a Brify! 🎉 Agrega nuestro bot de Telegram',
+          subject: '¡Bienvenido a StaffHub! 🎉 Agrega nuestro bot de Telegram',
           html: this.getWelcomeEmailHTML(clientName)
         })
       })
@@ -288,13 +288,13 @@ El equipo de Brify 💙
 
   // Template HTML para el correo de bienvenida (carpetas compartidas)
   getWelcomeEmailHTML(clientName) {
-    return this.getWelcomeEmailHTMLByExtension(clientName, 'Brify')
+    return this.getWelcomeEmailHTMLByExtension(clientName, 'StaffHub')
   }
 
-  getWelcomeEmailHTMLByExtension(clientName, extension = 'Brify') {
+  getWelcomeEmailHTMLByExtension(clientName, extension = 'StaffHub') {
     const extensionConfig = {
-      'Brify': {
-        title: 'Brify',
+      'StaffHub': {
+        title: 'StaffHub',
         subtitle: 'Tu plataforma de búsqueda inteligente con IA',
         color: '#667eea',
         features: [
@@ -328,7 +328,7 @@ El equipo de Brify 💙
       }
     }
 
-    const config = extensionConfig[extension] || extensionConfig['Brify']
+    const config = extensionConfig[extension] || extensionConfig['StaffHub']
 
     return `
 <!DOCTYPE html>
@@ -361,7 +361,7 @@ El equipo de Brify 💙
             
             <div class="telegram-section">
                 <h2><span class="emoji">🤖</span> ¡Conecta con nuestro Bot de Telegram!</h2>
-                <p><strong>@brifybeta_bot</strong></p>
+                <p><strong>@staffhubbeta_bot</strong></p>
                 <p>Aquí podrás acceder a todas las funcionalidades de ${config.title}</p>
             </div>
             
@@ -373,7 +373,7 @@ El equipo de Brify 💙
             <div class="steps">
                 <h3><span class="emoji">🔗</span> Para comenzar, simplemente:</h3>
                 <div class="step">1. Abre Telegram</div>
-                <div class="step">2. Busca: <strong>@brifybeta_bot</strong></div>
+                <div class="step">2. Busca: <strong>@staffhubbeta_bot</strong></div>
                 <div class="step">3. Inicia una conversación</div>
                 <div class="step">4. <span class="emoji">🌟</span> ¡Disfruta de tu experiencia personalizada!</div>
             </div>
@@ -398,7 +398,7 @@ El equipo de Brify 💙
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Bienvenido a Brify!</title>
+    <title>¡Bienvenido a StaffHub!</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #000000; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -422,7 +422,7 @@ El equipo de Brify 💙
 <body>
     <div class="container">
         <div class="header">
-            <h1><span class="emoji">🎉</span> ¡Bienvenido a Brify, ${clientName}! <span class="emoji">🎉</span></h1>
+            <h1><span class="emoji">🎉</span> ¡Bienvenido a StaffHub, ${clientName}! <span class="emoji">🎉</span></h1>
             <p>Tu plataforma de entrenamiento e inteligencia artificial</p>
             <div class="success-badge">
                 <span class="emoji">✅</span> Plan ${planName} Activado Exitosamente
@@ -475,7 +475,7 @@ El equipo de Brify 💙
             
             <!-- Telegram Bot -->
             <div class="telegram-section">
-                <h2><span class="emoji">📱</span> Bot de Telegram @brifybeta_bot</h2>
+                <h2><span class="emoji">📱</span> Bot de Telegram @staffhubbeta_bot</h2>
                 <p style="font-size: 1.1em; margin-bottom: 20px;">Desde Telegram podrás acceder a todas las funcionalidades:</p>
                 <ul class="feature-list">
                     <li class="feature-item">📁 <strong>Crear carpetas:</strong> Gestiona tus carpetas directamente desde Telegram</li>
@@ -489,7 +489,7 @@ El equipo de Brify 💙
                     <h3><span class="emoji">🚀</span> Para comenzar:</h3>
                     <ol style="text-align: left; margin: 0; padding-left: 20px;">
                         <li>Abre Telegram</li>
-                        <li>Busca: <strong>@brifybeta_bot</strong></li>
+                        <li>Busca: <strong>@staffhubbeta_bot</strong></li>
                         <li>Inicia una conversación</li>
                         <li>¡Disfruta de todas las funcionalidades!</li>
                     </ol>
@@ -506,7 +506,7 @@ El equipo de Brify 💙
                 <a href="${window.location.origin}/panel-principal" class="cta-button">
                     <span class="emoji">🚀</span> Ir al Panel Principal
                 </a>
-                <a href="https://t.me/brifybeta_bot" class="cta-button">
+                <a href="https://t.me/staffhubbeta_bot" class="cta-button">
                     <span class="emoji">📱</span> Abrir Bot de Telegram
                 </a>
             </div>
@@ -514,7 +514,7 @@ El equipo de Brify 💙
         
         <div class="footer">
             <p><span class="emoji">💙</span> Gracias por confiar en nosotros</p>
-            <p><strong>El equipo de Brify</strong></p>
+            <p><strong>El equipo de StaffHub</strong></p>
             <p style="font-size: 0.9em; color: #999;">Si tienes alguna pregunta, no dudes en contactarnos</p>
         </div>
     </div>
@@ -531,7 +531,7 @@ El equipo de Brify 💙
 ¡COMPRA REALIZADA EXITOSAMENTE! ✅
 Tu plan ${planName} está ahora activo.
 
-🚀 ¡Bienvenido a Brify! Tu plataforma completa de entrenamiento e inteligencia artificial.
+🚀 ¡Bienvenido a StaffHub! Tu plataforma completa de entrenamiento e inteligencia artificial.
 
 📁 GESTIÓN DE CARPETAS:
 • Crear carpetas (recomendamos usar correos como nombres para invitaciones automáticas)
@@ -551,7 +551,7 @@ Tu plan ${planName} está ahora activo.
 • Consultas específicas sobre tu rutina
 • Seguimiento personalizado de progreso
 
-📱 BOT DE TELEGRAM (@brifybeta_bot):
+📱 BOT DE TELEGRAM (@staffhubbeta_bot):
 Desde Telegram podrás:
 • Crear carpetas
 • Subir archivos
@@ -561,7 +561,7 @@ Desde Telegram podrás:
 
 🔗 Para comenzar con Telegram:
 1. Abre Telegram
-2. Busca: @brifybeta_bot
+2. Busca: @staffhubbeta_bot
 3. Inicia una conversación
 4. ¡Disfruta de todas las funcionalidades!
 
@@ -571,7 +571,7 @@ Tu plan ${planName} te da acceso completo a todas estas funcionalidades.
 💙 Gracias por confiar en nosotros.
 
 Saludos,
-El equipo de Brify
+El equipo de StaffHub
     `.trim()
   }
 }

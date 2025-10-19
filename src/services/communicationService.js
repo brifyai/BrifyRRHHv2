@@ -569,7 +569,7 @@ class CommunicationService {
               result = await this.sendSMSMessage(employeeIds, message);
               break;
             case 'email':
-              const emailSubject = options.subject || 'Mensaje de Brify AI';
+              const emailSubject = options.subject || 'Mensaje de StaffHub';
               result = await this.sendEmailMessage(employeeIds, message, emailSubject);
               break;
             default:

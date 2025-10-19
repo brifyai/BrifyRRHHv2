@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
 import DatabaseCompanySummary from './DatabaseCompanySummary'
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
+import organizedDatabaseService from '../../services/organizedDatabaseService'
+import companySyncService from '../../services/companySyncService'
 import {
   FolderIcon,
   DocumentIcon,
@@ -108,7 +109,7 @@ const ModernDashboardRedesigned = () => {
   })
 
   const loadDashboardData = useCallback(async () => {
-    console.log('🚀 Dashboard: Iniciando carga optimizada')
+    console.log('🚀 Dashboard: Iniciando carga con datos 100% reales desde base de datos')
     
     if (!user || !userProfile) {
       console.log('Dashboard: Esperando usuario y perfil...')
@@ -125,156 +126,51 @@ const ModernDashboardRedesigned = () => {
       return
     }
 
-    console.log('Dashboard: Cargando datos para usuario:', user.id)
+    console.log('Dashboard: Cargando datos reales para usuario:', user.id)
     
     try {
       setLoading(true)
-      
-      // CARGA RÁPIDA INICIAL: Mostrar datos básicos inmediatamente
       const startTime = performance.now()
       
-      // Optimización: Obtener solo el conteo de empleados, no todos los datos
-      let totalFolders = 800 // Valor conocido y constante
-      let totalFiles = 3200 // Estimación basada en promedio histórico (4 archivos por carpeta)
+      // CARGA DE DATOS 100% REALES desde organizedDatabaseService
+      const dashboardStats = await organizedDatabaseService.getDashboardStats()
       
-      // Verificación rápida del conteo (solo si es necesario)
-      try {
-        const employees = await inMemoryEmployeeService.getEmployees()
-        const employeeCount = employees.filter(emp => emp.email).length
-        totalFolders = employeeCount
-        console.log('📊 Dashboard: Conteo de empleados verificado:', employeeCount)
-      } catch (error) {
-        console.log('📊 Dashboard: Error verificando empleados, usando valor por defecto:', error.message)
+      console.log('📊 Dashboard: Estadísticas cargadas:', dashboardStats)
+      
+      // Usar datos 100% reales desde la base de datos
+      const realStats = {
+        totalFolders: dashboardStats.folders || 0,
+        totalFiles: dashboardStats.documents || 0,
+        storageUsed: dashboardStats.storageUsed || 0,
+        tokensUsed: dashboardStats.tokensUsed || 0,
+        tokenLimit: 1000, // valor por defecto
+        monthlyGrowth: dashboardStats.monthlyGrowth || 0,
+        activeUsers: dashboardStats.activeUsers || 0,
+        successRate: dashboardStats.successRate || 0
       }
       
-      // Actualizar inmediatamente con datos básicos
-      const basicStats = {
-        totalFolders,
-        totalFiles,
-        storageUsed: totalFiles * 1024, // 1KB por archivo
-        tokensUsed: 0,
-        tokenLimit: 1000
+      const realPercentages = {
+        folders: Math.min((realStats.totalFolders / 1000) * 100, 100), // Basado en límite de 1000 carpetas
+        files: Math.min((realStats.totalFiles / 5000) * 100, 100) // Basado en límite de 5000 archivos
       }
       
-      const basicPercentages = {
-        folders: 100,
-        files: Math.min((totalFiles / 5000) * 100, 100) // Basado en límite de 5000 archivos
-      }
-      
-      setStats(basicStats)
-      setPercentages(basicPercentages)
+      setStats(realStats)
+      setPercentages(realPercentages)
       
       const loadTime = performance.now() - startTime
-      console.log('⚡ Dashboard: Carga básica completada en', loadTime.toFixed(2), 'ms')
+      console.log('⚡ Dashboard: Carga de datos reales completada en', loadTime.toFixed(2), 'ms')
       
       // Guardar en cache
       cacheRef.current = {
-        data: { stats: basicStats, percentages: basicPercentages },
+        data: { stats: realStats, percentages: realPercentages },
         timestamp: now,
         isValid: true
       }
       
-      // CARGA SECUNDARIA EN SEGUNDO PLANO: Datos más precisos (sin bloquear UI)
-      setTimeout(async () => {
-        try {
-          console.log('🔄 Dashboard: Iniciando carga secundaria en segundo plano...')
-          
-          // Muestreo reducido y optimizado (solo 10 carpetas máximo)
-          try {
-            const employeeFolderService = await import('../../services/employeeFolderService.js')
-            const folderService = employeeFolderService.default
-            
-            const employees = await inMemoryEmployeeService.getEmployees()
-            const employeeEmails = employees.filter(emp => emp.email).map(emp => emp.email)
-            
-            // Muestreo ultra reducido para mejor rendimiento
-            const sampleSize = Math.min(10, employeeEmails.length)
-            const sampleEmails = employeeEmails
-              .sort(() => Math.random() - 0.5) // Mezclar aleatoriamente
-              .slice(0, sampleSize)
-            
-            let sampleFileCount = 0
-            let validSamples = 0
-            
-            // Procesamiento en paralelo con límite de concurrencia
-            const batchSize = 3
-            for (let i = 0; i < sampleEmails.length; i += batchSize) {
-              const batch = sampleEmails.slice(i, i + batchSize)
-              
-              // Función separada para evitar referencias inseguras
-              const processEmail = async (email) => {
-                try {
-                  const folder = await folderService.getEmployeeFolder(email)
-                  if (folder?.knowledgeBase) {
-                    const kb = folder.knowledgeBase
-                    return (kb.faqs?.length || 0) +
-                           (kb.documents?.length || 0) +
-                           (kb.policies?.length || 0) +
-                           (kb.procedures?.length || 0)
-                  }
-                  return 0
-                } catch (error) {
-                  // Ignorar errores individuales
-                  return 0
-                }
-              }
-              
-              const batchResults = await Promise.all(batch.map(processEmail))
-              
-              // Acumular resultados de forma segura
-              for (const fileCount of batchResults) {
-                if (fileCount > 0) {
-                  sampleFileCount += fileCount
-                  validSamples++
-                }
-              }
-            }
-            
-            // Calcular total más preciso
-            if (validSamples > 0) {
-              const avgFilesPerFolder = sampleFileCount / validSamples
-              totalFiles = Math.round(avgFilesPerFolder * totalFolders)
-              
-              // Actualizar con datos más precisos
-              const updatedStats = {
-                ...basicStats,
-                totalFiles,
-                storageUsed: totalFiles * 1024
-              }
-              
-              const updatedPercentages = {
-                ...basicPercentages,
-                files: Math.min((totalFiles / 5000) * 100, 100)
-              }
-              
-              setStats(updatedStats)
-              setPercentages(updatedPercentages)
-              
-              // Actualizar cache
-              cacheRef.current = {
-                data: { stats: updatedStats, percentages: updatedPercentages },
-                timestamp: Date.now(),
-                isValid: true
-              }
-              
-              console.log('📊 Dashboard: Actualización secundaria completada')
-              console.log('📊 Dashboard: Muestreo de', validSamples, 'carpetas válidas')
-              console.log('📊 Dashboard: Archivos totales recalculados:', totalFiles)
-            }
-            
-          } catch (error) {
-            console.log('📊 Dashboard: Error en carga secundaria, manteniendo valores básicos:', error.message)
-          }
-          
-        } catch (error) {
-          console.error('❌ Error en carga secundaria:', error)
-        }
-      }, 100) // Pequeño retraso para no bloquear la carga inicial
-      
-      console.log('✅ Dashboard: Carga inicial completada correctamente')
+      console.log('✅ Dashboard: Carga con datos 100% reales completada correctamente')
       
     } catch (error) {
-      console.error('❌ Error loading dashboard data:', error)
+      console.error('❌ Error loading real dashboard data:', error)
       // Establecer valores por defecto en caso de error
       const defaultStats = {
         totalFolders: 800,
@@ -284,7 +180,7 @@ const ModernDashboardRedesigned = () => {
         tokenLimit: 1000
       }
       const defaultPercentages = {
-        folders: 100,
+        folders: 80,
         files: 64
       }
       
@@ -358,6 +254,40 @@ const ModernDashboardRedesigned = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showNotifications])
+
+  // Escuchar cambios en las empresas para actualizar el dashboard
+  useEffect(() => {
+    if (!user || !userProfile) return
+
+    const subscriptionId = `modern-dashboard-${user.id}`
+    
+    const handleCompanyChange = () => {
+      console.log('🔄 ModernDashboard: Cambio detectado en empresas, actualizando dashboard...')
+      // Invalidar cache para forzar recarga
+      cacheRef.current.isValid = false
+      loadDashboardData()
+    }
+
+    try {
+      if (companySyncService && typeof companySyncService.subscribe === 'function') {
+        companySyncService.subscribe('companies-updated', handleCompanyChange, subscriptionId)
+        console.log('✅ ModernDashboard: Suscrito a cambios de empresas')
+      }
+    } catch (error) {
+      console.warn('⚠️ ModernDashboard: Error al suscribirse a cambios de empresas:', error.message)
+    }
+
+    return () => {
+      try {
+        if (companySyncService && typeof companySyncService.unsubscribe === 'function') {
+          companySyncService.unsubscribe('companies-updated', subscriptionId)
+          console.log('🔌 ModernDashboard: Desuscrito de cambios de empresas')
+        }
+      } catch (error) {
+        console.warn('⚠️ ModernDashboard: Error al desuscribirse:', error.message)
+      }
+    }
+  }, [user, userProfile, loadDashboardData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 Bytes'
@@ -447,7 +377,10 @@ const ModernDashboardRedesigned = () => {
                   className="text-xl font-light text-gray-900"
                 >
                   {getGreeting()}, <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    {userProfile?.name || user?.user_metadata?.name || user?.user_metadata?.full_name || userProfile?.email?.split('@')[0] || 'Usuario'}
+                    {userProfile?.full_name ||
+                     user?.user_metadata?.name ||
+                     user?.user_metadata?.full_name ||
+                     (user?.email ? user.email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Usuario')}
                   </span>
                 </motion.h1>
                 <motion.p 
@@ -838,7 +771,7 @@ const ModernDashboardRedesigned = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Crecimiento Mensual</p>
-                <p className="text-2xl font-bold text-gray-800">+24.5%</p>
+                <p className="text-2xl font-bold text-gray-800">+{stats.monthlyGrowth || 0}%</p>
               </div>
             </div>
           </motion.div>
@@ -852,7 +785,7 @@ const ModernDashboardRedesigned = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Usuarios Activos</p>
-                <p className="text-2xl font-bold text-gray-800">1,284</p>
+                <p className="text-2xl font-bold text-gray-800">{(stats.activeUsers || 0).toLocaleString()}</p>
               </div>
             </div>
           </motion.div>
@@ -866,7 +799,7 @@ const ModernDashboardRedesigned = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Tasa de Éxito</p>
-                <p className="text-2xl font-bold text-gray-800">98.2%</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.successRate}%</p>
               </div>
             </div>
           </motion.div>
@@ -882,13 +815,7 @@ const ModernDashboardRedesigned = () => {
           }}
           className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800">Resumen Empresarial</h2>
-            <motion.div
-              className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg"
-            >
-              <ChartBarIcon className="w-5 h-5 text-white" />
-            </motion.div>
+          <div className="mb-6">
           </div>
           <DatabaseCompanySummary />
         </motion.div>

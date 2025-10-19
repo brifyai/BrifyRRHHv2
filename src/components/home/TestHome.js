@@ -5,7 +5,7 @@ const TestHome = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-8 text-blue-600">
-          🚀 Test Home Moderno - BrifyRRHH
+          🚀 Test Home Moderno - StaffHub
         </h1>
         
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">

@@ -66,7 +66,7 @@ DATOS DEL SISTEMA:
 - Almacenamiento usado: ${this.formatBytes(stats.storageUsed || 0)}
 
 CONTEXTO:
-- Esto es una plataforma de RRHH llamada Brify AI
+- Esto es una plataforma de RRHH llamada StaffHub
 - Gestiona 800 empleados con sus carpetas y documentos
 - Usa IA para comunicación y análisis
 - El objetivo es optimizar la productividad y el engagement

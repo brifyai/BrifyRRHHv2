@@ -85,7 +85,7 @@ class DatabaseEmployeeService {
       console.error('Error obteniendo empresas:', error);
       // Fallback a lista simulada si hay error
       const fallbackCompanies = [
-        { id: 'brify-ai', name: 'Brify AI' },
+        { id: 'staffhub', name: 'StaffHub' },
         { id: 'microsoft', name: 'Microsoft' },
         { id: 'google', name: 'Google' },
         { id: 'amazon', name: 'Amazon' },
@@ -139,7 +139,7 @@ class DatabaseEmployeeService {
     try {
       // Simular conteo de empleados por empresa
       const employeeCounts = {
-        'brify-ai': 45,
+        'staffhub': 45,
         'microsoft': 120,
         'google': 150,
         'amazon': 200,
@@ -169,7 +169,7 @@ class DatabaseEmployeeService {
     try {
       // Generar estadísticas simuladas consistentes basadas en el companyId
       const companyStats = {
-        'brify-ai': { scheduled: 8, draft: 3, sent: 45, read: 38 },
+        'staffhub': { scheduled: 8, draft: 3, sent: 45, read: 38 },
         'microsoft': { scheduled: 12, draft: 5, sent: 120, read: 95 },
         'google': { scheduled: 15, draft: 7, sent: 150, read: 130 },
         'amazon': { scheduled: 10, draft: 4, sent: 200, read: 180 },

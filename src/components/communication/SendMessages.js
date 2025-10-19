@@ -13,7 +13,7 @@ import { List } from 'react-window';
 import { EditorState, ContentState } from 'draft-js';
 import { Editor } from 'react-draft-wysiwyg';
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import templateService from '../../services/templateService';
 import inMemoryDraftService from '../../services/inMemoryDraftService';
@@ -104,7 +104,7 @@ const SendMessages = () => {
     try {
       console.log('Loading selected employees:', employeeIds);
       const employeesData = await Promise.all(
-        employeeIds.map(id => inMemoryEmployeeService.getEmployeeById(id))
+        employeeIds.map(id => organizedDatabaseService.getEmployeeById(id))
       );
       console.log('Loaded employees data:', employeesData);
       setSelectedEmployees(employeesData);
@@ -209,7 +209,7 @@ const SendMessages = () => {
           title: 'Asunto del Email',
           input: 'text',
           inputLabel: 'Ingrese el asunto del correo electrónico',
-          inputValue: 'Mensaje de Brify AI',
+          inputValue: 'Mensaje de StaffHub',
           showCancelButton: true,
           confirmButtonText: 'Enviar',
           cancelButtonText: 'Cancelar',

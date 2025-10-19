@@ -22,8 +22,8 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3003',
-      'https://brifyrrhhapp.netlify.app',
-      'https://brifyrrhh.vercel.app',
+      'https://staffhubapp.netlify.app',
+      'https://staffhub.vercel.app',
       'https://tmqglnycivlcjijoymwe.supabase.co'
     ];
     
@@ -57,7 +57,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuración de Supabase - BrifyRRHH
+// Configuración de Supabase - StaffHub
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
@@ -362,7 +362,7 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Webrify - Servidor de Integraciones</title>
+        <title>StaffHub - Servidor de Integraciones</title>
         <style>
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -420,7 +420,7 @@ app.get('/', (req, res) => {
     </head>
     <body>
         <div class="container">
-            <h1>🚀 Webrify - Servidor de Integraciones</h1>
+            <h1>🚀 StaffHub - Servidor de Integraciones</h1>
 
             <div class="status">
                 ✅ Servidor funcionando correctamente en puerto ${PORT}

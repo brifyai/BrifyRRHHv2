@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import DatabaseCompanySummary from './DatabaseCompanySummary'
 import employeeFolderService from '../../services/employeeFolderService'
 import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
+import companySyncService from '../../services/companySyncService'
 import {
   FolderIcon,
   DocumentIcon,
@@ -201,6 +202,34 @@ const ModernDashboard = () => {
       setLoading(false)
     }
   }, [user, userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Suscribirse a eventos de cambios en empresas
+  useEffect(() => {
+    if (!user) return
+
+    let unsubscribeId = null
+    try {
+      if (companySyncService && typeof companySyncService.subscribe === 'function') {
+        unsubscribeId = companySyncService.subscribe('companies-updated', (data) => {
+          console.log('Dashboard: Empresas actualizadas, recargando datos...', data)
+          // Recargar datos del dashboard cuando hay cambios en empresas
+          loadDashboardData()
+        })
+      }
+    } catch (error) {
+      console.error('Error al suscribirse a eventos de empresas:', error)
+    }
+
+    return () => {
+      if (unsubscribeId && companySyncService && typeof companySyncService.unsubscribe === 'function') {
+        try {
+          companySyncService.unsubscribe('companies-updated', unsubscribeId)
+        } catch (error) {
+          console.error('Error al cancelar suscripción:', error)
+        }
+      }
+    }
+  }, [user, loadDashboardData])
 
 
   // Timeout de seguridad para evitar loading infinito
