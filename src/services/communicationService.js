@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import inMemoryEmployeeService from './inMemoryEmployeeService.js';
+import whatsappService from './whatsappService.js';
+import multiWhatsAppService from './multiWhatsAppService.js';
 
 class CommunicationService {
   // Get all employees with optional filters - Optimized version
@@ -320,8 +322,8 @@ class CommunicationService {
     }
   }
 
-  // Send WhatsApp message - Optimized version
-  async sendWhatsAppMessage(recipientIds, message) {
+  // Send WhatsApp message - Optimized version with real WhatsApp API
+  async sendWhatsAppMessage(recipientIds, message, options = {}) {
     try {
       console.log('🚀 Iniciando envío de WhatsApp message');
       console.log('Recipient IDs:', recipientIds);
@@ -334,6 +336,283 @@ class CommunicationService {
       if (!message || typeof message !== 'string' || message.trim().length === 0) {
         throw new Error('Message must be a non-empty string');
       }
+      
+      // Check if WhatsApp is configured
+      const whatsappConfig = whatsappService.loadConfiguration();
+      if (!whatsappConfig.accessToken) {
+        console.warn('⚠️ WhatsApp no está configurado, usando simulación');
+        return this.sendSimulatedWhatsAppMessage(recipientIds, message);
+      }
+      
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
+      
+      // Get employee data for phone numbers
+      const employees = await this.getEmployeesByIds(recipientIds);
+      const phoneNumbers = employees
+        .filter(emp => emp.phone && emp.phone.trim() !== '')
+        .map(emp => emp.phone);
+      
+      if (phoneNumbers.length === 0) {
+        throw new Error('No se encontraron números de teléfono válidos para los destinatarios');
+      }
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        recipientIds,
+        message,
+        'whatsapp'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
+      
+      // Send real WhatsApp messages
+      const result = await whatsappService.sendBulkMessage({
+        recipients: phoneNumbers,
+        message: message,
+        messageType: options.templateName ? 'template' : 'text',
+        templateName: options.templateName || null,
+        templateLanguage: options.templateLanguage || 'es',
+        components: options.components || [],
+        delayBetweenMessages: options.delayBetweenMessages || 1000
+      });
+      
+      console.log('✅ Mensaje de WhatsApp enviado exitosamente');
+      return {
+        success: result.success,
+        message: result.success
+          ? `Mensaje enviado a ${result.successful} destinatarios vía WhatsApp`
+          : `Error: ${result.failed} mensajes fallaron`,
+        recipientCount: result.totalRecipients,
+        successfulDeliveries: result.successful,
+        failedDeliveries: result.failed,
+        channel: 'whatsapp',
+        timestamp: new Date().toISOString(),
+        logId: logId,
+        details: result.results
+      };
+    } catch (error) {
+      console.error('❌ Error sending WhatsApp message:', error);
+      throw error;
+    }
+  }
+
+  // Send WhatsApp message using multi-number service (NEW METHOD)
+  async sendWhatsAppMessageByCompany(companyId, recipientIds, message, options = {}) {
+    try {
+      console.log('🚀 Iniciando envío de WhatsApp multi-empresa');
+      console.log('Company ID:', companyId);
+      console.log('Recipient IDs:', recipientIds);
+      console.log('Message:', message);
+      
+      // Validate inputs
+      if (!companyId) {
+        throw new Error('Company ID is required for multi-number WhatsApp');
+      }
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+        throw new Error('Recipient IDs must be a non-empty array');
+      }
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('Message must be a non-empty string');
+      }
+      
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
+      
+      // Get employee data for phone numbers
+      const employees = await this.getEmployeesByIds(recipientIds);
+      const phoneNumbers = employees
+        .filter(emp => emp.phone && emp.phone.trim() !== '')
+        .map(emp => emp.phone);
+      
+      if (phoneNumbers.length === 0) {
+        throw new Error('No se encontraron números de teléfono válidos para los destinatarios');
+      }
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        recipientIds,
+        message,
+        'whatsapp'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
+      
+      // Send using multi-WhatsApp service
+      const result = await multiWhatsAppService.sendMessageByCompany(companyId, {
+        recipients: phoneNumbers,
+        message: message,
+        templateName: options.templateName || null,
+        templateLanguage: options.templateLanguage || 'es',
+        components: options.components || [],
+        messageType: options.messageType || 'text'
+      });
+      
+      console.log('✅ Mensaje de WhatsApp multi-empresa enviado exitosamente');
+      return {
+        success: result.success,
+        message: result.success
+          ? `Mensaje enviado a ${result.successful} destinatarios vía WhatsApp (Empresa: ${companyId})`
+          : `Error: ${result.failed} mensajes fallaron`,
+        recipientCount: result.totalRecipients,
+        successfulDeliveries: result.successful,
+        failedDeliveries: result.failed,
+        channel: 'whatsapp',
+        companyId: companyId,
+        timestamp: new Date().toISOString(),
+        logId: logId,
+        details: result.results
+      };
+    } catch (error) {
+      console.error('❌ Error sending multi-company WhatsApp message:', error);
+      throw error;
+    }
+  }
+
+  // Send bulk WhatsApp messages to multiple companies (NEW METHOD)
+  async sendBulkWhatsAppToCompanies(companiesData, message, options = {}) {
+    try {
+      console.log('🚀 Iniciando envío masivo de WhatsApp a múltiples empresas');
+      
+      // Validate input
+      if (!companiesData || !Array.isArray(companiesData) || companiesData.length === 0) {
+        throw new Error('Companies data must be a non-empty array');
+      }
+      
+      // Prepare data for multi-WhatsApp service
+      const companies = companiesData.map(company => ({
+        companyId: company.companyId,
+        recipients: company.recipients || []
+      }));
+      
+      // Send using multi-WhatsApp service
+      const result = await multiWhatsAppService.sendBulkMessageByCompanies({
+        companies: companies,
+        message: message,
+        templateName: options.templateName || null,
+        templateLanguage: options.templateLanguage || 'es',
+        components: options.components || [],
+        messageType: options.messageType || 'text',
+        delayBetweenMessages: options.delayBetweenMessages || 1000
+      });
+      
+      console.log('✅ Envío masivo multi-empresa completado');
+      return {
+        success: result.success,
+        message: result.message,
+        totalCompanies: result.totalCompanies,
+        successfulCompanies: result.successfulCompanies,
+        failedCompanies: result.failedCompanies,
+        totalRecipients: result.totalRecipients,
+        totalSuccessful: result.totalSuccessful,
+        totalFailed: result.totalFailed,
+        channel: 'whatsapp',
+        timestamp: new Date().toISOString(),
+        details: result.results
+      };
+    } catch (error) {
+      console.error('❌ Error sending bulk WhatsApp to companies:', error);
+      throw error;
+    }
+  }
+
+  // Get WhatsApp configurations for all companies (NEW METHOD)
+  async getAllWhatsAppConfigurations() {
+    try {
+      const configs = await multiWhatsAppService.getAllWhatsAppConfigs();
+      return {
+        success: true,
+        configurations: configs,
+        total: configs.length
+      };
+    } catch (error) {
+      console.error('❌ Error getting WhatsApp configurations:', error);
+      return {
+        success: false,
+        message: `Error obteniendo configuraciones: ${error.message}`,
+        configurations: []
+      };
+    }
+  }
+
+  // Get WhatsApp configuration for a specific company (NEW METHOD)
+  async getWhatsAppConfigurationByCompany(companyId) {
+    try {
+      const config = await multiWhatsAppService.getWhatsAppConfigByCompany(companyId);
+      return {
+        success: !!config,
+        configuration: config,
+        message: config ? 'Configuración encontrada' : 'No hay configuración para esta empresa'
+      };
+    } catch (error) {
+      console.error('❌ Error getting WhatsApp configuration for company:', error);
+      return {
+        success: false,
+        message: `Error obteniendo configuración: ${error.message}`,
+        configuration: null
+      };
+    }
+  }
+
+  // Configure WhatsApp for a company (NEW METHOD)
+  async configureWhatsAppForCompany(companyId, config) {
+    try {
+      const result = await multiWhatsAppService.configureWhatsAppForCompany(companyId, config);
+      return result;
+    } catch (error) {
+      console.error('❌ Error configuring WhatsApp for company:', error);
+      return {
+        success: false,
+        message: `Error configurando WhatsApp: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
+
+  // Get WhatsApp usage statistics (NEW METHOD)
+  async getWhatsAppUsageStats(companyId = null) {
+    try {
+      const stats = await multiWhatsAppService.getUsageStats(companyId);
+      return {
+        success: true,
+        statistics: stats,
+        companyId: companyId
+      };
+    } catch (error) {
+      console.error('❌ Error getting WhatsApp usage stats:', error);
+      return {
+        success: false,
+        message: `Error obteniendo estadísticas: ${error.message}`,
+        statistics: null
+      };
+    }
+  }
+
+  // Delete WhatsApp configuration for a company (NEW METHOD)
+  async deleteWhatsAppConfiguration(companyId) {
+    try {
+      const result = await multiWhatsAppService.deleteWhatsAppConfiguration(companyId);
+      return result;
+    } catch (error) {
+      console.error('❌ Error deleting WhatsApp configuration:', error);
+      return {
+        success: false,
+        message: `Error eliminando configuración: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
+
+  // Fallback simulated WhatsApp message for development/testing
+  async sendSimulatedWhatsAppMessage(recipientIds, message) {
+    try {
+      console.log('🧪 Enviando mensaje de WhatsApp simulado');
       
       // Get sender data using optimized helper
       const senderData = await this.getSenderData();
@@ -357,17 +636,18 @@ class CommunicationService {
       console.log('⏳ Simulando llamada a API de WhatsApp...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('✅ Mensaje de WhatsApp enviado exitosamente');
+      console.log('✅ Mensaje de WhatsApp simulado enviado exitosamente');
       return {
         success: true,
-        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía WhatsApp`,
+        message: `Mensaje simulado enviado a ${validRecipientIds.length} destinatarios vía WhatsApp`,
         recipientCount: validRecipientIds.length,
         channel: 'whatsapp',
         timestamp: new Date().toISOString(),
-        logId: logId
+        logId: logId,
+        simulated: true
       };
     } catch (error) {
-      console.error('❌ Error sending WhatsApp message:', error);
+      console.error('❌ Error sending simulated WhatsApp message:', error);
       throw error;
     }
   }
@@ -644,6 +924,59 @@ class CommunicationService {
     } catch (error) {
       console.error('Error fetching employees by IDs:', error);
       return [];
+    }
+  }
+
+  // Get WhatsApp configuration status
+  getWhatsAppStatus() {
+    const config = whatsappService.loadConfiguration();
+    return {
+      configured: !!(config.accessToken && config.phoneNumberId),
+      testMode: config.testMode || false,
+      phoneNumberId: config.phoneNumberId || null
+    };
+  }
+
+  // Test WhatsApp connection
+  async testWhatsAppConnection() {
+    try {
+      const result = await whatsappService.testConnection();
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error de conexión: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
+
+  // Send WhatsApp test message
+  async sendWhatsAppTest(phoneNumber, message = 'Este es un mensaje de prueba desde StaffHub') {
+    try {
+      const result = await whatsappService.sendTestMessage(phoneNumber, message);
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error al enviar mensaje de prueba: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
+
+  // Get WhatsApp templates
+  async getWhatsAppTemplates() {
+    try {
+      const result = await whatsappService.getTemplates();
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error al obtener plantillas: ${error.message}`,
+        error: error.message,
+        templates: []
+      };
     }
   }
 

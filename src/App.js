@@ -16,14 +16,14 @@ import LoadingSpinner from './components/common/LoadingSpinner.js'
 import Navbar from './components/layout/Navbar.js'
 import GoogleAuthCallback from './components/auth/GoogleAuthCallback.js'
 // Componentes auxiliares
-import ColorClasses from './components/layout/ColorClasses.js'
-import PruebaColores from './components/layout/PruebaColores.js'
-// Página de prueba
-import TestHome from './components/home/TestHome.js'
-// Página innovadora
-import LandingInnovadora from './components/layout/LandingInnovadora.js'
+// Nuevo Home Moderno
+import HomeStaffHubSEO from './components/home/HomeStaffHubSEO.js';
+
+// Manejo de errores y carga
+import ReactErrorBoundary from './components/error/ReactErrorBoundary.js'
+import SuspenseWrapper from './components/common/SuspenseWrapper.js'
 // Componentes de autenticación innovadores
-import LoginInnovador from './components/auth/LoginInnovador.js'
+import LoginUltraModern from './components/auth/LoginRedesigned.js'
 import RegisterInnovador from './components/auth/RegisterInnovador.js'
 // Componente de dashboard innovador
 // import DashboardInnovador from './components/dashboard/DashboardInnovador.js'
@@ -34,12 +34,6 @@ import ModernDashboard from './components/dashboard/ModernDashboardRedesigned.js
 import CompanyEmployeeTest from './components/dashboard/CompanyEmployeeTest.js'
 // Componente de prueba de sincronización de empresas
 import CompanySyncTest from './components/test/CompanySyncTest.js'
-// Componente de verificación de estilos
-import VerificarEstilos from './components/layout/VerificarEstilos.js'
-// Componente de prueba de Tailwind
-import PruebaTailwind from './components/layout/PruebaTailwind.js'
-// Componente de prueba básica
-import PruebaBasica from './components/layout/PruebaBasica.js'
 // Nuevo componente de comunicación Webrify
 import WebrifyCommunicationDashboard from './components/communication/WebrifyCommunicationDashboard.js'
 // Componente de configuración
@@ -48,6 +42,10 @@ import Settings from './components/settings/Settings.js'
 import BrevoStatisticsDashboard from './components/communication/BrevoStatisticsDashboard.js'
 // Gestor de plantillas de Brevo
 import BrevoTemplatesManager from './components/communication/BrevoTemplatesManager.js'
+// Asistente de configuración fácil de WhatsApp Business
+import WhatsAppOnboarding from './components/whatsapp/WhatsAppOnboarding.js'
+// Gestor multi-WhatsApp para agencias (solo para usuarios avanzados)
+import MultiWhatsAppManager from './components/whatsapp/MultiWhatsAppManager.js'
 
 
 // Componente para rutas protegidas
@@ -80,18 +78,17 @@ const AuthenticatedLayout = ({ children }) => {
       <main className="container mx-auto px-4 py-8">
         {children}
       </main>
-      {/* Componente auxiliar oculto para forzar generación de clases */}
-      <ColorClasses />
     </div>
   )
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="App">
-          <Toaster
+    <ReactErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <div className="App">
+            <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,
@@ -115,44 +112,27 @@ function App() {
           />
           
           <Routes>
-            {/* Página de inicio - Redirigir directamente al login */}
+            {/* Nuevo Home Moderno - página principal */}
             <Route
               path="/"
-              element={<Navigate to="/login" replace />}
+              element={
+                <SuspenseWrapper
+                  message="Cargando página principal..."
+                  fullScreen={true}
+                >
+                  <HomeStaffHubSEO />
+                </SuspenseWrapper>
+              }
             />
-            
-            {/* Página de prueba básica */}
-            <Route 
-              path="/prueba-basica" 
-              element={<PruebaBasica />} 
-            />
-            
-            {/* Página de inicio innovadora - siempre accesible */}
-            <Route 
-              path="/landing-prueba" 
-              element={<LandingInnovadora />} 
-            />
-            
-            {/* Ruta de prueba de Tailwind */}
-            <Route
-              path="/prueba-tailwind"
-              element={<PruebaTailwind />}
-            />
-            
-            {/* Ruta de prueba del Home Moderno */}
-            <Route
-              path="/test-home"
-              element={<TestHome />}
-            />
-            
+
             {/* Rutas públicas */}
-            <Route 
-              path="/login" 
+            <Route
+              path="/login"
               element={
                 <PublicRoute>
-                  <LoginInnovador />
+                  <LoginUltraModern />
                 </PublicRoute>
-              } 
+              }
             />
             <Route 
               path="/register" 
@@ -186,7 +166,9 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AuthenticatedLayout>
-                    <ModernDashboard />
+                    <SuspenseWrapper message="Cargando dashboard...">
+                      <ModernDashboard />
+                    </SuspenseWrapper>
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
@@ -340,29 +322,7 @@ function App() {
                 }
               />
               {/* Ruta de prueba de colores */}
-              <Route
-                path="/prueba-colores"
-                element={
-                  <ProtectedRoute>
-                    <AuthenticatedLayout>
-                      <PruebaColores />
-                    </AuthenticatedLayout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* Ruta de verificación de estilos */}
-              <Route
-                path="/verificar-estilos"
-                element={
-                  <ProtectedRoute>
-                    <AuthenticatedLayout>
-                      <VerificarEstilos />
-                    </AuthenticatedLayout>
-                  </ProtectedRoute>
-                }
-              />
-
-            {/* Rutas de comunicación interna - Sistema moderno unificado */}
+              {/* Rutas de comunicación interna - Sistema moderno unificado */}
             <Route 
               path="/communication" 
               element={
@@ -488,6 +448,36 @@ function App() {
               }
             />
             
+            {/* Asistente de configuración fácil de WhatsApp Business */}
+            <Route
+              path="/whatsapp/setup"
+              element={
+                <ProtectedRoute>
+                  <WhatsAppOnboarding />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Gestor Multi-WhatsApp para agencias (solo para usuarios avanzados) */}
+            <Route
+              path="/whatsapp/multi-manager"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <MultiWhatsAppManager />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Redirección de la ruta antigua para compatibilidad */}
+            <Route
+              path="/whatsapp/setup-wizard"
+              element={
+                <Navigate to="/whatsapp/setup" replace />
+              }
+            />
+
             {/* Ruta de prueba de empresas y empleados */}
             <Route 
               path="/test-company-employee" 
@@ -530,10 +520,11 @@ function App() {
                 </div>
               } 
             />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </ReactErrorBoundary>
   )
 }
 

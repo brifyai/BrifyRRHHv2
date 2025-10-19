@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
+import { toast } from 'react-hot-toast'
 import DatabaseCompanySummary from './DatabaseCompanySummary'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
 import companySyncService from '../../services/companySyncService'
@@ -109,16 +110,18 @@ const ModernDashboardRedesigned = () => {
   })
 
   const loadDashboardData = useCallback(async () => {
-    console.log('🚀 Dashboard: Iniciando carga con datos 100% reales desde base de datos')
+    console.log('🚀 Dashboard: Iniciando carga optimizada')
     
     if (!user || !userProfile) {
       console.log('Dashboard: Esperando usuario y perfil...')
       return
     }
 
-    // Verificar cache (válido por 2 minutos)
+    // Verificar cache (válido por 5 minutos - aumentado para mejor rendimiento)
     const now = Date.now()
-    if (cacheRef.current.isValid && (now - cacheRef.current.timestamp) < 120000) {
+    const CACHE_DURATION = 5 * 60 * 1000 // 5 minutos
+    
+    if (cacheRef.current.isValid && (now - cacheRef.current.timestamp) < CACHE_DURATION) {
       console.log('📊 Dashboard: Usando datos cacheados')
       setStats(cacheRef.current.data.stats)
       setPercentages(cacheRef.current.data.percentages)
@@ -126,14 +129,19 @@ const ModernDashboardRedesigned = () => {
       return
     }
 
-    console.log('Dashboard: Cargando datos reales para usuario:', user.id)
+    console.log('Dashboard: Cargando datos optimizados para usuario:', user.id)
     
     try {
       setLoading(true)
       const startTime = performance.now()
       
-      // CARGA DE DATOS 100% REALES desde organizedDatabaseService
-      const dashboardStats = await organizedDatabaseService.getDashboardStats()
+      // CARGA OPTIMIZADA con timeout y manejo de errores mejorado
+      const dashboardStats = await Promise.race([
+        organizedDatabaseService.getDashboardStats(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout de carga')), 8000) // 8 segundos timeout
+        )
+      ])
       
       console.log('📊 Dashboard: Estadísticas cargadas:', dashboardStats)
       
@@ -150,15 +158,15 @@ const ModernDashboardRedesigned = () => {
       }
       
       const realPercentages = {
-        folders: Math.min((realStats.totalFolders / 1000) * 100, 100), // Basado en límite de 1000 carpetas
-        files: Math.min((realStats.totalFiles / 5000) * 100, 100) // Basado en límite de 5000 archivos
+        folders: Math.min((realStats.totalFolders / 1000) * 100, 100),
+        files: Math.min((realStats.totalFiles / 5000) * 100, 100)
       }
       
       setStats(realStats)
       setPercentages(realPercentages)
       
       const loadTime = performance.now() - startTime
-      console.log('⚡ Dashboard: Carga de datos reales completada en', loadTime.toFixed(2), 'ms')
+      console.log('⚡ Dashboard: Carga optimizada completada en', loadTime.toFixed(2), 'ms')
       
       // Guardar en cache
       cacheRef.current = {
@@ -167,43 +175,64 @@ const ModernDashboardRedesigned = () => {
         isValid: true
       }
       
-      console.log('✅ Dashboard: Carga con datos 100% reales completada correctamente')
+      console.log('✅ Dashboard: Carga optimizada completada correctamente')
       
     } catch (error) {
-      console.error('❌ Error loading real dashboard data:', error)
-      // Establecer valores por defecto en caso de error
-      const defaultStats = {
-        totalFolders: 800,
-        totalFiles: 3200,
-        storageUsed: 3200 * 1024,
+      console.error('❌ Error en carga optimizada:', error)
+      
+      // Valores por defecto más realistas en caso de error
+      const fallbackStats = {
+        totalFolders: 0,
+        totalFiles: 0,
+        storageUsed: 0,
         tokensUsed: 0,
-        tokenLimit: 1000
+        tokenLimit: 1000,
+        monthlyGrowth: 0,
+        activeUsers: 0,
+        successRate: 0
       }
-      const defaultPercentages = {
-        folders: 80,
-        files: 64
+      const fallbackPercentages = {
+        folders: 0,
+        files: 0
       }
       
-      setStats(defaultStats)
-      setPercentages(defaultPercentages)
+      setStats(fallbackStats)
+      setPercentages(fallbackPercentages)
       
-      // Guardar en cache incluso los valores por defecto
+      // Guardar en cache con duración más corta para reintentar pronto
       cacheRef.current = {
-        data: { stats: defaultStats, percentages: defaultPercentages },
+        data: { stats: fallbackStats, percentages: fallbackPercentages },
         timestamp: now,
         isValid: true
+      }
+      
+      // Mostrar notificación de error solo si es un error real de red
+      if (error.message !== 'Timeout de carga') {
+        toast.error('Error al cargar datos del dashboard. Usando valores por defecto.')
       }
     } finally {
       setLoading(false)
     }
   }, [user, userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Timeout de seguridad para evitar loading infinito
+  // Timeout de seguridad mejorado para evitar loading infinito
   useEffect(() => {
     const maxLoadingTimeout = setTimeout(() => {
-      console.log('Dashboard: Max loading timeout reached, forcing loading to false')
+      console.log('Dashboard: Timeout de seguridad alcanzado, forzando loading = false')
       setLoading(false)
-    }, 10000) // 10 segundos máximo
+      // Establecer valores por defecto si el timeout ocurre
+      setStats({
+        totalFolders: 0,
+        totalFiles: 0,
+        storageUsed: 0,
+        tokensUsed: 0,
+        tokenLimit: 1000,
+        monthlyGrowth: 0,
+        activeUsers: 0,
+        successRate: 0
+      })
+      setPercentages({ folders: 0, files: 0 })
+    }, 12000) // 12 segundos máximo (aumentado para conexiones lentas)
 
     return () => clearTimeout(maxLoadingTimeout)
   }, [])
@@ -211,21 +240,33 @@ const ModernDashboardRedesigned = () => {
   useEffect(() => {
     let loadTimeout = null
     
-    console.log('🔄 Dashboard: useEffect triggered', { user: !!user, userProfile: !!userProfile })
+    console.log('🔄 Dashboard: useEffect optimizado', { user: !!user, userProfile: !!userProfile })
     
     if (user && userProfile) {
-      console.log('✅ Dashboard: Both user and userProfile available, loading data...')
-      // Debounce para evitar llamadas excesivas
+      console.log('✅ Dashboard: Usuario y perfil disponibles, cargando datos...')
+      // Debounce optimizado para evitar llamadas excesivas
       loadTimeout = setTimeout(() => {
         loadDashboardData()
-      }, 300)
+      }, 500) // Aumentado a 500ms para reducir llamadas
     } else if (user && !userProfile) {
       // Usuario existe pero userProfile aún no se ha cargado, mantener loading
-      console.log('⏳ Dashboard: User exists but userProfile not loaded yet')
+      console.log('⏳ Dashboard: Usuario disponible pero perfil aún no cargado')
     } else {
-      // Si no hay usuario, asegurar que loading sea false
-      console.log('❌ Dashboard: No user available, setting loading to false')
+      // Si no hay usuario, asegurar que loading sea false inmediatamente
+      console.log('❌ Dashboard: Sin usuario, desactivando loading')
       setLoading(false)
+      // Establecer valores iniciales vacíos
+      setStats({
+        totalFolders: 0,
+        totalFiles: 0,
+        storageUsed: 0,
+        tokensUsed: 0,
+        tokenLimit: 1000,
+        monthlyGrowth: 0,
+        activeUsers: 0,
+        successRate: 0
+      })
+      setPercentages({ folders: 0, files: 0 })
     }
     
     return () => {
@@ -233,7 +274,7 @@ const ModernDashboardRedesigned = () => {
         clearTimeout(loadTimeout)
       }
     }
-  }, [user, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, userProfile, loadDashboardData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualizar tiempo cada segundo
   useEffect(() => {

@@ -5,6 +5,7 @@ import googleDriveService from '../../lib/googleDrive'
 import brevoService from '../../services/brevoService'
 import companySyncService from '../../services/companySyncService'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
+import communicationService from '../../services/communicationService'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -46,7 +47,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
     hubspot: { connected: false, status: 'disconnected', lastSync: null },
     salesforce: { connected: false, status: 'disconnected', lastSync: null },
     brevo: { connected: false, status: 'disconnected', lastSync: null },
-    groq: { connected: false, status: 'disconnected', lastSync: null, model: 'gemma2-9b-it' }
+    groq: { connected: false, status: 'disconnected', lastSync: null, model: 'gemma2-9b-it' },
+    whatsapp: { connected: false, status: 'disconnected', lastSync: null }
   })
 
   const [activeTab, setActiveTab] = useState(propActiveTab || 'companies')
@@ -147,7 +149,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
           loadBackupSettings(),
           checkGoogleDriveConnection(),
           checkBrevoConfiguration(),
-          checkGroqConfiguration()
+          checkGroqConfiguration(),
+          checkWhatsAppConfiguration()
         ])
       } catch (error) {
         console.error('Error loading settings data:', error)
@@ -353,6 +356,26 @@ const Settings = ({ activeTab: propActiveTab }) => {
         status: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? 'connected' : 'disconnected',
         lastSync: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? new Date().toISOString() : null,
         model: model
+      }
+    }))
+  }, [])
+
+  // Función para verificar configuración de WhatsApp
+  const checkWhatsAppConfiguration = useCallback(() => {
+    const config = {
+      accessToken: localStorage.getItem('whatsapp_access_token'),
+      phoneNumberId: localStorage.getItem('whatsapp_phone_number_id'),
+      webhookVerifyToken: localStorage.getItem('whatsapp_webhook_verify_token'),
+      testMode: localStorage.getItem('whatsapp_test_mode') === 'true'
+    };
+    
+    setIntegrations(prev => ({
+      ...prev,
+      whatsapp: {
+        connected: !!(config.accessToken && config.phoneNumberId),
+        status: !!(config.accessToken && config.phoneNumberId) ? 'connected' : 'disconnected',
+        lastSync: !!(config.accessToken && config.phoneNumberId) ? new Date().toISOString() : null,
+        testMode: config.testMode
       }
     }))
   }, [])
@@ -1596,6 +1619,218 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   };
 
+  const configureWhatsApp = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Configurar WhatsApp Business API',
+      html: `
+        <div style="text-align: left;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Access Token de Meta:</label>
+            <input type="password" id="whatsapp-access-token" class="swal2-input" placeholder="EA...">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Obtén tu token en{' '}
+              <a href="https://developers.facebook.com/docs/whatsapp/business-management-api/get-started" target="_blank" style="color: #25d366;">
+                Meta for Developers
+              </a>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Phone Number ID:</label>
+            <input type="text" id="whatsapp-phone-number-id" class="swal2-input" placeholder="123456789...">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              ID numérico de tu número de WhatsApp Business
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Webhook Verify Token:</label>
+            <input type="text" id="whatsapp-webhook-token" class="swal2-input" placeholder="Token opcional">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Opcional: Token para verificar webhooks entrantes
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="checkbox" id="whatsapp-test-mode" style="margin-right: 8px;" checked>
+              <span style="font-weight: 600;">Modo de prueba</span>
+            </label>
+            <p style="font-size: 12px; color: #666; margin-top: 4px; margin-left: 20px;">
+              En modo prueba, los mensajes se enviarán solo para testing
+            </p>
+          </div>
+
+          <div style="font-size: 12px; color: #666; margin-top: 16px; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <strong style="color: #25d366;">📋 Instrucciones para obtener credenciales:</strong><br>
+            1. Ve a <a href="https://business.facebook.com/wa/manage" target="_blank" style="color: #25d366;">Meta Business Suite</a><br>
+            2. Selecciona tu cuenta de WhatsApp Business<br>
+            3. Ve a Configuración → API de WhatsApp<br>
+            4. Genera un Access Token de sistema<br>
+            5. Copia el Phone Number ID y el Access Token aquí
+          </div>
+          
+          <div style="font-size: 12px; color: #666; margin-top: 12px; background-color: #e8f4fd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #25d366;">🚀 Funcionalidades incluidas:</strong><br>
+            • Envío de mensajes individuales y masivos<br>
+            • Plantillas de mensaje pre-aprobadas<br>
+            • Webhooks para estado de entrega en tiempo real<br>
+            • Estadísticas detalladas de uso<br>
+            • Integración con sistema de comunicación existente<br>
+            • Costo: ~$0.0525 USD por mensaje
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const accessToken = document.getElementById('whatsapp-access-token').value;
+        const phoneNumberId = document.getElementById('whatsapp-phone-number-id').value;
+        const webhookToken = document.getElementById('whatsapp-webhook-token').value;
+        const testMode = document.getElementById('whatsapp-test-mode').checked;
+
+        if (!accessToken) {
+          Swal.showValidationMessage('El Access Token es obligatorio');
+          return false;
+        }
+
+        if (!accessToken.startsWith('EA') && !accessToken.startsWith('EAA')) {
+          Swal.showValidationMessage('El Access Token debe comenzar con EA o EAA');
+          return false;
+        }
+
+        if (!phoneNumberId) {
+          Swal.showValidationMessage('El Phone Number ID es obligatorio');
+          return false;
+        }
+
+        if (!/^\d+$/.test(phoneNumberId)) {
+          Swal.showValidationMessage('El Phone Number ID debe contener solo números');
+          return false;
+        }
+
+        return { accessToken, phoneNumberId, webhookToken, testMode };
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Conectar y Probar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#25d366',
+      width: '600px'
+    });
+
+    if (formValues) {
+      // Mostrar estado de conexión
+      setIntegrations(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, status: 'connecting' } }));
+
+      try {
+        // Configurar el servicio de WhatsApp
+        const config = {
+          accessToken: formValues.accessToken,
+          phoneNumberId: formValues.phoneNumberId,
+          webhookVerifyToken: formValues.webhookToken,
+          testMode: formValues.testMode
+        };
+
+        // Probar conexión usando communicationService
+        const testResult = await communicationService.testWhatsAppConnection();
+
+        if (testResult.success) {
+          // Actualizar estado
+          setIntegrations(prev => ({
+            ...prev,
+            whatsapp: {
+              connected: true,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              testMode: formValues.testMode
+            }
+          }));
+
+          // Mostrar éxito
+          await Swal.fire({
+            title: '🎉 WhatsApp Configurado Exitosamente',
+            html: `
+              <div style="text-align: left;">
+                <div style="background-color: #d4edda; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #155724;">✅ Conexión exitosa</h4>
+                  <p style="margin: 0; font-size: 14px;">La API de WhatsApp está funcionando correctamente.</p>
+                </div>
+                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Información del número:</h4>
+                  <p style="margin: 4px 0; font-size: 14px;">
+                    <strong>Número:</strong> ${testResult.phoneInfo?.name || 'Configurado'}<br>
+                    <strong>Nombre verificado:</strong> ${testResult.phoneInfo?.verifiedName || 'Pendiente'}<br>
+                    <strong>Modo:</strong> ${formValues.testMode ? 'Prueba 🧪' : 'Producción 🚀'}
+                  </p>
+                </div>
+                <div style="background-color: #e8f4fd; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #25d366;">📊 Funcionalidades activas:</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>✅ Envío de mensajes individuales</li>
+                    <li>✅ Envío masivo de mensajes</li>
+                    <li>✅ Plantillas de mensaje pre-aprobadas</li>
+                    <li>✅ Webhooks para estado de entrega</li>
+                    <li>✅ Estadísticas en tiempo real</li>
+                    <li>✅ Integración con sistema de comunicación</li>
+                  </ul>
+                </div>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '¡Perfecto!',
+            confirmButtonColor: '#25d366',
+            width: '500px'
+          });
+
+          toast.success('WhatsApp configurado exitosamente');
+        } else {
+          throw new Error(testResult.error || 'Error al conectar con WhatsApp');
+        }
+      } catch (error) {
+        console.error('Error configuring WhatsApp:', error);
+        
+        // Restaurar estado
+        setIntegrations(prev => ({
+          ...prev,
+          whatsapp: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null,
+            testMode: false
+          }
+        }));
+
+        // Mostrar error
+        await Swal.fire({
+          title: '❌ Error de Conexión',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f8d7da; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #721c24;">No se pudo conectar con WhatsApp</h4>
+                <p style="margin: 0; font-size: 14px;"><strong>Error:</strong> ${error.message}</p>
+              </div>
+              <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">🔍 Posibles soluciones:</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                  <li>• Verifica que el Access Token sea correcto</li>
+                  <li>• Asegúrate de que el Phone Number ID sea válido</li>
+                  <li>• Revisa que tu número de WhatsApp esté verificado</li>
+                  <li>• Verifica los permisos del token</li>
+                  <li>• Revisa tu conexión a internet</li>
+                </ul>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
+        });
+
+        toast.error('Error al configurar WhatsApp');
+      }
+    }
+  };
+
   const disconnectIntegration = async (integration) => {
     const integrationNames = {
       google: 'Google Workspace',
@@ -1604,7 +1839,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
       hubspot: 'HubSpot',
       salesforce: 'Salesforce',
       brevo: 'Brevo',
-      groq: 'Groq AI'
+      groq: 'Groq AI',
+      whatsapp: 'WhatsApp'
     };
 
     const result = await Swal.fire({
@@ -1630,6 +1866,14 @@ const Settings = ({ activeTab: propActiveTab }) => {
         localStorage.removeItem('groq_model');
         localStorage.removeItem('groq_temperature');
         localStorage.removeItem('groq_max_tokens');
+      }
+
+      // Si es WhatsApp, limpiar la configuración guardada
+      if (integration === 'whatsapp') {
+        localStorage.removeItem('whatsapp_access_token');
+        localStorage.removeItem('whatsapp_phone_number_id');
+        localStorage.removeItem('whatsapp_webhook_verify_token');
+        localStorage.removeItem('whatsapp_test_mode');
       }
 
       setIntegrations(prev => ({

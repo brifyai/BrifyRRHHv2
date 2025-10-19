@@ -9,7 +9,9 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ChatBubbleLeftRightIcon,
+  PlusCircleIcon
 } from '@heroicons/react/24/outline'
 
 const Navbar = () => {
@@ -37,6 +39,8 @@ const Navbar = () => {
     { name: 'Panel Principal', href: '/panel-principal', icon: HomeIcon },
     { name: 'Base de datos', href: '/base-de-datos', icon: FolderIcon },
     { name: 'Búsqueda IA', href: '/busqueda-ia', icon: MagnifyingGlassIcon },
+    { name: 'WhatsApp Multi', href: '/whatsapp/multi-manager', icon: ChatBubbleLeftRightIcon },
+    { name: 'Configurar WhatsApp', href: '/whatsapp/setup-wizard', icon: PlusCircleIcon },
     {
       name: 'Configuración',
       href: '/configuracion',

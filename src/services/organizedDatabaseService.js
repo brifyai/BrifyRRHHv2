@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Configuración de Supabase
-const supabaseUrl = 'https://tmqglnycivlcjijoymwe.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcWdsbnljaXZsY2ppam95bXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTQ1NDYsImV4cCI6MjA3NjEzMDU0Nn0.ILwxm7pKdFZtG-Xz8niMSHaTwMvE4S7VlU8yDSgxOpE';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../lib/supabaseClient.js';
+import { CACHE_CONFIG, TIMEOUT_CONFIG, LIMITS_CONFIG, DEV_CONFIG } from '../config/constants.js';
 
 /**
  * SERVICIO DE BASE DE DATOS ORGANIZADA
@@ -24,7 +19,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 class OrganizedDatabaseService {
   constructor() {
     this.cache = new Map();
-    this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
+    this.cacheTimeout = CACHE_CONFIG.DASHBOARD_STATS_DURATION; // Usar configuración centralizada
+    
+    // Logging en desarrollo
+    this.log = DEV_CONFIG.ENABLE_LOGGING ?
+      (...args) => console.log('[OrganizedDatabaseService]', ...args) :
+      () => {};
   }
 
   // ========================================
@@ -408,58 +408,113 @@ class OrganizedDatabaseService {
     if (cached) return cached;
 
     try {
-      // Obtener conteos en paralelo
+      console.log('🔍 OrganizedDatabase: Cargando estadísticas del dashboard...');
+      
+      // Obtener conteos en paralelo con timeout individual
+      const queries = [
+        supabase.from('companies').select('*', { count: 'exact', head: true }),
+        supabase.from('employees').select('*', { count: 'exact', head: true }),
+        supabase.from('folders').select('*', { count: 'exact', head: true }),
+        supabase.from('documents').select('*', { count: 'exact', head: true }),
+        supabase.from('communication_logs').select('*', { count: 'exact', head: true })
+      ];
+
+      // Agregar timeout a cada consulta usando configuración centralizada
+      const queriesWithTimeout = queries.map(query =>
+        Promise.race([
+          query,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Query timeout')), TIMEOUT_CONFIG.DATABASE_QUERY)
+          )
+        ])
+      );
+
       const [
         companiesResult,
         employeesResult,
         foldersResult,
         documentsResult,
         communicationResult
-      ] = await Promise.all([
-        supabase.from('companies').select('*', { count: 'exact', head: true }),
-        supabase.from('employees').select('*', { count: 'exact', head: true }),
-        supabase.from('folders').select('*', { count: 'exact', head: true }),
-        supabase.from('documents').select('*', { count: 'exact', head: true }),
-        supabase.from('communication_logs').select('*', { count: 'exact', head: true })
-      ]);
+      ] = await Promise.allSettled(queriesWithTimeout);
 
-      // Calcular métricas adicionales basadas en datos reales
-      const totalEmployees = employeesResult.count || 0;
-      const totalCommunications = communicationResult.count || 0;
-      const totalDocuments = documentsResult.count || 0;
-      
-      // Calcular crecimiento mensual (basado en empleados creados en el último mes)
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      
-      const { count: newEmployeesThisMonth } = await supabase
-        .from('employees')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', oneMonthAgo.toISOString());
-      
-      const monthlyGrowth = totalEmployees > 0
-        ? Math.round((newEmployeesThisMonth / totalEmployees) * 100)
-        : 0;
+      // Extraer resultados de manera segura
+      const extractCount = (result) => {
+        if (result.status === 'fulfilled' && result.value) {
+          return result.value.count || 0;
+        }
+        console.warn('⚠️ Query fallida:', result.reason?.message || 'Error desconocido');
+        return 0;
+      };
 
-      // Calcular tasa de éxito (comunicaciones exitosas)
-      const { data: commStats } = await supabase
-        .from('communication_logs')
-        .select('status')
-        .in('status', ['sent', 'read']);
+      const totalCompanies = extractCount(companiesResult);
+      const totalEmployees = extractCount(employeesResult);
+      const totalFolders = extractCount(foldersResult);
+      const totalDocuments = extractCount(documentsResult);
+      const totalCommunications = extractCount(communicationResult);
       
-      const successfulCommunications = commStats?.length || 0;
-      const successRate = totalCommunications > 0
-        ? Math.round((successfulCommunications / totalCommunications) * 100)
-        : 0;
+      console.log('📊 Datos básicos cargados:', {
+        companies: totalCompanies,
+        employees: totalEmployees,
+        folders: totalFolders,
+        documents: totalDocuments,
+        communications: totalCommunications
+      });
+
+      // Calcular métricas adicionales con manejo de errores
+      let monthlyGrowth = 0;
+      let successRate = 0;
+
+      try {
+        // Calcular crecimiento mensual (con timeout)
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        const newEmployeesResult = await Promise.race([
+          supabase.from('employees').select('*', { count: 'exact', head: true })
+            .gte('created_at', oneMonthAgo.toISOString()),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Monthly growth query timeout')), TIMEOUT_CONFIG.DATABASE_QUERY)
+          )
+        ]);
+        
+        const newEmployeesThisMonth = newEmployeesResult?.count || 0;
+        monthlyGrowth = totalEmployees > 0
+          ? Math.round((newEmployeesThisMonth / totalEmployees) * 100)
+          : 0;
+      } catch (error) {
+        console.warn('⚠️ Error calculando crecimiento mensual:', error.message);
+        monthlyGrowth = 0;
+      }
+
+      try {
+        // Calcular tasa de éxito (con timeout)
+        const commStatsResult = await Promise.race([
+          supabase.from('communication_logs')
+            .select('status')
+            .in('status', ['sent', 'read'])
+            .limit(LIMITS_CONFIG.MAX_PAGE_SIZE), // Usar configuración centralizada
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Success rate query timeout')), TIMEOUT_CONFIG.DATABASE_QUERY)
+          )
+        ]);
+        
+        const successfulCommunications = commStatsResult?.data?.length || 0;
+        successRate = totalCommunications > 0
+          ? Math.round((successfulCommunications / totalCommunications) * 100)
+          : 0;
+      } catch (error) {
+        console.warn('⚠️ Error calculando tasa de éxito:', error.message);
+        successRate = 0;
+      }
 
       // Calcular almacenamiento real (basado en documentos)
       const avgDocumentSize = 50 * 1024; // 50KB promedio por documento
       const storageUsed = totalDocuments * avgDocumentSize;
 
       const stats = {
-        companies: companiesResult.count || 0,
+        companies: totalCompanies,
         employees: totalEmployees,
-        folders: foldersResult.count || 0,
+        folders: totalFolders,
         documents: totalDocuments,
         communications: totalCommunications,
         tokensUsed: totalCommunications, // Usar comunicaciones como proxy de tokens
@@ -469,11 +524,14 @@ class OrganizedDatabaseService {
         activeUsers: totalEmployees // Usar empleados como usuarios activos
       };
 
+      console.log('✅ Estadísticas del dashboard calculadas:', stats);
       this.setCache(cacheKey, stats);
       return stats;
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      return {
+      console.error('❌ Error crítico en getDashboardStats:', error);
+      
+      // Retornar valores seguros en caso de error crítico
+      const fallbackStats = {
         companies: 0,
         employees: 0,
         folders: 0,
@@ -485,6 +543,10 @@ class OrganizedDatabaseService {
         successRate: 0,
         activeUsers: 0
       };
+      
+      // Cache por menos tiempo para reintentar pronto
+      this.setCache(cacheKey, fallbackStats);
+      return fallbackStats;
     }
   }
 
