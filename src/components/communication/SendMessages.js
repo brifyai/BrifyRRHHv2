@@ -131,16 +131,118 @@ const SendMessages = () => {
       return;
     }
 
-    // Obtener información para la confirmación
+    // Configuración de control de tasa por canal
+    const rateLimits = {
+      'WhatsApp': { batchSize: 50, delayBetweenBatches: 5000 }, // 50 mensajes cada 5 segundos
+      'Telegram': { batchSize: 30, delayBetweenBatches: 3000 },  // 30 mensajes cada 3 segundos
+      'SMS': { batchSize: 100, delayBetweenBatches: 10000 },    // 100 mensajes cada 10 segundos
+      'Email': { batchSize: 200, delayBetweenBatches: 15000 }   // 200 mensajes cada 15 segundos
+    };
+
+    const config = rateLimits[channel] || { batchSize: 50, delayBetweenBatches: 5000 };
     const employeeCount = selectedEmployees.length;
+    const numberOfBatches = Math.ceil(employeeCount / config.batchSize);
+    const totalEstimatedTime = (numberOfBatches - 1) * config.delayBetweenBatches;
+    
+    // Formatear tiempo total estimado
+    const formatTime = (milliseconds) => {
+      const seconds = Math.floor(milliseconds / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      
+      if (minutes > 0) {
+        return `${minutes} minuto${minutes > 1 ? 's' : ''} y ${remainingSeconds} segundo${remainingSeconds !== 1 ? 's' : ''}`;
+      }
+      return `${seconds} segundo${seconds !== 1 ? 's' : ''}`;
+    };
+
+    // Mostrar alerta de control de tasa
+    const rateLimitResult = await Swal.fire({
+      title: '⚡ Control de Tasa de Envío',
+      html: `
+        <div style="text-align: left; font-size: 16px; line-height: 1.6;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">📊 Información de Envío</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px;">
+                <div style="font-size: 14px; opacity: 0.9;">Total de mensajes</div>
+                <div style="font-size: 20px; font-weight: bold;">${employeeCount}</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px;">
+                <div style="font-size: 14px; opacity: 0.9;">Canal</div>
+                <div style="font-size: 20px; font-weight: bold;">${channel}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+            <h4 style="margin: 0 0 16px 0; color: #007bff; font-size: 16px; font-weight: 600;">⏱️ Configuración de Tasa</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+              <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: bold; color: #28a745;">${config.batchSize}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 4px;">Mensajes por bloque</div>
+              </div>
+              <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: bold; color: #ffc107;">${config.delayBetweenBatches / 1000}s</div>
+                <div style="font-size: 12px; color: #666; margin-top: 4px;">Tiempo entre bloques</div>
+              </div>
+              <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${numberOfBatches}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 4px;">Número de bloques</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: #fff3cd; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+            <h4 style="margin: 0 0 12px 0; color: #856404; font-size: 16px; font-weight: 600;">🕐 Tiempo Estimado</h4>
+            <div style="display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
+              <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: bold; color: #856404;">${formatTime(totalEstimatedTime)}</div>
+                <div style="font-size: 14px; color: #856404; margin-top: 4px;">Tiempo total de envío</div>
+              </div>
+            </div>
+            <div style="margin-top: 12px; font-size: 14px; color: #856404;">
+              <strong>⚠️ Importante:</strong> Los mensajes se enviarán en bloques de ${config.batchSize} destinatarios cada ${config.delayBetweenBatches / 1000} segundos para evitar límites de la API y garantizar la entrega.
+            </div>
+          </div>
+
+          <div style="background: #d1ecf1; padding: 16px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+            <div style="display: flex; align-items: center;">
+              <div style="margin-right: 12px; font-size: 20px;">ℹ️</div>
+              <div style="font-size: 14px; color: #0c5460;">
+                <strong>Proceso:</strong> El sistema mostrará el progreso en tiempo real y podrás cancelar en cualquier momento si es necesario.
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonColor: getChannelColor(channel),
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: `🚀 Iniciar Envío`,
+      cancelButtonText: 'Cancelar',
+      customClass: {
+        popup: 'swal-rate-limit'
+      },
+      width: 700
+    });
+
+    if (!rateLimitResult.isConfirmed) {
+      return;
+    }
+
+    // Obtener información para la confirmación final
     const appliedFilters = location.state?.filters || {};
 
     // Crear información detallada de empleados
     let employeesInfo = '';
-    if (selectedEmployees.length > 0) {
+    if (selectedEmployees.length > 0 && selectedEmployees.length <= 10) {
       employeesInfo = selectedEmployees
         .map(employee => `• ${employee.name} (${employee.position}, ${employee.company?.name || 'Empresa'})`)
         .join('\n');
+    } else if (selectedEmployees.length > 10) {
+      employeesInfo = `• ${selectedEmployees.slice(0, 5).map(e => e.name).join(', ')}\n• ... y ${selectedEmployees.length - 5} más empleados`;
     }
 
     // Crear mensaje de filtros aplicados
@@ -152,13 +254,19 @@ const SendMessages = () => {
           .join('\n');
     }
 
-    // Mostrar modal de confirmación
+    // Mostrar modal de confirmación final
     const result = await Swal.fire({
-      title: 'Confirmar Envío',
+      title: 'Confirmar Envío Final',
       html: `
         <div style="text-align: left; font-size: 16px; line-height: 1.6;">
-          <p style="margin-bottom: 12px;"><strong>¿Está seguro de enviar ${employeeCount} mensaje(s)?</strong></p>
-          <p style="margin-bottom: 8px;"><strong>Canal:</strong> ${channel}</p>
+          <p style="margin-bottom: 12px;"><strong>¿Está seguro de enviar ${employeeCount} mensaje(s) por ${channel}?</strong></p>
+          <p style="margin-bottom: 8px;"><strong>Configuración de envío:</strong></p>
+          <div style="background: #e3f2fd; padding: 12px; border-radius: 4px; font-size: 14px; margin-bottom: 8px;">
+            • ${config.batchSize} mensajes por bloque<br>
+            • ${config.delayBetweenBatches / 1000} segundos entre bloques<br>
+            • ${numberOfBatches} bloques totales<br>
+            • Tiempo estimado: ${formatTime(totalEstimatedTime)}
+          </div>
           <p style="margin-bottom: 8px;"><strong>Destinatarios:</strong></p>
           <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 14px; margin-bottom: 8px; white-space: pre-line;">
             ${employeesInfo}
@@ -170,7 +278,7 @@ const SendMessages = () => {
       showCancelButton: true,
       confirmButtonColor: getChannelColor(channel),
       cancelButtonColor: '#6c757d',
-      confirmButtonText: `Sí, enviar por ${channel}`,
+      confirmButtonText: `✅ Sí, enviar ahora`,
       cancelButtonText: 'Cancelar',
       customClass: {
         popup: 'swal-confirmation'
@@ -275,6 +383,46 @@ const SendMessages = () => {
     }
   };
 
+  // Función para obtener configuración de fallback de la empresa
+  const getCompanyFallbackConfig = async () => {
+    try {
+      // Determinar la empresa principal (la más común entre los empleados seleccionados)
+      const companyCounts = {};
+      selectedEmployees.forEach(employee => {
+        const companyId = employee.company?.id;
+        if (companyId) {
+          companyCounts[companyId] = (companyCounts[companyId] || 0) + 1;
+        }
+      });
+
+      const primaryCompanyId = Object.keys(companyCounts).reduce((a, b) =>
+        companyCounts[a] > companyCounts[b] ? a : b, null
+      );
+
+      if (!primaryCompanyId) {
+        // Si no hay empresa, usar orden por defecto
+        return ['WhatsApp', 'Telegram', 'SMS', 'Email'];
+      }
+
+      // Obtener configuración de fallback de la empresa
+      const { data: company, error } = await supabase
+        .from('companies')
+        .select('fallback_config')
+        .eq('id', primaryCompanyId)
+        .single();
+
+      if (error || !company?.fallback_config?.order) {
+        console.warn('No se encontró configuración de fallback, usando orden por defecto');
+        return ['WhatsApp', 'Telegram', 'SMS', 'Email'];
+      }
+
+      return company.fallback_config.order;
+    } catch (error) {
+      console.error('Error obteniendo configuración de fallback:', error);
+      return ['WhatsApp', 'Telegram', 'SMS', 'Email'];
+    }
+  };
+
   // Función para enviar con fallback inteligente
   const handleSendWithFallback = async (primaryChannel = 'WhatsApp') => {
     // Verificar que haya empleados seleccionados
@@ -293,6 +441,12 @@ const SendMessages = () => {
       return;
     }
 
+    // Obtener configuración de fallback dinámica
+    const fallbackOrder = await getCompanyFallbackConfig();
+    
+    // Asegurar que el canal principal esté primero y eliminar duplicados
+    const uniqueChannels = [...new Set([primaryChannel, ...fallbackOrder.filter(ch => ch !== primaryChannel)])];
+    
     // Mostrar modal de confirmación para fallback
     const result = await Swal.fire({
       title: '🔄 Envío Inteligente con Fallback',
@@ -303,7 +457,7 @@ const SendMessages = () => {
           <div style="background: #f0f8ff; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
             <div style="color: #007bff; font-weight: bold; margin-bottom: 4px;">🔄 Orden de Fallback:</div>
             <div style="font-size: 14px;">
-              ${primaryChannel} → Telegram → SMS → Email
+              ${uniqueChannels.join(' → ')}
             </div>
           </div>
           <p style="margin-bottom: 8px;"><strong>Destinatarios:</strong> ${selectedEmployees.length} empleados</p>
@@ -335,12 +489,14 @@ const SendMessages = () => {
       console.log(`🚀 Enviando mensaje con fallback inteligente a ${employeeIds.length} empleados:`, employeeIds);
       console.log('💬 Mensaje:', message);
       console.log('🎯 Canal principal:', primaryChannel);
+      console.log('🔄 Orden de fallback:', uniqueChannels);
       
-      // Enviar usando el servicio de fallback
+      // Enviar usando el servicio de fallback con orden personalizado
       const fallbackResult = await communicationService.sendWithFallback(
         employeeIds,
         message,
-        primaryChannel.toLowerCase()
+        primaryChannel.toLowerCase(),
+        uniqueChannels
       );
 
       console.log('📊 Resultado del envío con fallback:', fallbackResult);
@@ -408,7 +564,7 @@ const SendMessages = () => {
     <div style={style} className="flex items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100 hover:shadow-md transition-all duration-300">
       <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
         <span className="text-white font-bold text-sm">
-          {employee.name.charAt(0)}
+          {employee.name?.charAt(0) || '?'}
         </span>
       </div>
       <div className="ml-4 min-w-0 flex-1">
@@ -1504,7 +1660,7 @@ const SendMessages = () => {
                       <div key={employee.id} className="flex items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100 hover:shadow-md transition-all duration-300">
                         <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
                           <span className="text-white font-bold text-sm">
-                            {employee.name.charAt(0)}
+                            {employee.name?.charAt(0) || '?'}
                           </span>
                         </div>
                         <div className="ml-4 min-w-0 flex-1">

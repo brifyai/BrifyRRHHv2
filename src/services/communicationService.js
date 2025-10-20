@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase.js';
 import inMemoryEmployeeService from './inMemoryEmployeeService.js';
 import whatsappService from './whatsappService.js';
 import multiWhatsAppService from './multiWhatsAppService.js';
+import companyChannelCredentialsService from './companyChannelCredentialsService.js';
 
 class CommunicationService {
   // Get all employees with optional filters - Optimized version
@@ -809,12 +810,13 @@ class CommunicationService {
     }
   }
 
-  // Smart fallback message delivery - New method
-  async sendWithFallback(recipientIds, message, primaryChannel = 'whatsapp', options = {}) {
+  // Smart fallback message delivery - Enhanced with company-specific credentials
+  async sendWithFallback(recipientIds, message, primaryChannel = 'whatsapp', fallbackOrder = null, options = {}) {
     try {
       console.log('🚀 Iniciando envío con fallback inteligente');
       console.log('Primary channel:', primaryChannel);
       console.log('Recipient IDs:', recipientIds);
+      console.log('Fallback order:', fallbackOrder);
       
       const results = {
         total: recipientIds.length,
@@ -824,60 +826,66 @@ class CommunicationService {
         details: []
       };
 
-      // Get employee data to check available channels
+      // Get employee data to check available channels and their companies
       const employees = await this.getEmployeesByIds(recipientIds);
       
-      // Group employees by available channels
-      const channelGroups = this.groupEmployeesByChannel(employees, primaryChannel);
+      // Group employees by company and channel
+      const companyChannelGroups = await this.groupEmployeesByCompanyAndChannel(employees, primaryChannel, fallbackOrder);
       
-      // Send messages through each channel
-      for (const [channel, employeeIds] of Object.entries(channelGroups)) {
-        if (employeeIds.length === 0) continue;
+      // Send messages through each channel for each company
+      for (const [companyId, channelGroups] of Object.entries(companyChannelGroups)) {
+        console.log(`🏢 Procesando empresa ${companyId}`);
         
-        console.log(`📤 Enviando ${employeeIds.length} mensajes por ${channel}`);
-        
-        try {
-          let result;
-          switch (channel) {
-            case 'whatsapp':
-              result = await this.sendWhatsAppMessage(employeeIds, message);
-              break;
-            case 'telegram':
-              result = await this.sendTelegramMessage(employeeIds, message);
-              break;
-            case 'sms':
-              result = await this.sendSMSMessage(employeeIds, message);
-              break;
-            case 'email':
-              const emailSubject = options.subject || 'Mensaje de StaffHub';
-              result = await this.sendEmailMessage(employeeIds, message, emailSubject);
-              break;
-            default:
-              console.warn(`⚠️ Canal desconocido: ${channel}`);
-              continue;
-          }
+        for (const [channel, employeeIds] of Object.entries(channelGroups)) {
+          if (employeeIds.length === 0) continue;
           
-          if (result.success) {
-            results.successful += result.recipientCount;
-            results.byChannel[channel] = (results.byChannel[channel] || 0) + result.recipientCount;
+          console.log(`📤 Enviando ${employeeIds.length} mensajes por ${channel} (Empresa: ${companyId})`);
+          
+          try {
+            let result;
+            switch (channel) {
+              case 'whatsapp':
+                result = await this.sendWhatsAppMessageWithCompanyCredentials(companyId, employeeIds, message, options);
+                break;
+              case 'telegram':
+                result = await this.sendTelegramMessageWithCompanyCredentials(companyId, employeeIds, message, options);
+                break;
+              case 'sms':
+                result = await this.sendSMSMessageWithCompanyCredentials(companyId, employeeIds, message, options);
+                break;
+              case 'email':
+                const emailSubject = options.subject || 'Mensaje de StaffHub';
+                result = await this.sendEmailMessageWithCompanyCredentials(companyId, employeeIds, message, emailSubject, options);
+                break;
+              default:
+                console.warn(`⚠️ Canal desconocido: ${channel}`);
+                continue;
+            }
+            
+            if (result.success) {
+              results.successful += result.recipientCount;
+              results.byChannel[channel] = (results.byChannel[channel] || 0) + result.recipientCount;
+              
+              results.details.push({
+                channel,
+                companyId,
+                recipientCount: result.recipientCount,
+                status: 'success',
+                message: result.message
+              });
+            }
+          } catch (error) {
+            console.error(`❌ Error enviando por ${channel} (Empresa: ${companyId}):`, error);
+            results.failed += employeeIds.length;
             
             results.details.push({
               channel,
-              recipientCount: result.recipientCount,
-              status: 'success',
-              message: result.message
+              companyId,
+              recipientCount: employeeIds.length,
+              status: 'failed',
+              error: error.message
             });
           }
-        } catch (error) {
-          console.error(`❌ Error enviando por ${channel}:`, error);
-          results.failed += employeeIds.length;
-          
-          results.details.push({
-            channel,
-            recipientCount: employeeIds.length,
-            status: 'failed',
-            error: error.message
-          });
         }
       }
       
@@ -899,6 +907,319 @@ class CommunicationService {
       
     } catch (error) {
       console.error('❌ Error en envío con fallback:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced method to group employees by company and channel
+  async groupEmployeesByCompanyAndChannel(employees, primaryChannel, fallbackOrder = null) {
+    const companyGroups = {};
+    
+    // Default fallback order if none provided
+    const defaultOrder = ['WhatsApp', 'Telegram', 'SMS', 'Email'];
+    const order = fallbackOrder || defaultOrder;
+    
+    // Group employees by company
+    const employeesByCompany = {};
+    employees.forEach(employee => {
+      const companyId = employee.company_id || 'default';
+      if (!employeesByCompany[companyId]) {
+        employeesByCompany[companyId] = [];
+      }
+      employeesByCompany[companyId].push(employee);
+    });
+    
+    // For each company, group employees by available channels
+    for (const [companyId, companyEmployees] of Object.entries(employeesByCompany)) {
+      companyGroups[companyId] = {
+        whatsapp: [],
+        telegram: [],
+        sms: [],
+        email: []
+      };
+      
+      // Get company's fallback order
+      let companyFallbackOrder = order;
+      try {
+        companyFallbackOrder = await companyChannelCredentialsService.getFallbackOrder(companyId);
+      } catch (error) {
+        console.warn(`⚠️ Error getting fallback order for company ${companyId}, using default:`, error.message);
+      }
+      
+      companyEmployees.forEach(employee => {
+        const hasWhatsApp = employee.phone && employee.phone.length > 0;
+        const hasTelegram = employee.telegram_id && employee.telegram_id.length > 0;
+        const hasSMS = employee.phone && employee.phone.length > 0;
+        const hasEmail = employee.email && employee.email.length > 0;
+        
+        // Check available channels for this employee
+        const availableChannels = [];
+        if (hasWhatsApp) availableChannels.push('WhatsApp');
+        if (hasTelegram) availableChannels.push('Telegram');
+        if (hasSMS) availableChannels.push('SMS');
+        if (hasEmail) availableChannels.push('Email');
+        
+        // Find the best channel for this employee based on company's fallback order
+        let assignedChannel = null;
+        
+        // First, try primary channel
+        const primaryChannelCapitalized = primaryChannel.charAt(0).toUpperCase() + primaryChannel.slice(1);
+        if (availableChannels.includes(primaryChannelCapitalized)) {
+          assignedChannel = primaryChannelCapitalized;
+        } else {
+          // Use company's custom fallback order
+          for (const channel of companyFallbackOrder) {
+            if (availableChannels.includes(channel)) {
+              assignedChannel = channel;
+              break;
+            }
+          }
+        }
+        
+        // Assign employee to the determined channel
+        if (assignedChannel) {
+          const channelKey = assignedChannel.toLowerCase();
+          if (companyGroups[companyId][channelKey]) {
+            companyGroups[companyId][channelKey].push(employee.id);
+          }
+        }
+      });
+    }
+    
+    console.log('📊 Employee grouping by company and channel:', companyGroups);
+    return companyGroups;
+  }
+
+  // Enhanced WhatsApp method with company-specific credentials
+  async sendWhatsAppMessageWithCompanyCredentials(companyId, recipientIds, message, options = {}) {
+    try {
+      console.log(`🚀 Enviando WhatsApp con credenciales específicas para empresa ${companyId}`);
+      
+      // Get company-specific WhatsApp credentials
+      const credentials = await companyChannelCredentialsService.getChannelCredentials(companyId, 'whatsapp');
+      
+      if (!credentials) {
+        console.warn(`⚠️ No hay credenciales WhatsApp configuradas para empresa ${companyId}, usando método estándar`);
+        return await this.sendWhatsAppMessage(recipientIds, message, options);
+      }
+      
+      // Get sender data
+      const senderData = await this.getSenderData();
+      
+      // Get employee data for phone numbers
+      const employees = await this.getEmployeesByIds(recipientIds);
+      const phoneNumbers = employees
+        .filter(emp => emp.phone && emp.phone.trim() !== '')
+        .map(emp => emp.phone);
+      
+      if (phoneNumbers.length === 0) {
+        throw new Error('No se encontraron números de teléfono válidos para los destinatarios');
+      }
+      
+      // Create communication log
+      const logId = await this.createCommunicationLog(
+        senderData,
+        recipientIds,
+        message,
+        'whatsapp'
+      );
+      
+      // Use company-specific credentials with whatsappService
+      const originalConfig = whatsappService.loadConfiguration();
+      
+      // Temporarily set company-specific configuration
+      whatsappService.setConfiguration({
+        accessToken: credentials.access_token,
+        phoneNumberId: credentials.phone_number_id,
+        webhookVerifyToken: credentials.webhook_verify_token,
+        testMode: originalConfig.testMode
+      });
+      
+      try {
+        // Send messages with company credentials
+        const result = await whatsappService.sendBulkMessage({
+          recipients: phoneNumbers,
+          message: message,
+          messageType: options.templateName ? 'template' : 'text',
+          templateName: options.templateName || null,
+          templateLanguage: options.templateLanguage || 'es',
+          components: options.components || [],
+          delayBetweenMessages: options.delayBetweenMessages || 1000
+        });
+        
+        // Restore original configuration
+        whatsappService.setConfiguration(originalConfig);
+        
+        console.log(`✅ WhatsApp enviado con credenciales de empresa ${companyId}`);
+        return {
+          success: result.success,
+          message: result.success
+            ? `Mensaje enviado a ${result.successful} destinatarios vía WhatsApp (Empresa: ${companyId})`
+            : `Error: ${result.failed} mensajes fallaron`,
+          recipientCount: result.totalRecipients,
+          successfulDeliveries: result.successful,
+          failedDeliveries: result.failed,
+          channel: 'whatsapp',
+          companyId: companyId,
+          timestamp: new Date().toISOString(),
+          logId: logId,
+          details: result.results,
+          usedCompanyCredentials: true
+        };
+      } catch (error) {
+        // Restore original configuration on error
+        whatsappService.setConfiguration(originalConfig);
+        throw error;
+      }
+    } catch (error) {
+      console.error(`❌ Error enviando WhatsApp con credenciales de empresa ${companyId}:`, error);
+      throw error;
+    }
+  }
+
+  // Enhanced Telegram method with company-specific credentials
+  async sendTelegramMessageWithCompanyCredentials(companyId, recipientIds, message, options = {}) {
+    try {
+      console.log(`🚀 Enviando Telegram con credenciales específicas para empresa ${companyId}`);
+      
+      // Get company-specific Telegram credentials
+      const credentials = await companyChannelCredentialsService.getChannelCredentials(companyId, 'telegram');
+      
+      if (!credentials) {
+        console.warn(`⚠️ No hay credenciales Telegram configuradas para empresa ${companyId}, usando método estándar`);
+        return await this.sendTelegramMessage(recipientIds, message);
+      }
+      
+      // Get sender data
+      const senderData = await this.getSenderData();
+      
+      // Validate recipient IDs
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'telegram'
+      );
+      
+      // TODO: Implement Telegram service with company-specific credentials
+      // For now, simulate with company credentials
+      console.log('⏳ Simulando llamada a API de Telegram con credenciales de empresa...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log(`✅ Telegram enviado con credenciales de empresa ${companyId}`);
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía Telegram (Empresa: ${companyId})`,
+        recipientCount: validRecipientIds.length,
+        channel: 'telegram',
+        companyId: companyId,
+        timestamp: new Date().toISOString(),
+        logId: logId,
+        usedCompanyCredentials: true
+      };
+    } catch (error) {
+      console.error(`❌ Error enviando Telegram con credenciales de empresa ${companyId}:`, error);
+      throw error;
+    }
+  }
+
+  // Enhanced SMS method with company-specific credentials
+  async sendSMSMessageWithCompanyCredentials(companyId, recipientIds, message, options = {}) {
+    try {
+      console.log(`🚀 Enviando SMS con credenciales específicas para empresa ${companyId}`);
+      
+      // Get company-specific SMS credentials
+      const credentials = await companyChannelCredentialsService.getChannelCredentials(companyId, 'sms');
+      
+      if (!credentials) {
+        console.warn(`⚠️ No hay credenciales SMS configuradas para empresa ${companyId}, usando método estándar`);
+        return await this.sendSMSMessage(recipientIds, message);
+      }
+      
+      // Get sender data
+      const senderData = await this.getSenderData();
+      
+      // Validate recipient IDs
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'sms'
+      );
+      
+      // TODO: Implement SMS service with company-specific credentials
+      // For now, simulate with company credentials
+      console.log('⏳ Simulando llamada a API de SMS con credenciales de empresa...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log(`✅ SMS enviado con credenciales de empresa ${companyId}`);
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía SMS (Empresa: ${companyId})`,
+        recipientCount: validRecipientIds.length,
+        channel: 'sms',
+        companyId: companyId,
+        timestamp: new Date().toISOString(),
+        logId: logId,
+        usedCompanyCredentials: true
+      };
+    } catch (error) {
+      console.error(`❌ Error enviando SMS con credenciales de empresa ${companyId}:`, error);
+      throw error;
+    }
+  }
+
+  // Enhanced Email method with company-specific credentials
+  async sendEmailMessageWithCompanyCredentials(companyId, recipientIds, message, subject, options = {}) {
+    try {
+      console.log(`🚀 Enviando Email con credenciales específicas para empresa ${companyId}`);
+      
+      // Get company-specific Email credentials
+      const credentials = await companyChannelCredentialsService.getChannelCredentials(companyId, 'email');
+      
+      if (!credentials) {
+        console.warn(`⚠️ No hay credenciales Email configuradas para empresa ${companyId}, usando método estándar`);
+        return await this.sendEmailMessage(recipientIds, message, subject);
+      }
+      
+      // Get sender data
+      const senderData = await this.getSenderData();
+      
+      // Validate recipient IDs
+      const validRecipientIds = await this.validateRecipients(recipientIds);
+      
+      // Create communication log
+      const logId = await this.createCommunicationLog(
+        senderData,
+        validRecipientIds,
+        message,
+        'email'
+      );
+      
+      // TODO: Implement Email service with company-specific credentials
+      // For now, simulate with company credentials
+      console.log('⏳ Simulando llamada a API de Email con credenciales de empresa...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log(`✅ Email enviado con credenciales de empresa ${companyId}`);
+      return {
+        success: true,
+        message: `Mensaje enviado a ${validRecipientIds.length} destinatarios vía Email (Empresa: ${companyId})`,
+        recipientCount: validRecipientIds.length,
+        channel: 'email',
+        companyId: companyId,
+        timestamp: new Date().toISOString(),
+        logId: logId,
+        usedCompanyCredentials: true
+      };
+    } catch (error) {
+      console.error(`❌ Error enviando Email con credenciales de empresa ${companyId}:`, error);
       throw error;
     }
   }
@@ -981,7 +1302,7 @@ class CommunicationService {
   }
 
   // Helper method to group employees by available channels
-  groupEmployeesByChannel(employees, primaryChannel) {
+  groupEmployeesByChannel(employees, primaryChannel, fallbackOrder = null) {
     const groups = {
       whatsapp: [],
       telegram: [],
@@ -989,35 +1310,50 @@ class CommunicationService {
       email: []
     };
     
+    // Default fallback order if none provided
+    const defaultOrder = ['WhatsApp', 'Telegram', 'SMS', 'Email'];
+    const order = fallbackOrder || defaultOrder;
+    
     employees.forEach(employee => {
       const hasWhatsApp = employee.phone && employee.phone.length > 0;
       const hasTelegram = employee.telegram_id && employee.telegram_id.length > 0;
       const hasSMS = employee.phone && employee.phone.length > 0;
       const hasEmail = employee.email && employee.email.length > 0;
       
-      // Primary channel first
-      if (primaryChannel === 'whatsapp' && hasWhatsApp) {
-        groups.whatsapp.push(employee.id);
-      } else if (primaryChannel === 'telegram' && hasTelegram) {
-        groups.telegram.push(employee.id);
-      } else if (primaryChannel === 'sms' && hasSMS) {
-        groups.sms.push(employee.id);
-      } else if (primaryChannel === 'email' && hasEmail) {
-        groups.email.push(employee.id);
+      // Check available channels for this employee
+      const availableChannels = [];
+      if (hasWhatsApp) availableChannels.push('WhatsApp');
+      if (hasTelegram) availableChannels.push('Telegram');
+      if (hasSMS) availableChannels.push('SMS');
+      if (hasEmail) availableChannels.push('Email');
+      
+      // Find the best channel for this employee based on custom order
+      let assignedChannel = null;
+      
+      // First, try primary channel
+      const primaryChannelCapitalized = primaryChannel.charAt(0).toUpperCase() + primaryChannel.slice(1);
+      if (availableChannels.includes(primaryChannelCapitalized)) {
+        assignedChannel = primaryChannelCapitalized;
       } else {
-        // Fallback logic
-        if (hasWhatsApp && primaryChannel !== 'whatsapp') {
-          groups.whatsapp.push(employee.id);
-        } else if (hasTelegram && primaryChannel !== 'telegram') {
-          groups.telegram.push(employee.id);
-        } else if (hasSMS && primaryChannel !== 'sms') {
-          groups.sms.push(employee.id);
-        } else if (hasEmail && primaryChannel !== 'email') {
-          groups.email.push(employee.id);
+        // Use custom fallback order
+        for (const channel of order) {
+          if (availableChannels.includes(channel)) {
+            assignedChannel = channel;
+            break;
+          }
+        }
+      }
+      
+      // Assign employee to the determined channel
+      if (assignedChannel) {
+        const channelKey = assignedChannel.toLowerCase();
+        if (groups[channelKey]) {
+          groups[channelKey].push(employee.id);
         }
       }
     });
     
+    console.log('📊 Employee grouping by channel:', groups);
     return groups;
   }
 

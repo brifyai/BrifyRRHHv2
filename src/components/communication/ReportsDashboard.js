@@ -644,8 +644,8 @@ const ReportsDashboard = () => {
           <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/10 rounded-full"></div>
         </div>
 
-        {/* All Metrics Cards - 8 cajas individuales arriba */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* All Metrics Cards - 10 cajas individuales arriba (incluyendo métricas de control de tasa) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
            <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-all duration-300">
              <div className="absolute inset-0 bg-black/10"></div>
              <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full"></div>
@@ -738,6 +738,43 @@ const ReportsDashboard = () => {
             </div>
           </div>
 
+          {/* Nuevas métricas de control de tasa */}
+          <div className="bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full"></div>
+            <div className="relative z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-amber-100 text-sm font-medium mb-1">Bloques Enviados</p>
+                  <p className="text-3xl font-bold">{reports?.rateLimitMetrics?.totalBatches || 0}</p>
+                  <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
+                  <p className="text-xs text-amber-200 mt-1">Control de tasa</p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-2xl group-hover:bg-white/30 transition-colors duration-300">
+                  <ArrowPathIcon className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-600 to-blue-600 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full"></div>
+            <div className="relative z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-teal-100 text-sm font-medium mb-1">Tiempo Total Envío</p>
+                  <p className="text-3xl font-bold">{reports?.rateLimitMetrics?.totalSendingTime || 0}s</p>
+                  <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
+                  <p className="text-xs text-teal-200 mt-1">Acumulado</p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-2xl group-hover:bg-white/30 transition-colors duration-300">
+                  <ClockIcon className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-all duration-300">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full"></div>
@@ -784,6 +821,24 @@ const ReportsDashboard = () => {
                   <p className="text-3xl font-bold">{reports?.bounceRate || 0}%</p>
                   <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
                   <p className="text-xs text-rose-200 mt-1">Mensajes fallidos</p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-2xl group-hover:bg-white/30 transition-colors duration-300">
+                  <ArrowTrendingUpIcon className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full"></div>
+            <div className="relative z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-violet-100 text-sm font-medium mb-1">Eficiencia Envío</p>
+                  <p className="text-3xl font-bold">{reports?.rateLimitMetrics?.efficiency || 0}%</p>
+                  <div className="w-10 h-1 bg-white/30 rounded-full mt-2"></div>
+                  <p className="text-xs text-violet-200 mt-1">Optimización</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-2xl group-hover:bg-white/30 transition-colors duration-300">
                   <ArrowTrendingUpIcon className="h-6 w-6 text-white" />
@@ -1261,8 +1316,211 @@ const ReportsDashboard = () => {
                 }}
               />
             </div>
+    
+            {/* Rate Limit Analytics Section */}
+            <div className="grid grid-cols-1 gap-8 mb-8">
+              {/* Rate Limit Overview */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-orange-600 to-red-600"></div>
+                <div className="flex items-center mb-6">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-3 rounded-xl mr-4">
+                    <ArrowPathIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Análisis de Control de Tasa</h3>
+                    <p className="text-sm text-gray-600">Métricas detalladas del envío en bloques</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-amber-800 text-sm font-medium">Promedio por Bloque</p>
+                        <p className="text-3xl font-bold text-amber-900">{reports?.rateLimitMetrics?.avgBatchSize || 0}</p>
+                      </div>
+                      <div className="bg-amber-200 p-3 rounded-xl">
+                        <ChatBubbleLeftRightIcon className="h-6 w-6 text-amber-700" />
+                      </div>
+                    </div>
+                    <div className="text-xs text-amber-700">
+                      Mensajes promedio por cada bloque de envío
+                    </div>
+                  </div>
+    
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-blue-800 text-sm font-medium">Tiempo entre Bloques</p>
+                        <p className="text-3xl font-bold text-blue-900">{reports?.rateLimitMetrics?.avgDelayTime || 0}s</p>
+                      </div>
+                      <div className="bg-blue-200 p-3 rounded-xl">
+                        <ClockIcon className="h-6 w-6 text-blue-700" />
+                      </div>
+                    </div>
+                    <div className="text-xs text-blue-700">
+                      Tiempo promedio de espera entre bloques
+                    </div>
+                  </div>
+    
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-green-800 text-sm font-medium">Optimización</p>
+                        <p className="text-3xl font-bold text-green-900">{reports?.rateLimitMetrics?.optimizationRate || 0}%</p>
+                      </div>
+                      <div className="bg-green-200 p-3 rounded-xl">
+                        <ArrowTrendingUpIcon className="h-6 w-6 text-green-700" />
+                      </div>
+                    </div>
+                    <div className="text-xs text-green-700">
+                      Tasa de optimización del control de tasa
+                    </div>
+                  </div>
+                </div>
+              </div>
+    
+              {/* Rate Limit by Channel */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500"></div>
+                <div className="flex items-center mb-6">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-3 rounded-xl mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Control de Tasa por Canal</h3>
+                    <p className="text-sm text-gray-600">Análisis detallado por cada canal de comunicación</p>
+                  </div>
+                </div>
+                <div className="h-80">
+                  <Bar
+                    data={{
+                      labels: ['WhatsApp', 'Telegram', 'SMS', 'Email'],
+                      datasets: [
+                        {
+                          label: 'Mensajes por Bloque',
+                          data: [
+                            reports?.rateLimitMetrics?.byChannel?.whatsapp?.batchSize || 50,
+                            reports?.rateLimitMetrics?.byChannel?.telegram?.batchSize || 30,
+                            reports?.rateLimitMetrics?.byChannel?.sms?.batchSize || 100,
+                            reports?.rateLimitMetrics?.byChannel?.email?.batchSize || 200
+                          ],
+                          backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                          borderColor: 'rgb(34, 197, 94)',
+                          borderWidth: 1,
+                        },
+                        {
+                          label: 'Tiempo entre Bloques (s)',
+                          data: [
+                            reports?.rateLimitMetrics?.byChannel?.whatsapp?.delayTime || 5,
+                            reports?.rateLimitMetrics?.byChannel?.telegram?.delayTime || 3,
+                            reports?.rateLimitMetrics?.byChannel?.sms?.delayTime || 10,
+                            reports?.rateLimitMetrics?.byChannel?.email?.delayTime || 15
+                          ],
+                          backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                          borderColor: 'rgb(59, 130, 246)',
+                          borderWidth: 1,
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                        title: {
+                          display: false,
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                          },
+                        },
+                        x: {
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+    
+              {/* Rate Limit Trends */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500"></div>
+                <div className="flex items-center mb-6">
+                  <div className="bg-gradient-to-r from-cyan-500 to-blue-600 p-3 rounded-xl mr-4">
+                    <ArrowTrendingUpIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Tendencias de Control de Tasa</h3>
+                    <p className="text-sm text-gray-600">Evolución del rendimiento del sistema de control</p>
+                  </div>
+                </div>
+                <div className="h-80">
+                  <Line
+                    data={{
+                      labels: Object.keys(reports?.rateLimitMetrics?.trends || {}).sort(),
+                      datasets: [
+                        {
+                          label: 'Bloques Procesados',
+                          data: Object.keys(reports?.rateLimitMetrics?.trends || {}).sort().map(date =>
+                            reports?.rateLimitMetrics?.trends[date]?.batches || 0
+                          ),
+                          borderColor: 'rgb(251, 146, 60)',
+                          backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                          tension: 0.4,
+                          fill: true,
+                        },
+                        {
+                          label: 'Eficiencia (%)',
+                          data: Object.keys(reports?.rateLimitMetrics?.trends || {}).sort().map(date =>
+                            reports?.rateLimitMetrics?.trends[date]?.efficiency || 0
+                          ),
+                          borderColor: 'rgb(34, 197, 94)',
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          tension: 0.4,
+                          fill: true,
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                        title: {
+                          display: false,
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                          },
+                        },
+                        x: {
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+    
           </div>
-
           {/* Sentiment by Company */}
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-indigo-500"></div>

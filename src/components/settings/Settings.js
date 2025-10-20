@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import googleDriveService from '../../lib/googleDrive'
 import brevoService from '../../services/brevoService'
@@ -29,13 +29,18 @@ import CompanyForm from './CompanyForm'
 import UserManagement from './UserManagement'
 import DatabaseSettings from './DatabaseSettings'
 
-const Settings = ({ activeTab: propActiveTab }) => {
+const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   const { user, userProfile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [editingCompany, setEditingCompany] = useState(null)
+  const [companyId, setCompanyId] = useState(null)
+  
+  // Estado para controlar el sistema de configuración jerárquico
+  const [hierarchyMode, setHierarchyMode] = useState('company_first') // 'global_only', 'company_first', 'both'
   
   // Estados de integraciones
   const [integrations, setIntegrations] = useState({
@@ -48,7 +53,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
     salesforce: { connected: false, status: 'disconnected', lastSync: null },
     brevo: { connected: false, status: 'disconnected', lastSync: null },
     groq: { connected: false, status: 'disconnected', lastSync: null, model: 'gemma2-9b-it' },
-    whatsapp: { connected: false, status: 'disconnected', lastSync: null }
+    whatsapp: { connected: false, status: 'disconnected', lastSync: null },
+    telegram: { connected: false, status: 'disconnected', lastSync: null }
   })
 
   const [activeTab, setActiveTab] = useState(propActiveTab || 'companies')
@@ -126,6 +132,46 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   }, [propActiveTab, activeTab])
 
+  // Extraer companyId de la URL si estamos en modo empresa específica
+  useEffect(() => {
+    if (propCompanyId === true) {
+      // Estamos en modo empresa específica, extraer el ID de la URL
+      const pathParts = location.pathname.split('/')
+      const companyIdFromUrl = pathParts[pathParts.length - 1]
+      if (companyIdFromUrl && companyIdFromUrl !== 'empresas') {
+        setCompanyId(companyIdFromUrl)
+        
+        // Cargar la empresa específica para editar
+        const loadSpecificCompany = async () => {
+          try {
+            const companiesData = await organizedDatabaseService.getCompanies()
+            const specificCompany = companiesData.find(c => c.id === companyIdFromUrl)
+            if (specificCompany) {
+              setEditingCompany(specificCompany)
+              setShowCompanyForm(true)
+            }
+          } catch (error) {
+            console.error('Error loading specific company:', error)
+            toast.error('Error al cargar la empresa especificada')
+          }
+        }
+        
+        if (companies.length === 0) {
+          loadCompanies().then(() => {
+            loadSpecificCompany()
+          })
+        } else {
+          loadSpecificCompany()
+        }
+      } else {
+        // Resetear estados si no hay companyId válido
+        setCompanyId(null)
+        setEditingCompany(null)
+        setShowCompanyForm(false)
+      }
+    }
+  }, [propCompanyId, location.pathname, companies.length])
+
   useEffect(() => {
     // Evitar ejecución múltiple si no hay usuario
     if (!user?.id) return
@@ -147,10 +193,12 @@ const Settings = ({ activeTab: propActiveTab }) => {
           loadActiveSessions(),
           loadSecurityLogs(),
           loadBackupSettings(),
+          loadHierarchyMode(),
           checkGoogleDriveConnection(),
           checkBrevoConfiguration(),
           checkGroqConfiguration(),
-          checkWhatsAppConfiguration()
+          checkWhatsAppConfiguration(),
+          checkTelegramConfiguration()
         ])
       } catch (error) {
         console.error('Error loading settings data:', error)
@@ -193,6 +241,68 @@ const Settings = ({ activeTab: propActiveTab }) => {
       console.error('Error loading notification settings:', error)
     }
   }, [user?.email])
+
+  // Funciones para manejar el modo de jerarquía de configuración
+  const handleHierarchyModeChange = async (newMode) => {
+    try {
+      setHierarchyMode(newMode)
+      
+      // Guardar en localStorage para persistencia
+      localStorage.setItem('hierarchyMode', newMode)
+      
+      // Mostrar mensaje informativo sobre el cambio
+      const modeDescriptions = {
+        global_only: 'Solo se usarán configuraciones globales. Las configuraciones por empresa serán ignoradas.',
+        company_first: 'Se priorizarán configuraciones por empresa. Si no existen, se usarán las globales.',
+        both: 'Se combinarán ambas configuraciones. Las específicas de empresa sobreescribirán las globales.'
+      }
+      
+      toast.success(`Modo de configuración actualizado: ${newMode.replace('_', ' ').toUpperCase()}`)
+      
+      // Mostrar detalles del modo
+      setTimeout(() => {
+        Swal.fire({
+          title: '🔧 Modo de Configuración Actualizado',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #0066ff;">Modo seleccionado:</h4>
+                <p style="margin: 0; font-weight: bold; text-transform: uppercase;">
+                  ${newMode.replace('_', ' ')}
+                </p>
+              </div>
+              <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #333;">Comportamiento:</h4>
+                <p style="margin: 0; font-size: 14px;">
+                  ${modeDescriptions[newMode]}
+                </p>
+              </div>
+            </div>
+          `,
+          icon: 'info',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#0066ff',
+          width: '500px'
+        });
+      }, 500)
+      
+    } catch (error) {
+      console.error('Error changing hierarchy mode:', error)
+      toast.error('Error al cambiar el modo de configuración')
+    }
+  }
+
+  // Cargar configuración de jerarquía desde localStorage
+  const loadHierarchyMode = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('hierarchyMode')
+      if (saved && ['global_only', 'company_first', 'both'].includes(saved)) {
+        setHierarchyMode(saved)
+      }
+    } catch (error) {
+      console.error('Error loading hierarchy mode:', error)
+    }
+  }, [])
 
   // Guardar configuraciones de notificaciones
   const saveNotificationSettings = async (settings) => {
@@ -376,6 +486,23 @@ const Settings = ({ activeTab: propActiveTab }) => {
         status: !!(config.accessToken && config.phoneNumberId) ? 'connected' : 'disconnected',
         lastSync: !!(config.accessToken && config.phoneNumberId) ? new Date().toISOString() : null,
         testMode: config.testMode
+      }
+    }))
+  }, [])
+
+  // Función para verificar configuración de Telegram
+  const checkTelegramConfiguration = useCallback(() => {
+    const botToken = localStorage.getItem('telegram_bot_token');
+    const botUsername = localStorage.getItem('telegram_bot_username');
+    
+    setIntegrations(prev => ({
+      ...prev,
+      telegram: {
+        connected: !!(botToken && botUsername),
+        status: !!(botToken && botUsername) ? 'connected' : 'disconnected',
+        lastSync: !!(botToken && botUsername) ? new Date().toISOString() : null,
+        botToken: botToken,
+        botUsername: botUsername
       }
     }))
   }, [])
@@ -1831,6 +1958,233 @@ const Settings = ({ activeTab: propActiveTab }) => {
     }
   };
 
+  const configureTelegram = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Configurar Telegram Bot',
+      html: `
+        <div style="text-align: left;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Bot Token:</label>
+            <input type="password" id="telegram-bot-token" class="swal2-input" placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Obtén tu token en <a href="https://t.me/BotFather" target="_blank" style="color: #0088cc;">@BotFather</a>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Bot Username:</label>
+            <input type="text" id="telegram-bot-username" class="swal2-input" placeholder="@tu_bot">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              El nombre de usuario de tu bot (con @)
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Chat ID (opcional):</label>
+            <input type="text" id="telegram-chat-id" class="swal2-input" placeholder="123456789">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              ID del chat para enviar mensajes de prueba
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: #666; margin-top: 16px; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <strong style="color: #0088cc;">📋 Instrucciones para obtener Bot Token:</strong><br>
+            1. Ve a <a href="https://t.me/BotFather" target="_blank" style="color: #0088cc;">@BotFather</a> en Telegram<br>
+            2. Envía el comando /newbot<br>
+            3. Sigue las instrucciones para crear tu bot<br>
+            4. Copia el token que te proporciona BotFather
+          </div>
+          
+          <div style="font-size: 12px; color: #666; margin-top: 12px; background-color: #e8f4fd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #0088cc;">🚀 Funcionalidades incluidas:</strong><br>
+            • Envío de mensajes individuales y masivos<br>
+            • Notificaciones automáticas<br>
+            • Integración con sistema de comunicación<br>
+            • Soporte para mensajes formateados<br>
+            • Entrega de archivos y documentos
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const botToken = document.getElementById('telegram-bot-token').value;
+        const botUsername = document.getElementById('telegram-bot-username').value;
+        const chatId = document.getElementById('telegram-chat-id').value;
+
+        if (!botToken) {
+          Swal.showValidationMessage('El Bot Token es obligatorio');
+          return false;
+        }
+
+        if (!botToken.match(/^\d+:[A-Za-z0-9_-]+$/)) {
+          Swal.showValidationMessage('El formato del Bot Token es inválido');
+          return false;
+        }
+
+        if (!botUsername) {
+          Swal.showValidationMessage('El Bot Username es obligatorio');
+          return false;
+        }
+
+        if (!botUsername.startsWith('@')) {
+          Swal.showValidationMessage('El Bot Username debe comenzar con @');
+          return false;
+        }
+
+        return { botToken, botUsername, chatId };
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Conectar y Probar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0088cc',
+      width: '600px'
+    });
+
+    if (formValues) {
+      // Mostrar estado de conexión
+      setIntegrations(prev => ({ ...prev, telegram: { ...prev.telegram, status: 'connecting' } }));
+
+      try {
+        // Guardar configuración en localStorage
+        localStorage.setItem('telegram_bot_token', formValues.botToken);
+        localStorage.setItem('telegram_bot_username', formValues.botUsername);
+        if (formValues.chatId) {
+          localStorage.setItem('telegram_chat_id', formValues.chatId);
+        }
+
+        // Probar conexión con Telegram
+        const testResult = await testTelegramConnection(formValues.botToken, formValues.botUsername);
+
+        if (testResult.success) {
+          // Actualizar estado
+          setIntegrations(prev => ({
+            ...prev,
+            telegram: {
+              connected: true,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              botToken: formValues.botToken,
+              botUsername: formValues.botUsername,
+              chatId: formValues.chatId
+            }
+          }));
+
+          // Mostrar éxito
+          await Swal.fire({
+            title: '🎉 Telegram Configurado Exitosamente',
+            html: `
+              <div style="text-align: left;">
+                <div style="background-color: #d4edda; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #155724;">✅ Conexión exitosa</h4>
+                  <p style="margin: 0; font-size: 14px;">El bot está funcionando correctamente.</p>
+                </div>
+                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Información del bot:</h4>
+                  <p style="margin: 4px 0; font-size: 14px;">
+                    <strong>Nombre:</strong> ${testResult.botInfo?.first_name || 'Configurado'}<br>
+                    <strong>Username:</strong> ${testResult.botInfo?.username || formValues.botUsername}<br>
+                    <strong>Chat ID:</strong> ${formValues.chatId || 'No configurado'}
+                  </p>
+                </div>
+                <div style="background-color: #e8f4fd; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #0088cc;">📊 Funcionalidades activas:</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>✅ Envío de mensajes individuales</li>
+                    <li>✅ Envío masivo de mensajes</li>
+                    <li>✅ Notificaciones automáticas</li>
+                    <li>✅ Integración con sistema de comunicación</li>
+                    <li>✅ Soporte para mensajes formateados</li>
+                  </ul>
+                </div>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '¡Perfecto!',
+            confirmButtonColor: '#0088cc',
+            width: '500px'
+          });
+
+          toast.success('Telegram configurado exitosamente');
+        } else {
+          throw new Error(testResult.error || 'Error al conectar con Telegram');
+        }
+      } catch (error) {
+        console.error('Error configuring Telegram:', error);
+        
+        // Restaurar estado
+        setIntegrations(prev => ({
+          ...prev,
+          telegram: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null
+          }
+        }));
+
+        // Limpiar configuración guardada
+        localStorage.removeItem('telegram_bot_token');
+        localStorage.removeItem('telegram_bot_username');
+        localStorage.removeItem('telegram_chat_id');
+
+        // Mostrar error
+        await Swal.fire({
+          title: '❌ Error de Conexión',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f8d7da; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #721c24;">No se pudo conectar con Telegram</h4>
+                <p style="margin: 0; font-size: 14px;"><strong>Error:</strong> ${error.message}</p>
+              </div>
+              <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">🔍 Posibles soluciones:</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                  <li>• Verifica que el Bot Token sea correcto</li>
+                  <li>• Asegúrate de que el bot esté activo</li>
+                  <li>• Revisa que el username sea correcto</li>
+                  <li>• Verifica tu conexión a internet</li>
+                  <li>• Confirma que el token no haya expirado</li>
+                </ul>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
+        });
+
+        toast.error('Error al configurar Telegram');
+      }
+    }
+  };
+
+  // Función para probar la conexión con Telegram
+  const testTelegramConnection = async (botToken, botUsername) => {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.ok) {
+        return {
+          success: true,
+          botInfo: data.result
+        };
+      } else {
+        throw new Error(data.description || 'Error al conectar con el bot');
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  };
+
   const disconnectIntegration = async (integration) => {
     const integrationNames = {
       google: 'Google Workspace',
@@ -1840,7 +2194,8 @@ const Settings = ({ activeTab: propActiveTab }) => {
       salesforce: 'Salesforce',
       brevo: 'Brevo',
       groq: 'Groq AI',
-      whatsapp: 'WhatsApp'
+      whatsapp: 'WhatsApp',
+      telegram: 'Telegram'
     };
 
     const result = await Swal.fire({
@@ -1874,6 +2229,13 @@ const Settings = ({ activeTab: propActiveTab }) => {
         localStorage.removeItem('whatsapp_phone_number_id');
         localStorage.removeItem('whatsapp_webhook_verify_token');
         localStorage.removeItem('whatsapp_test_mode');
+      }
+
+      // Si es Telegram, limpiar la configuración guardada
+      if (integration === 'telegram') {
+        localStorage.removeItem('telegram_bot_token');
+        localStorage.removeItem('telegram_bot_username');
+        localStorage.removeItem('telegram_chat_id');
       }
 
       setIntegrations(prev => ({
@@ -1981,7 +2343,16 @@ const Settings = ({ activeTab: propActiveTab }) => {
       <CompanyForm
         company={editingCompany}
         onSuccess={handleFormSuccess}
-        onCancel={() => setShowCompanyForm(false)}
+        onCancel={() => {
+          setShowCompanyForm(false)
+          setEditingCompany(null)
+          if (companyId) {
+            // Si estamos en modo empresa específica, redirigir a la lista de empresas
+            navigate('/configuracion/empresas')
+          }
+        }}
+        companyId={companyId}
+        isCompanySpecificMode={!!companyId}
       />
     )
   }
@@ -2188,11 +2559,11 @@ const Settings = ({ activeTab: propActiveTab }) => {
 
                   <div className="flex justify-end space-x-2">
                     <button
-                      onClick={() => handleEditCompany(company)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar empresa"
+                      onClick={() => navigate(`/configuracion/empresas/${company.id}`)}
+                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                      title="Configurar canales de comunicación"
                     >
-                      <PencilIcon className="h-4 w-4" />
+                      <Cog6ToothIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteCompany(company.id)}
@@ -2977,12 +3348,138 @@ const Settings = ({ activeTab: propActiveTab }) => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Integraciones Externas</h2>
-              <p className="text-gray-600 mt-1">Conecta tu sistema con otras plataformas</p>
+              <h2 className="text-xl font-semibold text-gray-900">Integraciones Globales</h2>
+              <p className="text-gray-600 mt-1">Configuraciones por defecto para todas las empresas</p>
             </div>
             <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full">
-              8 integraciones disponibles
+              Configuración global
             </span>
+          </div>
+
+          {/* Información sobre el sistema jerárquico */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-6 border border-blue-100">
+            <div className="flex items-start">
+              <div className="p-2 rounded-lg bg-blue-100 mr-4">
+                <PuzzlePieceIcon className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Sistema de Configuración Jerárquico</h3>
+                <p className="text-gray-600 mb-4">
+                  Las configuraciones aquí establecidas sirven como valores por defecto para todas las empresas.
+                  Cada empresa puede tener sus propias credenciales específicas que sobreescriben estas configuraciones globales.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">🌐 Configuración Global</h4>
+                    <p className="text-sm text-gray-600">
+                      Se usa cuando una empresa no tiene configuración específica. Ideal para startups y empresas pequeñas.
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">🏢 Configuración por Empresa</h4>
+                    <p className="text-sm text-gray-600">
+                      Sobreescribe la configuración global. Perfecta para empresas con múltiples marcas o requisitos específicos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Control de Modo de Jerarquía */}
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-6 border border-purple-100">
+            <div className="flex items-start">
+              <div className="p-2 rounded-lg bg-purple-100 mr-4">
+                <Cog6ToothIcon className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Control de Configuración Jerárquico</h3>
+                <p className="text-gray-600 mb-4">
+                  Selecciona cómo el sistema debe priorizar las configuraciones globales vs. las específicas de cada empresa.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <button
+                    onClick={() => handleHierarchyModeChange('global_only')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                      hierarchyMode === 'global_only'
+                        ? 'border-purple-500 bg-purple-100 shadow-lg'
+                        : 'border-gray-200 bg-white hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className={`text-2xl mb-2 ${hierarchyMode === 'global_only' ? 'text-purple-600' : 'text-gray-400'}`}>
+                        🌐
+                      </div>
+                      <h4 className={`font-semibold mb-1 ${hierarchyMode === 'global_only' ? 'text-purple-900' : 'text-gray-700'}`}>
+                        Solo Global
+                      </h4>
+                      <p className={`text-xs ${hierarchyMode === 'global_only' ? 'text-purple-700' : 'text-gray-500'}`}>
+                        Usa solo configuraciones globales
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleHierarchyModeChange('company_first')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                      hierarchyMode === 'company_first'
+                        ? 'border-purple-500 bg-purple-100 shadow-lg'
+                        : 'border-gray-200 bg-white hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className={`text-2xl mb-2 ${hierarchyMode === 'company_first' ? 'text-purple-600' : 'text-gray-400'}`}>
+                        🏢➡️🌐
+                      </div>
+                      <h4 className={`font-semibold mb-1 ${hierarchyMode === 'company_first' ? 'text-purple-900' : 'text-gray-700'}`}>
+                        Empresa Primero
+                      </h4>
+                      <p className={`text-xs ${hierarchyMode === 'company_first' ? 'text-purple-700' : 'text-gray-500'}`}>
+                        Prioriza config. por empresa
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleHierarchyModeChange('both')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                      hierarchyMode === 'both'
+                        ? 'border-purple-500 bg-purple-100 shadow-lg'
+                        : 'border-gray-200 bg-white hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className={`text-2xl mb-2 ${hierarchyMode === 'both' ? 'text-purple-600' : 'text-gray-400'}`}>
+                        🔄
+                      </div>
+                      <h4 className={`font-semibold mb-1 ${hierarchyMode === 'both' ? 'text-purple-900' : 'text-gray-700'}`}>
+                        Ambas
+                      </h4>
+                      <p className={`text-xs ${hierarchyMode === 'both' ? 'text-purple-700' : 'text-gray-500'}`}>
+                        Combina ambas configuraciones
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Modo Actual:</h4>
+                      <p className="text-sm text-gray-600">
+                        {hierarchyMode === 'global_only' && 'Solo se usarán configuraciones globales. Las configuraciones por empresa serán ignoradas.'}
+                        {hierarchyMode === 'company_first' && 'Se priorizarán configuraciones por empresa. Si no existen, se usarán las globales.'}
+                        {hierarchyMode === 'both' && 'Se combinarán ambas configuraciones. Las específicas de empresa sobreescribirán las globales.'}
+                      </p>
+                    </div>
+                    <div className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
+                      {hierarchyMode.replace('_', ' ').toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -3567,6 +4064,344 @@ const Settings = ({ activeTab: propActiveTab }) => {
                   className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {integrations.groq.status === 'connecting' ? 'Conectando...' : 'Configurar Groq AI'}
+                </button>
+              )}
+            </div>
+
+            {/* WhatsApp Business API - Configuración Principal */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">WhatsApp Business</h3>
+                    <p className="text-sm text-gray-600">API de mensajería</p>
+                  </div>
+                </div>
+                {getStatusBadge('whatsapp')}
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Configura la API de WhatsApp Business para enviar mensajes automáticos y notificaciones.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  {integrations.whatsapp.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.whatsapp.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                  {integrations.whatsapp.testMode && (
+                    <div className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full inline-block">
+                      🧪 Modo prueba activo
+                    </div>
+                  )}
+                </div>
+
+                {integrations.whatsapp.connected && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-green-800">WhatsApp configurado</span>
+                    </div>
+                    <div className="text-xs text-green-600">
+                      <p>• API de WhatsApp conectada</p>
+                      <p>• Envío de mensajes activo</p>
+                      <p>• Webhooks configurados</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {integrations.whatsapp.connected ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: '📱 Información de WhatsApp',
+                        html: `
+                          <div style="text-align: left;">
+                            <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                              <h4 style="margin: 0 0 8px 0; color: #25d366;">Funcionalidades Activas</h4>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                                <li>✅ Envío de mensajes individuales</li>
+                                <li>✅ Envío masivo de mensajes</li>
+                                <li>✅ Plantillas pre-aprobadas</li>
+                                <li>✅ Webhooks en tiempo real</li>
+                                <li>✅ Estadísticas de uso</li>
+                                <li>✅ Modo prueba ${integrations.whatsapp.testMode ? 'activado' : 'desactivado'}</li>
+                              </ul>
+                            </div>
+                            <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                              <h4 style="margin: 0 0 8px 0; color: #333;">Configuración</h4>
+                              <p style="margin: 4px 0; font-size: 14px;">
+                                <strong>Estado:</strong> <span style="color: #28a745;">Conectado</span><br>
+                                <strong>Modo:</strong> ${integrations.whatsapp.testMode ? 'Prueba 🧪' : 'Producción 🚀'}<br>
+                                <strong>Última sincronización:</strong> ${new Date(integrations.whatsapp.lastSync).toLocaleString('es-ES')}
+                              </p>
+                            </div>
+                          </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#25d366',
+                        width: '500px'
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    ℹ️ Ver Información
+                  </button>
+                  <button
+                    onClick={() => disconnectIntegration('whatsapp')}
+                    className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Desconectar WhatsApp
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={configureWhatsApp}
+                  disabled={integrations.whatsapp.status === 'connecting'}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {integrations.whatsapp.status === 'connecting' ? 'Conectando...' : 'Configurar WhatsApp'}
+                </button>
+              )}
+            </div>
+
+            {/* Asistente de Configuración Inicial de WhatsApp */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Asistente de Configuración Inicial</h3>
+                    <p className="text-sm text-gray-600">Configuración guiada</p>
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Guía paso a paso</span>
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Asistente interactivo que te guía paso a paso en la configuración inicial de WhatsApp Business API.
+                </p>
+
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-2 font-semibold">1</div>
+                    <span>Obtén tus credenciales de Meta</span>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-2 font-semibold">2</div>
+                    <span>Configura tu número de teléfono</span>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-2 font-semibold">3</div>
+                    <span>Personaliza plantillas de mensaje</span>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-2 font-semibold">4</div>
+                    <span>Prueba el funcionamiento</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-start">
+                    <div className="p-1 rounded bg-blue-100 mr-2">
+                      <ChatBubbleLeftRightIcon className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800 mb-1">Ideal para:</h4>
+                      <ul className="text-xs text-blue-600 space-y-1">
+                        <li>• Primeros usuarios de WhatsApp API</li>
+                        <li>• Configuración sin experiencia técnica</li>
+                        <li>• Empresas que recién inician con WhatsApp</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                to="/whatsapp/setup"
+                className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center"
+              >
+                🚀 Iniciar Configuración Guiada
+              </Link>
+            </div>
+
+            {/* Panel de Gestión Avanzada de WhatsApp */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Panel de Gestión Avanzada</h3>
+                    <p className="text-sm text-gray-600">Multi-agencia</p>
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">Avanzado</span>
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Gestiona múltiples cuentas de WhatsApp, agencias y configuraciones avanzadas desde un panel centralizado.
+                </p>
+
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-2 font-semibold">✓</div>
+                    <span>Gestión multi-agencia</span>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-2 font-semibold">✓</div>
+                    <span>Configuraciones avanzadas</span>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-2 font-semibold">✓</div>
+                    <span>Estadísticas detalladas</span>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-2 font-semibold">✓</div>
+                    <span>Control de acceso por roles</span>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                  <div className="flex items-start">
+                    <div className="p-1 rounded bg-purple-100 mr-2">
+                      <ChatBubbleLeftRightIcon className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-purple-800 mb-1">Ideal para:</h4>
+                      <ul className="text-xs text-purple-600 space-y-1">
+                        <li>• Agencias de marketing digital</li>
+                        <li>• Empresas con múltiples marcas</li>
+                        <li>• Usuarios con experiencia técnica</li>
+                        <li>• Gestión de clientes a gran escala</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                to="/whatsapp/multi-manager"
+                className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center"
+              >
+                ⚙️ Acceder Panel Avanzado
+              </Link>
+            </div>
+
+            {/* Telegram Bot */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Telegram Bot</h3>
+                    <p className="text-sm text-gray-600">Mensajería instantánea</p>
+                  </div>
+                </div>
+                {getStatusBadge('telegram')}
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Configura un bot de Telegram para enviar mensajes automáticos y notificaciones a tus usuarios.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  {integrations.telegram.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.telegram.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                  {integrations.telegram.botUsername && (
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
+                      Bot: {integrations.telegram.botUsername}
+                    </div>
+                  )}
+                </div>
+
+                {integrations.telegram.connected && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-green-800">Telegram configurado</span>
+                    </div>
+                    <div className="text-xs text-green-600">
+                      <p>• Bot de Telegram conectado</p>
+                      <p>• Envío de mensajes activo</p>
+                      <p>• Notificaciones automáticas listas</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {integrations.telegram.connected ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: '📱 Información de Telegram',
+                        html: `
+                          <div style="text-align: left;">
+                            <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                              <h4 style="margin: 0 0 8px 0; color: #0088cc;">Funcionalidades Activas</h4>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                                <li>✅ Envío de mensajes individuales</li>
+                                <li>✅ Envío masivo de mensajes</li>
+                                <li>✅ Notificaciones automáticas</li>
+                                <li>✅ Integración con sistema de comunicación</li>
+                                <li>✅ Soporte para mensajes formateados</li>
+                              </ul>
+                            </div>
+                            <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                              <h4 style="margin: 0 0 8px 0; color: #333;">Configuración</h4>
+                              <p style="margin: 4px 0; font-size: 14px;">
+                                <strong>Estado:</strong> <span style="color: #28a745;">Conectado</span><br>
+                                <strong>Bot Username:</strong> ${integrations.telegram.botUsername}<br>
+                                <strong>Última sincronización:</strong> ${new Date(integrations.telegram.lastSync).toLocaleString('es-ES')}
+                              </p>
+                            </div>
+                          </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#0088cc',
+                        width: '500px'
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    ℹ️ Ver Información
+                  </button>
+                  <button
+                    onClick={() => disconnectIntegration('telegram')}
+                    className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Desconectar Telegram
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={configureTelegram}
+                  disabled={integrations.telegram.status === 'connecting'}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {integrations.telegram.status === 'connecting' ? 'Conectando...' : 'Configurar Telegram'}
                 </button>
               )}
             </div>

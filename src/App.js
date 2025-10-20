@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext.js'
+import CacheCleanup from './components/CacheCleanup.js'
 
 // Componentes
 import ForgotPassword from './components/auth/ForgotPassword.js'
@@ -88,6 +89,7 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="App">
+            <CacheCleanup />
             <Toaster
             position="top-right"
             toastOptions={{
@@ -229,6 +231,16 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <Settings activeTab="companies" />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion/empresas/:companyId"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <Settings activeTab="companies" companyId={true} />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
