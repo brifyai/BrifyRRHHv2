@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { BuildingOfficeIcon, UserIcon, FunnelIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
+import { UserIcon, FunnelIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import organizedDatabaseService from '../../services/organizedDatabaseService';
+import {
+  getSimulatedWhatsApp,
+  getSimulatedTelegram,
+  getSimulatedSMS,
+  getSimulatedMailing
+} from '../../utils/communicationUtils.js';
 
 const MySwal = withReactContent(Swal);
 
@@ -490,7 +496,16 @@ const EmployeeSelector = () => {
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Teléfono
+                    WhatsApp
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Telegram
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SMS
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Mailing
                   </th>
                 </tr>
               </thead>
@@ -532,7 +547,7 @@ const EmployeeSelector = () => {
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 bg-gray-100 px-3 py-1 rounded-full inline-block">
-                        {employee.company?.name || 'N/A'}
+                        {employee.companies?.name || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
@@ -541,16 +556,59 @@ const EmployeeSelector = () => {
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium">{employee.email || 'Sin email'}</div>
-                      <div className="text-xs text-gray-500">{employee.phone || 'Sin teléfono'}</div>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${employee.email ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <div className="text-sm text-gray-900 font-medium">{employee.email || 'Sin email'}</div>
+                        {employee.email && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Activo</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">{employee.phone || 'Sin teléfono'}</div>
-                        {selectedEmployees.has(employee.id) && (
-                          <div className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                            ✓ Seleccionado
-                          </div>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${getSimulatedWhatsApp(employee).enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <div className="text-sm text-gray-900">{getSimulatedWhatsApp(employee).phone}</div>
+                        {getSimulatedWhatsApp(employee).enabled && (
+                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                          </svg>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${getSimulatedTelegram(employee).enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <div className="text-sm text-gray-900">
+                          {getSimulatedTelegram(employee).username}
+                        </div>
+                        {getSimulatedTelegram(employee).enabled && (
+                          <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
+                          </svg>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${getSimulatedSMS(employee).enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <div className="text-sm text-gray-900">{getSimulatedSMS(employee).phone}</div>
+                        {getSimulatedSMS(employee).enabled && (
+                          <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${getSimulatedMailing(employee).enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <div className="text-sm text-gray-900">
+                          {getSimulatedMailing(employee).status}
+                        </div>
+                        {getSimulatedMailing(employee).enabled && (
+                          <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
                         )}
                       </div>
                     </td>

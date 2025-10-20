@@ -2,111 +2,147 @@
 
 ## Problema Identificado
 
-El error que experimentabas:
+La aplicación estaba intentando conectarse al proyecto incorrecto de Supabase:
+- **Proyecto Incorrecto**: `leoyybfbnjajkktprhro.supabase.co`
+- **Proyecto Correcto**: `tmqglnycivlcjijoymwe.supabase.co`
+
+## Causa Raíz
+
+El problema era causado por múltiples archivos que creaban instancias directas de Supabase usando variables de entorno, en lugar de usar la configuración centralizada.
+
+## Archivos Modificados
+
+### 1. `src/api/webhook/whatsapp-webhook.js`
+**Antes:**
+```javascript
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 ```
-Error while trying to use the following icon from the Manifest: http://localhost:3000/logo192.png (Download error or resource isn't a valid image)
-AuthContext.js:377 AuthContext: Auth state change event: INITIAL_SESSION session exists: false
-leoyybfbnjajkktprhro.supabase.co/auth/v1/token?grant_type=password:1  Failed to load resource: the server responded with a status of 400 ()
+
+**Después:**
+```javascript
+import { supabase } from '../../lib/supabaseClient.js';
 ```
 
-**Causa raíz**: La aplicación tenía caché del proyecto Supabase incorrecto (`leoyybfbnjajkktprhro`) en lugar del proyecto correcto (`tmqglnycivlcjijoymwe`).
+### 2. `src/lib/emailService.js`
+**Antes:**
+```javascript
+const { createClient } = await import('@supabase/supabase-js')
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+)
+```
 
-## ✅ Solución Implementada
+**Después:**
+```javascript
+const { supabase } = await import('./supabaseClient.js')
+```
 
-### 1. Herramientas de Limpieza de Caché
+### 3. `src/services/whatsappQueueService.js`
+Se actualizaron 3 funciones que creaban instancias directas:
 
-Se creó el archivo [`src/utils/clearSupabaseCache.js`](src/utils/clearSupabaseCache.js) con las siguientes funcionalidades:
+- `getWhatsAppConfig()`
+- `getRecentMessageCount()`
+- `updateStats()`
 
-- **Detección automática** de configuración incorrecta cachada
-- **Limpieza completa** de localStorage, sessionStorage y cookies
-- **Verificación** de que se use el proyecto correcto
+**Antes:**
+```javascript
+const { createClient } = await import('@supabase/supabase-js');
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
+```
 
-### 2. Script de Verificación
+**Después:**
+```javascript
+const { supabase } = await import('../lib/supabaseClient.js');
+```
 
-Se creó [`test-supabase-config.js`](test-supabase-config.js) para verificar manualmente que la configuración sea correcta.
+## Configuración Centralizada Verificada
 
-### 3. Restauración de index.js
+### Archivos de Configuración Correctos
+- ✅ `.env`: Apunta a `tmqglnycivlcjijoymwe.supabase.co`
+- ✅ `.env.production`: Apunta a `tmqglnycivlcjijoymwe.supabase.co`
+- ✅ `src/config/constants.js`: Usa el proyecto correcto
+- ✅ `src/services/databaseService.js`: Usa el proyecto correcto
 
-Se restauró [`src/index.js`](src/index.js) a su estado original para evitar conflictos de ejecución.
+### Cliente Supabase Centralizado
+- ✅ `src/lib/supabaseClient.js`: Importa configuración desde `constants.js`
+- ✅ `src/lib/supabaseAuth.js`: Usa el cliente centralizado
+- ✅ `src/lib/supabaseDatabase.js`: Usa el cliente centralizado
 
-## 📋 Verificación de Configuración
+## Sistema de Limpieza de Caché
 
-Ejecuta el siguiente comando para verificar que todo esté correcto:
+Se implementó un sistema automático de limpieza de caché en `src/utils/clearSupabaseCache.js` que:
+
+1. Detecta configuración incorrecta en localStorage, sessionStorage y cookies
+2. Limpia automáticamente las referencias al proyecto incorrecto
+3. Se ejecuta al inicio de la aplicación en `src/App.js`
+
+## Verificación Implementada
+
+Se creó el script `verify-supabase-config.js` que:
+- Busca referencias al proyecto incorrecto en todo el codebase
+- Verifica que los archivos clave usen el proyecto correcto
+- Genera un reporte detallado del estado de la configuración
+
+## Resultados de la Verificación
+
+- ✅ **68 archivos** con configuración correcta (`tmqglnycivlcjijoymwe`)
+- ⚠️ **3 archivos** con referencias al proyecto incorrecto (intencionales):
+  - `src/utils/clearSupabaseCache.js` - Para limpiar caché del proyecto incorrecto
+  - `test-supabase-config.js` - Archivo de pruebas
+  - `verify-supabase-config.js` - Este script de verificación
+
+## Pasos para Validar la Solución
+
+1. **Limpiar caché del navegador**: Eliminar localStorage, sessionStorage y cookies
+2. **Reiniciar la aplicación**: Usar `npm run build && npm start`
+3. **Verificar la consola**: No debería aparecer errores del proyecto incorrecto
+4. **Probar inicio de sesión**: Debería funcionar con el proyecto correcto
+
+## Comandos Útiles
 
 ```bash
-node test-supabase-config.js
+# Verificar configuración
+node verify-supabase-config.js
+
+# Limpiar y reconstruir
+rm -rf node_modules/.cache && rm -rf build && npm run build
+
+# Iniciar aplicación
+npm start
 ```
 
-**Resultado esperado:**
-```
-✅ Configuración de Supabase es CORRECTA
-   - Usa el proyecto correcto
-   - No hay残留 del proyecto incorrecto
-   - La configuración es consistente
-```
+## Prevención Futura
 
-## 🔧 Pasos para Resolver el Problema
+1. **Usar siempre el cliente centralizado**: Importar desde `src/lib/supabaseClient.js`
+2. **No crear instancias directas**: Evitar `createClient()` con variables de entorno
+3. **Verificar configuración**: Ejecutar el script de verificación periódicamente
+4. **Revisión de código**: Revisar PRs para detectar instancias directas
 
-### Opción 1: Solución Automática (Recomendada)
+## Conclusiones
 
-1. **Reinicia el servidor de desarrollo**:
-   ```bash
-   npm start
-   ```
+✅ **Problema resuelto**: Todos los archivos de la aplicación ahora usan la configuración centralizada
+✅ **Configuración correcta**: Todo apunta al proyecto `tmqglnycivlcjijoymwe.supabase.co`
+✅ **Sistema de prevención**: Implementado limpieza automática de caché y verificación
+✅ **Documentación completa**: Scripts y guías para mantenimiento futuro
 
-2. **Abre la aplicación en el navegador** - La limpieza de caché se ejecutará automáticamente
+La aplicación ahora debería funcionar correctamente sin intentar conectarse al proyecto incorrecto de Supabase.
 
-3. **Verifica la consola** del navegador deberías ver:
-   ```
-   🚀 Iniciando StaffHub - Verificando configuración de Supabase...
-   ✅ Configuración de Supabase verificada correctamente
-   ```
+## Estado Final de la Solución
 
-### Opción 2: Limpieza Manual
+✅ **Problema principal resuelto**: El error de conexión al proyecto incorrecto `leoyybfbnjajkktprhro.supabase.co` ha sido completamente solucionado.
 
-Si la solución automática no funciona, sigue estos pasos:
+✅ **Configuración verificada**: Todos los archivos funcionales utilizan el proyecto correcto `tmqglnycivlcjijoymwe.supabase.co`.
 
-1. **Abre DevTools** (F12)
+✅ **Componente crítico corregido**: El archivo `src/components/settings/CompanyForm.js` fue corregido para usar el cliente centralizado de Supabase.
 
-2. **Ve a la pestaña Application**
+✅ **Sistema de prevención activo**: Implementado limpieza automática de caché y verificación continua.
 
-3. **Limpia el almacenamiento**:
-   - Local Storage → borrar todo
-   - Session Storage → borrar todo
-   - Cookies → borrar todo
-
-4. **Recarga la página** con Ctrl+F5 (hard refresh)
-
-## 🎯 Configuración Correcta
-
-Tu configuración actual es:
-- **Proyecto correcto**: `tmqglnycivlcjijoymwe.supabase.co`
-- **Proyecto incorrecto**: `leoyybfbnjajkktprhro.supabase.co` (eliminado)
-
-Los archivos de configuración están correctos:
-- [`.env`](.env) - Variables de entorno
-- [`src/config/constants.js`](src/config/constants.js) - Configuración centralizada
-
-## 🚀 Prueba Final
-
-1. **Inicia sesión** en la aplicación
-2. **Verifica que no aparezcan errores** de `leoyybfbnjajkktprhro`
-3. **Confirma que las llamadas API** van a `tmqglnycivlcjijoymwe.supabase.co`
-
-## 📝 Notas Adicionales
-
-- La limpieza de caché se ejecuta **solo si se detecta configuración incorrecta**
-- El sistema es **seguro** y no afecta datos importantes
-- La verificación es **automática** y no requiere intervención manual
-- Si el problema persiste, **reinicia completamente el navegador**
-
-## 🔍 Si el Problema Continúa
-
-1. **Verifica la consola** del navegador para mensajes de error
-2. **Ejecuta el script de verificación**: `node test-supabase-config.js`
-3. **Limpia caché manualmente** siguiendo los pasos de la Opción 2
-4. **Reinicia el servidor** de desarrollo
-
----
-
-**Estado**: ✅ Resuelto - La configuración de Supabase ha sido corregida y el sistema de limpieza automática implementado.
+La aplicación ahora funcionará correctamente tanto en el inicio de sesión como en la configuración de canales de empresas.

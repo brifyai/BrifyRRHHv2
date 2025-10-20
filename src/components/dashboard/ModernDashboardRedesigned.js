@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-hot-toast'
 import DatabaseCompanySummary from './DatabaseCompanySummary'
+import AnalyticsDashboard from '../analytics/AnalyticsDashboard'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
 import companySyncService from '../../services/companySyncService'
 import {
@@ -14,7 +15,9 @@ import {
   HomeIcon,
   ChartBarIcon,
   UsersIcon,
-  ClockIcon
+  ClockIcon,
+  SparklesIcon,
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline'
 
 const ModernDashboardRedesigned = () => {
@@ -35,6 +38,7 @@ const ModernDashboardRedesigned = () => {
   const [activeNotifications] = useState(3)
   const [selectedMetric, setSelectedMetric] = useState(null)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -846,20 +850,102 @@ const ModernDashboardRedesigned = () => {
           </motion.div>
         </motion.div>
 
-        {/* Resumen Empresarial */}
+        {/* Tabs de Navegación */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          whileHover={{
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-          }}
-          className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50"
+          className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-gray-200/50 mb-8"
         >
-          <div className="mb-6">
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                activeTab === 'overview'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <HomeIcon className="w-5 h-5" />
+              <span>Resumen General</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                activeTab === 'analytics'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/25'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <SparklesIcon className="w-5 h-5" />
+              <span>Analytics & Insights</span>
+            </button>
           </div>
-          <DatabaseCompanySummary />
         </motion.div>
+
+        {/* Contenido Dinámico según Tab */}
+        {activeTab === 'overview' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            whileHover={{
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+            }}
+            className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50"
+          >
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Resumen Empresarial</h2>
+              <p className="text-gray-600">Vista general de tu actividad y rendimiento</p>
+            </div>
+            <DatabaseCompanySummary />
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="space-y-6"
+          >
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-white">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <SparklesIcon className="w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold">Analytics & Insights</h2>
+                  <p className="text-purple-100 mt-1">Análisis avanzado con IA y métricas en tiempo real</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <ArrowTrendingUpIcon className="w-5 h-5" />
+                    <span className="font-semibold">IA Powered</span>
+                  </div>
+                  <p className="text-sm text-purple-100">Insights generados por Groq AI para análisis predictivo</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <ChartBarIcon className="w-5 h-5" />
+                    <span className="font-semibold">Tiempo Real</span>
+                  </div>
+                  <p className="text-sm text-purple-100">Métricas actualizadas cada 30 segundos</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <UsersIcon className="w-5 h-5" />
+                    <span className="font-semibold">Multi-Empresa</span>
+                  </div>
+                  <p className="text-sm text-purple-100">Análisis comparativos entre empresas</p>
+                </div>
+              </div>
+            </div>
+            
+            <AnalyticsDashboard />
+          </motion.div>
+        )}
       </div>
     </div>
   )

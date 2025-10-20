@@ -13,11 +13,7 @@ class EmailService {
   // Obtener tokens almacenados desde Supabase para un usuario específico
   async getStoredTokens(userId = null) {
     try {
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.REACT_APP_SUPABASE_URL,
-        process.env.REACT_APP_SUPABASE_ANON_KEY
-      )
+      const { supabase } = await import('./supabaseClient.js')
       
       // Si no se proporciona userId, intentar obtener el usuario actual
       if (!userId) {

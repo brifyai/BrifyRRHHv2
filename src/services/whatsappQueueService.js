@@ -271,11 +271,7 @@ class WhatsAppQueueService {
    */
   async getWhatsAppConfig(companyId) {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.REACT_APP_SUPABASE_URL,
-        process.env.REACT_APP_SUPABASE_ANON_KEY
-      );
+      const { supabase } = await import('../lib/supabaseClient.js');
 
       const { data, error } = await supabase
         .from('whatsapp_configs')
@@ -300,11 +296,7 @@ class WhatsAppQueueService {
    */
   async getRecentMessageCount(configId, seconds) {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.REACT_APP_SUPABASE_URL,
-        process.env.REACT_APP_SUPABASE_ANON_KEY
-      );
+      const { supabase } = await import('../lib/supabaseClient.js');
 
       const since = new Date(Date.now() - seconds * 1000).toISOString();
 
@@ -330,11 +322,7 @@ class WhatsAppQueueService {
    */
   async updateStats(configId, results) {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.REACT_APP_SUPABASE_URL,
-        process.env.REACT_APP_SUPABASE_ANON_KEY
-      );
+      const { supabase } = await import('../lib/supabaseClient.js');
 
       const successful = results.filter(r => r.success).length;
       const failed = results.length - successful;

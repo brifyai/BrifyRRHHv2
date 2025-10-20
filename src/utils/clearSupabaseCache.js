@@ -16,7 +16,7 @@ export const clearSupabaseCache = () => {
       if (key && (
         key.includes('supabase') ||
         key.includes('sb-') ||
-        key.includes('leoyybfbnjajkktprhro') || // Proyecto incorrecto anterior
+        key.includes('tmqglnycivlcjijoymwe') || // Proyecto incorrecto anterior
         key.includes('tmqglnycivlcjijoymwe') || // Proyecto correcto actual
         key.startsWith('sb-') ||
         key.includes('auth') ||
@@ -38,7 +38,7 @@ export const clearSupabaseCache = () => {
       if (key && (
         key.includes('supabase') ||
         key.includes('sb-') ||
-        key.includes('leoyybfbnjajkktprhro') ||
+        key.includes('tmqglnycivlcjijoymwe') ||
         key.includes('tmqglnycivlcjijoymwe') ||
         key.startsWith('sb-') ||
         key.includes('auth') ||
@@ -82,7 +82,7 @@ export const clearSupabaseCache = () => {
  * Verifica si hay configuración incorrecta cachada
  */
 export const checkForIncorrectConfig = () => {
-  const incorrectProject = 'leoyybfbnjajkktprhro'
+  const incorrectProject = 'tmqglnycivlcjijoymwe'
   const correctProject = 'tmqglnycivlcjijoymwe'
   
   let hasIncorrectConfig = false

@@ -1,9 +1,9 @@
 /**
  * Servicio Multi-WhatsApp para Agencias
- * 
+ *
  * Este servicio permite gestionar múltiples números de WhatsApp,
  * uno por cada empresa/cliente. Ideal para agencias de comunicación.
- * 
+ *
  * Características principales:
  * - Múltiples números de WhatsApp por empresa
  * - Selección automática de número por empresa
@@ -11,9 +11,11 @@
  * - Estadísticas por empresa y por número
  * - Plantillas por empresa
  * - Logs detallados de uso
+ * - Cumplimiento con políticas de WhatsApp Business 2024-2025
  */
 
 import { supabase } from '../lib/supabase.js';
+import whatsappComplianceService from './whatsappComplianceService.js';
 
 class MultiWhatsAppService {
   constructor() {

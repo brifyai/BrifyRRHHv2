@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext.js'
 import CacheCleanup from './components/CacheCleanup.js'
+import { ensureCorrectSupabaseConfig } from './utils/clearSupabaseCache.js'
+// Importar el interceptor forzado para asegurar el uso del proyecto correcto
+import './lib/forcedSupabaseClient.js'
 
 // Componentes
 import ForgotPassword from './components/auth/ForgotPassword.js'
@@ -48,6 +51,15 @@ import WhatsAppOnboarding from './components/whatsapp/WhatsAppOnboarding.js'
 // Gestor multi-WhatsApp para agencias (solo para usuarios avanzados)
 import MultiWhatsAppManager from './components/whatsapp/MultiWhatsAppManager.js'
 
+
+// Limpiar configuración incorrecta de Supabase al iniciar la aplicación
+console.log('🔍 Verificando configuración de Supabase al iniciar...')
+const configCheck = ensureCorrectSupabaseConfig()
+if (configCheck.success) {
+  console.log('✅ Configuración de Supabase verificada correctamente')
+} else {
+  console.warn('⚠️ Hubo problemas al verificar la configuración de Supabase:', configCheck)
+}
 
 // Componente para rutas protegidas
 const ProtectedRoute = ({ children }) => {

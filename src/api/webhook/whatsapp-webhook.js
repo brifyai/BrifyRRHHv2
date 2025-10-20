@@ -5,12 +5,7 @@
  * actualizaciones de estado y otros eventos de WhatsApp.
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-// Inicializar Supabase
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../../lib/supabaseClient.js';
 
 /**
  * Verifica el webhook con Meta
