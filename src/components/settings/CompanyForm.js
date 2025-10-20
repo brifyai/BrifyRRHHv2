@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../lib/supabaseClient.js'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
 import {
   BuildingOfficeIcon,
@@ -110,6 +110,9 @@ const CompanyForm = ({ company, onSuccess, onCancel, companyId, isCompanySpecifi
   const [employeesPerPage] = useState(10)
   const [fallbackOrder, setFallbackOrder] = useState(['WhatsApp', 'Telegram', 'SMS', 'Email'])
   const [activeChannelTab, setActiveChannelTab] = useState('email')
+  
+  // Estado para manejar debounce de guardado automático
+  const [debounceTimers, setDebounceTimers] = useState({})
 
   useEffect(() => {
     if (company) {
@@ -335,11 +338,26 @@ const CompanyForm = ({ company, onSuccess, onCancel, companyId, isCompanySpecifi
 
       if (error) {
         console.error(`Error guardando ${channelType}:`, error)
+        // Mostrar error sutil sin cerrar la página
+        toast.error(`Error al guardar ${channelType}: ${error.message}`, {
+          duration: 3000,
+          position: 'bottom-right'
+        })
       } else {
         console.log(`Configuración ${channelType} guardada automáticamente`)
+        // Mostrar éxito sutil
+        toast.success(`${channelType} guardado automáticamente`, {
+          duration: 2000,
+          position: 'bottom-right'
+        })
       }
     } catch (error) {
       console.error(`Error en guardado automático de ${channelType}:`, error)
+      // Mostrar error sin cerrar la página
+      toast.error(`Error inesperado guardando ${channelType}`, {
+        duration: 3000,
+        position: 'bottom-right'
+      })
     }
   }
 
@@ -350,19 +368,39 @@ const CompanyForm = ({ company, onSuccess, onCancel, companyId, isCompanySpecifi
     // Extraer el tipo de canal del nombre del campo
     const channelType = field.split('_')[0]
     
-    // Obtener todos los datos del canal actual
-    const channelData = {}
-    Object.keys(formData).forEach(key => {
-      if (key.startsWith(`${channelType}_`)) {
-        channelData[key] = formData[key]
-      }
-    })
-    channelData[field] = value
+    // Cancelar el timer existente para este canal
+    if (debounceTimers[channelType]) {
+      clearTimeout(debounceTimers[channelType])
+    }
     
-    // Guardar automáticamente después de un breve delay
-    setTimeout(() => {
-      saveChannelConfig(channelType, channelData)
-    }, 500)
+    // Crear un nuevo timer para guardar después de 1.5 segundos
+    const newTimer = setTimeout(() => {
+      // Obtener todos los datos del canal actual
+      const channelData = {}
+      Object.keys(formData).forEach(key => {
+        if (key.startsWith(`${channelType}_`)) {
+          channelData[key] = formData[key]
+        }
+      })
+      
+      // Guardar automáticamente solo si estamos en modo específico
+      if (isCompanySpecificMode && company?.id) {
+        saveChannelConfig(channelType, channelData)
+      }
+      
+      // Limpiar el timer después de ejecutar
+      setDebounceTimers(prev => {
+        const newTimers = { ...prev };
+        delete newTimers[channelType];
+        return newTimers;
+      })
+    }, 1500) // Aumentado a 1.5 segundos para evitar guardados frecuentes
+    
+    // Guardar el nuevo timer
+    setDebounceTimers(prev => ({
+      ...prev,
+      [channelType]: newTimer
+    }))
   }
 
   const handleSubmit = async (e) => {
@@ -467,7 +505,8 @@ const CompanyForm = ({ company, onSuccess, onCancel, companyId, isCompanySpecifi
         }
 
         toast.success('Configuración de canales guardada exitosamente')
-        onSuccess()
+        // En modo específico, no llamar a onSuccess() para evitar redirección infinita
+        // El usuario permanece en la página de configuración
         return
       }
 
@@ -685,7 +724,19 @@ const CompanyForm = ({ company, onSuccess, onCancel, companyId, isCompanySpecifi
         hint: error.hint,
         code: error.code
       })
-      toast.error(`Error al guardar: ${error.message || 'Error desconocido'}`)
+      
+      // Mostrar error detallado pero sin cerrar la página
+      const errorMessage = error.message || 'Error desconocido'
+      toast.error(`Error al guardar: ${errorMessage}`, {
+        duration: 5000,
+        position: 'top-center'
+      })
+      
+      // En modo específico, no cerrar la página incluso si hay error
+      if (isCompanySpecificMode) {
+        console.log('Error en modo específico, manteniendo la página abierta')
+        return
+      }
     } finally {
       setLoading(false)
     }
