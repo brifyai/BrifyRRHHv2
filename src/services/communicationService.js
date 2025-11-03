@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase.js';
 import inMemoryEmployeeService from './inMemoryEmployeeService.js';
 import whatsappService from './whatsappService.js';
+import whatsappOfficialService from './whatsappOfficialService.js';
+import whatsappWahaService from './whatsappWahaService.js';
 import multiWhatsAppService from './multiWhatsAppService.js';
 import companyChannelCredentialsService from './companyChannelCredentialsService.js';
 
@@ -320,6 +322,283 @@ class CommunicationService {
     } catch (error) {
       console.error('Error fetching employee:', error);
       throw error;
+    }
+  }
+
+  // Send WhatsApp message using selected API (Official, WAHA, or legacy)
+  async sendWhatsAppMessageWithAPI(recipientIds, message, options = {}) {
+    try {
+      console.log('🚀 Iniciando envío de WhatsApp con API seleccionada');
+      console.log('Recipient IDs:', recipientIds);
+      console.log('Message:', message);
+      console.log('Options:', options);
+      
+      // Validate inputs
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+        throw new Error('Recipient IDs must be a non-empty array');
+      }
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('Message must be a non-empty string');
+      }
+      
+      // Get sender data using optimized helper
+      const senderData = await this.getSenderData();
+      
+      // Get employee data for phone numbers
+      const employees = await this.getEmployeesByIds(recipientIds);
+      const phoneNumbers = employees
+        .filter(emp => emp.phone && emp.phone.trim() !== '')
+        .map(emp => emp.phone);
+      
+      if (phoneNumbers.length === 0) {
+        throw new Error('No se encontraron números de teléfono válidos para los destinatarios');
+      }
+      
+      // Create communication log using optimized helper
+      const logId = await this.createCommunicationLog(
+        senderData,
+        recipientIds,
+        message,
+        'whatsapp'
+      );
+      
+      if (logId) {
+        console.log('✅ Log de comunicación guardado con ID:', logId);
+      }
+      
+      // Determine which API to use based on options or configuration
+      const apiType = options.apiType || this.getPreferredWhatsAppAPI();
+      let result;
+      
+      console.log(`📱 Usando API de WhatsApp: ${apiType}`);
+      
+      switch (apiType) {
+        case 'official':
+          result = await this.sendWhatsAppWithOfficialAPI(phoneNumbers, message, options);
+          break;
+        case 'waha':
+          result = await this.sendWhatsAppWithWahaAPI(phoneNumbers, message, options);
+          break;
+        case 'legacy':
+        default:
+          result = await this.sendWhatsAppWithLegacyAPI(phoneNumbers, message, options);
+          break;
+      }
+      
+      console.log('✅ Mensaje de WhatsApp enviado exitosamente');
+      return {
+        success: result.success,
+        message: result.success
+          ? `Mensaje enviado a ${result.successful} destinatarios vía WhatsApp (${apiType})`
+          : `Error: ${result.failed} mensajes fallaron`,
+        recipientCount: result.totalRecipients,
+        successfulDeliveries: result.successful,
+        failedDeliveries: result.failed,
+        channel: 'whatsapp',
+        apiType: apiType,
+        timestamp: new Date().toISOString(),
+        logId: logId,
+        details: result.results
+      };
+    } catch (error) {
+      console.error('❌ Error sending WhatsApp message with API:', error);
+      throw error;
+    }
+  }
+
+  // Send WhatsApp message using Official API
+  async sendWhatsAppWithOfficialAPI(phoneNumbers, message, options = {}) {
+    try {
+      const config = whatsappOfficialService.loadConfiguration();
+      
+      if (!config.accessToken || !config.phoneNumberId) {
+        throw new Error('WhatsApp Official API no está configurado');
+      }
+      
+      const result = await whatsappOfficialService.sendBulkMessage({
+        recipients: phoneNumbers,
+        message: message,
+        messageType: options.templateName ? 'template' : 'text',
+        templateName: options.templateName || null,
+        templateLanguage: options.templateLanguage || 'es',
+        components: options.components || [],
+        delayBetweenMessages: options.delayBetweenMessages || 1000
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error sending WhatsApp with Official API:', error);
+      throw error;
+    }
+  }
+
+  // Send WhatsApp message using WAHA API
+  async sendWhatsAppWithWahaAPI(phoneNumbers, message, options = {}) {
+    try {
+      const config = whatsappWahaService.loadConfiguration();
+      
+      if (!config.apiKey || !config.sessionId) {
+        throw new Error('WhatsApp WAHA API no está configurado');
+      }
+      
+      const result = await whatsappWahaService.sendBulkMessage({
+        recipients: phoneNumbers,
+        message: message,
+        messageType: options.messageType || 'text',
+        delayBetweenMessages: options.delayBetweenMessages || 1000
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error sending WhatsApp with WAHA API:', error);
+      throw error;
+    }
+  }
+
+  // Send WhatsApp message using Legacy API
+  async sendWhatsAppWithLegacyAPI(phoneNumbers, message, options = {}) {
+    try {
+      const config = whatsappService.loadConfiguration();
+      
+      if (!config.accessToken || !config.phoneNumberId) {
+        throw new Error('WhatsApp Legacy API no está configurado');
+      }
+      
+      const result = await whatsappService.sendBulkMessage({
+        recipients: phoneNumbers,
+        message: message,
+        messageType: options.templateName ? 'template' : 'text',
+        templateName: options.templateName || null,
+        templateLanguage: options.templateLanguage || 'es',
+        components: options.components || [],
+        delayBetweenMessages: options.delayBetweenMessages || 1000
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error sending WhatsApp with Legacy API:', error);
+      throw error;
+    }
+  }
+
+  // Get preferred WhatsApp API based on configuration
+  getPreferredWhatsAppAPI() {
+    try {
+      // Check if Official API is configured and preferred
+      const officialConfig = whatsappOfficialService.loadConfiguration();
+      if (officialConfig.accessToken && officialConfig.phoneNumberId) {
+        return 'official';
+      }
+      
+      // Check if WAHA API is configured and preferred
+      const wahaConfig = whatsappWahaService.loadConfiguration();
+      if (wahaConfig.apiKey && wahaConfig.sessionId) {
+        return 'waha';
+      }
+      
+      // Fall back to legacy API
+      const legacyConfig = whatsappService.loadConfiguration();
+      if (legacyConfig.accessToken && legacyConfig.phoneNumberId) {
+        return 'legacy';
+      }
+      
+      // No API configured
+      return 'legacy';
+    } catch (error) {
+      console.error('Error getting preferred WhatsApp API:', error);
+      return 'legacy';
+    }
+  }
+
+  // Get status of all WhatsApp APIs
+  getWhatsAppAPIsStatus() {
+    try {
+      const officialConfig = whatsappOfficialService.loadConfiguration();
+      const wahaConfig = whatsappWahaService.loadConfiguration();
+      const legacyConfig = whatsappService.loadConfiguration();
+      
+      return {
+        official: {
+          configured: !!(officialConfig.accessToken && officialConfig.phoneNumberId),
+          testMode: officialConfig.testMode || false,
+          phoneNumberId: officialConfig.phoneNumberId || null
+        },
+        waha: {
+          configured: !!(wahaConfig.apiKey && wahaConfig.sessionId),
+          testMode: wahaConfig.testMode || false,
+          sessionId: wahaConfig.sessionId || null,
+          serverUrl: wahaConfig.serverUrl || null
+        },
+        legacy: {
+          configured: !!(legacyConfig.accessToken && legacyConfig.phoneNumberId),
+          testMode: legacyConfig.testMode || false,
+          phoneNumberId: legacyConfig.phoneNumberId || null
+        },
+        preferred: this.getPreferredWhatsAppAPI()
+      };
+    } catch (error) {
+      console.error('Error getting WhatsApp APIs status:', error);
+      return {
+        official: { configured: false },
+        waha: { configured: false },
+        legacy: { configured: false },
+        preferred: 'legacy',
+        error: error.message
+      };
+    }
+  }
+
+  // Test connection to all configured WhatsApp APIs
+  async testWhatsAppAPIs() {
+    try {
+      const results = {
+        official: { success: false, message: 'No configurado' },
+        waha: { success: false, message: 'No configurado' },
+        legacy: { success: false, message: 'No configurado' }
+      };
+      
+      // Test Official API
+      const officialConfig = whatsappOfficialService.loadConfiguration();
+      if (officialConfig.accessToken && officialConfig.phoneNumberId) {
+        try {
+          results.official = await whatsappOfficialService.testConnection();
+        } catch (error) {
+          results.official = { success: false, message: error.message };
+        }
+      }
+      
+      // Test WAHA API
+      const wahaConfig = whatsappWahaService.loadConfiguration();
+      if (wahaConfig.apiKey && wahaConfig.sessionId) {
+        try {
+          results.waha = await whatsappWahaService.testConnection();
+        } catch (error) {
+          results.waha = { success: false, message: error.message };
+        }
+      }
+      
+      // Test Legacy API
+      const legacyConfig = whatsappService.loadConfiguration();
+      if (legacyConfig.accessToken && legacyConfig.phoneNumberId) {
+        try {
+          results.legacy = await whatsappService.testConnection();
+        } catch (error) {
+          results.legacy = { success: false, message: error.message };
+        }
+      }
+      
+      return {
+        success: true,
+        results: results,
+        preferred: this.getPreferredWhatsAppAPI()
+      };
+    } catch (error) {
+      console.error('Error testing WhatsApp APIs:', error);
+      return {
+        success: false,
+        message: error.message,
+        results: {}
+      };
     }
   }
 

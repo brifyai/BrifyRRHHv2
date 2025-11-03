@@ -38,6 +38,8 @@ import ModernDashboard from './components/dashboard/ModernDashboardRedesigned.js
 import CompanyEmployeeTest from './components/dashboard/CompanyEmployeeTest.js'
 // Componente de prueba de sincronización de empresas
 import CompanySyncTest from './components/test/CompanySyncTest.js'
+// Componente de prueba de WhatsApp APIs
+import WhatsAppAPITest from './components/test/WhatsAppAPITest.js'
 // Nuevo componente de comunicación Webrify
 import WebrifyCommunicationDashboard from './components/communication/WebrifyCommunicationDashboard.js'
 // Componente de configuración
@@ -521,6 +523,18 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <CompanySyncTest />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Ruta de prueba de WhatsApp APIs */}
+            <Route
+              path="/test-whatsapp-apis"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <WhatsAppAPITest />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }

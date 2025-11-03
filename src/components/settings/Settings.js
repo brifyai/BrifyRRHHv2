@@ -6,6 +6,8 @@ import brevoService from '../../services/brevoService'
 import companySyncService from '../../services/companySyncService'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
 import communicationService from '../../services/communicationService'
+import whatsappOfficialService from '../../services/whatsappOfficialService'
+import whatsappWahaService from '../../services/whatsappWahaService'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -54,6 +56,8 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     brevo: { connected: false, status: 'disconnected', lastSync: null },
     groq: { connected: false, status: 'disconnected', lastSync: null, model: 'gemma2-9b-it' },
     whatsapp: { connected: false, status: 'disconnected', lastSync: null },
+    whatsappOfficial: { connected: false, status: 'disconnected', lastSync: null },
+    whatsappWaha: { connected: false, status: 'disconnected', lastSync: null },
     telegram: { connected: false, status: 'disconnected', lastSync: null }
   })
 
@@ -198,6 +202,8 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           checkBrevoConfiguration(),
           checkGroqConfiguration(),
           checkWhatsAppConfiguration(),
+          checkWhatsAppOfficialConfiguration(),
+          checkWhatsAppWahaConfiguration(),
           checkTelegramConfiguration()
         ])
       } catch (error) {
@@ -503,6 +509,36 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
         lastSync: !!(botToken && botUsername) ? new Date().toISOString() : null,
         botToken: botToken,
         botUsername: botUsername
+      }
+    }))
+  }, [])
+
+  // Función para verificar configuración de WhatsApp Official
+  const checkWhatsAppOfficialConfiguration = useCallback(() => {
+    const config = whatsappOfficialService.loadConfiguration();
+    
+    setIntegrations(prev => ({
+      ...prev,
+      whatsappOfficial: {
+        connected: !!(config.accessToken && config.phoneNumberId),
+        status: !!(config.accessToken && config.phoneNumberId) ? 'connected' : 'disconnected',
+        lastSync: !!(config.accessToken && config.phoneNumberId) ? new Date().toISOString() : null,
+        testMode: config.testMode
+      }
+    }))
+  }, [])
+
+  // Función para verificar configuración de WhatsApp WAHA
+  const checkWhatsAppWahaConfiguration = useCallback(() => {
+    const config = whatsappWahaService.loadConfiguration();
+    
+    setIntegrations(prev => ({
+      ...prev,
+      whatsappWaha: {
+        connected: !!(config.apiKey && config.sessionId),
+        status: !!(config.apiKey && config.sessionId) ? 'connected' : 'disconnected',
+        lastSync: !!(config.apiKey && config.sessionId) ? new Date().toISOString() : null,
+        testMode: config.testMode
       }
     }))
   }, [])
@@ -2185,6 +2221,437 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
   };
 
+  // Función para configurar WhatsApp Official API
+  const configureWhatsAppOfficial = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Configurar WhatsApp Official API',
+      html: `
+        <div style="text-align: left;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Access Token de Meta:</label>
+            <input type="password" id="whatsapp-official-access-token" class="swal2-input" placeholder="EA...">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Obtén tu token en{' '}
+              <a href="https://developers.facebook.com/docs/whatsapp/business-management-api/get-started" target="_blank" style="color: #25d366;">
+                Meta for Developers
+              </a>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Phone Number ID:</label>
+            <input type="text" id="whatsapp-official-phone-number-id" class="swal2-input" placeholder="123456789...">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              ID numérico de tu número de WhatsApp Business
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Webhook Verify Token:</label>
+            <input type="text" id="whatsapp-official-webhook-token" class="swal2-input" placeholder="Token opcional">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Opcional: Token para verificar webhooks entrantes
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="checkbox" id="whatsapp-official-test-mode" style="margin-right: 8px;" checked>
+              <span style="font-weight: 600;">Modo de prueba</span>
+            </label>
+            <p style="font-size: 12px; color: #666; margin-top: 4px; margin-left: 20px;">
+              En modo prueba, los mensajes se enviarán solo para testing
+            </p>
+          </div>
+
+          <div style="font-size: 12px; color: #666; margin-top: 16px; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <strong style="color: #25d366;">📋 Instrucciones para obtener credenciales:</strong><br>
+            1. Ve a <a href="https://business.facebook.com/wa/manage" target="_blank" style="color: #25d366;">Meta Business Suite</a><br>
+            2. Selecciona tu cuenta de WhatsApp Business<br>
+            3. Ve a Configuración → API de WhatsApp<br>
+            4. Genera un Access Token de sistema<br>
+            5. Copia el Phone Number ID y el Access Token aquí
+          </div>
+          
+          <div style="font-size: 12px; color: #666; margin-top: 12px; background-color: #e8f4fd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #25d366;">🚀 Funcionalidades incluidas:</strong><br>
+            • Envío de mensajes individuales y masivos<br>
+            • Plantillas de mensaje pre-aprobadas<br>
+            • Webhooks para estado de entrega en tiempo real<br>
+            • Estadísticas detalladas de uso<br>
+            • Integración con sistema de comunicación existente<br>
+            • Costo: ~$0.0525 USD por mensaje
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const accessToken = document.getElementById('whatsapp-official-access-token').value;
+        const phoneNumberId = document.getElementById('whatsapp-official-phone-number-id').value;
+        const webhookToken = document.getElementById('whatsapp-official-webhook-token').value;
+        const testMode = document.getElementById('whatsapp-official-test-mode').checked;
+
+        if (!accessToken) {
+          Swal.showValidationMessage('El Access Token es obligatorio');
+          return false;
+        }
+
+        if (!accessToken.startsWith('EA') && !accessToken.startsWith('EAA')) {
+          Swal.showValidationMessage('El Access Token debe comenzar con EA o EAA');
+          return false;
+        }
+
+        if (!phoneNumberId) {
+          Swal.showValidationMessage('El Phone Number ID es obligatorio');
+          return false;
+        }
+
+        if (!/^\d+$/.test(phoneNumberId)) {
+          Swal.showValidationMessage('El Phone Number ID debe contener solo números');
+          return false;
+        }
+
+        return { accessToken, phoneNumberId, webhookToken, testMode };
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Conectar y Probar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#25d366',
+      width: '600px'
+    });
+
+    if (formValues) {
+      // Mostrar estado de conexión
+      setIntegrations(prev => ({ ...prev, whatsappOfficial: { ...prev.whatsappOfficial, status: 'connecting' } }));
+
+      try {
+        // Configurar el servicio de WhatsApp Official
+        const config = {
+          accessToken: formValues.accessToken,
+          phoneNumberId: formValues.phoneNumberId,
+          webhookVerifyToken: formValues.webhookToken,
+          testMode: formValues.testMode
+        };
+
+        // Guardar configuración
+        whatsappOfficialService.saveConfiguration(config);
+
+        // Probar conexión
+        const testResult = await whatsappOfficialService.testConnection();
+
+        if (testResult.success) {
+          // Actualizar estado
+          setIntegrations(prev => ({
+            ...prev,
+            whatsappOfficial: {
+              connected: true,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              testMode: formValues.testMode
+            }
+          }));
+
+          // Mostrar éxito
+          await Swal.fire({
+            title: '🎉 WhatsApp Official Configurado Exitosamente',
+            html: `
+              <div style="text-align: left;">
+                <div style="background-color: #d4edda; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #155724;">✅ Conexión exitosa</h4>
+                  <p style="margin: 0; font-size: 14px;">La API oficial de WhatsApp está funcionando correctamente.</p>
+                </div>
+                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Información del número:</h4>
+                  <p style="margin: 4px 0; font-size: 14px;">
+                    <strong>Número:</strong> ${testResult.phoneInfo?.name || 'Configurado'}<br>
+                    <strong>Nombre verificado:</strong> ${testResult.phoneInfo?.verifiedName || 'Pendiente'}<br>
+                    <strong>Modo:</strong> ${formValues.testMode ? 'Prueba 🧪' : 'Producción 🚀'}
+                  </p>
+                </div>
+                <div style="background-color: #e8f4fd; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #25d366;">📊 Funcionalidades activas:</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>✅ Envío de mensajes individuales</li>
+                    <li>✅ Envío masivo de mensajes</li>
+                    <li>✅ Plantillas de mensaje pre-aprobadas</li>
+                    <li>✅ Webhooks para estado de entrega</li>
+                    <li>✅ Estadísticas en tiempo real</li>
+                    <li>✅ Integración con sistema de comunicación</li>
+                  </ul>
+                </div>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '¡Perfecto!',
+            confirmButtonColor: '#25d366',
+            width: '500px'
+          });
+
+          toast.success('WhatsApp Official configurado exitosamente');
+        } else {
+          throw new Error(testResult.error || 'Error al conectar con WhatsApp Official');
+        }
+      } catch (error) {
+        console.error('Error configuring WhatsApp Official:', error);
+        
+        // Restaurar estado
+        setIntegrations(prev => ({
+          ...prev,
+          whatsappOfficial: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null,
+            testMode: false
+          }
+        }));
+
+        // Limpiar configuración guardada
+        whatsappOfficialService.clearConfiguration();
+
+        // Mostrar error
+        await Swal.fire({
+          title: '❌ Error de Conexión',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f8d7da; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #721c24;">No se pudo conectar con WhatsApp Official</h4>
+                <p style="margin: 0; font-size: 14px;"><strong>Error:</strong> ${error.message}</p>
+              </div>
+              <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">🔍 Posibles soluciones:</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                  <li>• Verifica que el Access Token sea correcto</li>
+                  <li>• Asegúrate de que el Phone Number ID sea válido</li>
+                  <li>• Revisa que tu número de WhatsApp esté verificado</li>
+                  <li>• Verifica los permisos del token</li>
+                  <li>• Revisa tu conexión a internet</li>
+                </ul>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
+        });
+
+        toast.error('Error al configurar WhatsApp Official');
+      }
+    }
+  };
+
+  // Función para configurar WhatsApp WAHA API
+  const configureWhatsAppWaha = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Configurar WhatsApp WAHA API',
+      html: `
+        <div style="text-align: left;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">API Key de WAHA:</label>
+            <input type="password" id="whatsapp-waha-api-key" class="swal2-input" placeholder="waha_...">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Obtén tu API Key en <a href="https://waha.devike.pro" target="_blank" style="color: #9333ea;">waha.devike.pro</a>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Session ID:</label>
+            <input type="text" id="whatsapp-waha-session-id" class="swal2-input" placeholder="session-default">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              Identificador único para tu sesión de WhatsApp
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">URL del servidor WAHA:</label>
+            <input type="text" id="whatsapp-waha-url" class="swal2-input" placeholder="https://waha.devike.pro" value="https://waha.devike.pro">
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">
+              URL del servidor de WAHA API
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="checkbox" id="whatsapp-waha-test-mode" style="margin-right: 8px;" checked>
+              <span style="font-weight: 600;">Modo de prueba</span>
+            </label>
+            <p style="font-size: 12px; color: #666; margin-top: 4px; margin-left: 20px;">
+              En modo prueba, los mensajes se enviarán solo para testing
+            </p>
+          </div>
+
+          <div style="font-size: 12px; color: #666; margin-top: 16px; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <strong style="color: #9333ea;">📋 Instrucciones para obtener credenciales:</strong><br>
+            1. Ve a <a href="https://waha.devike.pro" target="_blank" style="color: #9333ea;">waha.devike.pro</a><br>
+            2. Regístra tu cuenta y obtén tu API Key<br>
+            3. Crea una nueva sesión de WhatsApp<br>
+            4. Escanea el código QR con tu WhatsApp<br>
+            5. Copia el Session ID y la API Key aquí
+          </div>
+          
+          <div style="font-size: 12px; color: #666; margin-top: 12px; background-color: #e8f4fd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #9333ea;">🚀 Funcionalidades incluidas:</strong><br>
+            • Envío de mensajes individuales y masivos<br>
+            • Envío de archivos y documentos<br>
+            • Envío de ubicaciones y contactos<br>
+            • Gestión de sesiones múltiples<br>
+            • Estadísticas de uso en tiempo real<br>
+            • Integración con sistema de comunicación existente
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const apiKey = document.getElementById('whatsapp-waha-api-key').value;
+        const sessionId = document.getElementById('whatsapp-waha-session-id').value;
+        const serverUrl = document.getElementById('whatsapp-waha-url').value;
+        const testMode = document.getElementById('whatsapp-waha-test-mode').checked;
+
+        if (!apiKey) {
+          Swal.showValidationMessage('La API Key es obligatoria');
+          return false;
+        }
+
+        if (!sessionId) {
+          Swal.showValidationMessage('El Session ID es obligatorio');
+          return false;
+        }
+
+        if (!serverUrl) {
+          Swal.showValidationMessage('La URL del servidor es obligatoria');
+          return false;
+        }
+
+        return { apiKey, sessionId, serverUrl, testMode };
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Conectar y Probar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#9333ea',
+      width: '600px'
+    });
+
+    if (formValues) {
+      // Mostrar estado de conexión
+      setIntegrations(prev => ({ ...prev, whatsappWaha: { ...prev.whatsappWaha, status: 'connecting' } }));
+
+      try {
+        // Configurar el servicio de WhatsApp WAHA
+        const config = {
+          apiKey: formValues.apiKey,
+          sessionId: formValues.sessionId,
+          serverUrl: formValues.serverUrl,
+          testMode: formValues.testMode
+        };
+
+        // Guardar configuración
+        whatsappWahaService.saveConfiguration(config);
+
+        // Probar conexión
+        const testResult = await whatsappWahaService.testConnection();
+
+        if (testResult.success) {
+          // Actualizar estado
+          setIntegrations(prev => ({
+            ...prev,
+            whatsappWaha: {
+              connected: true,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              testMode: formValues.testMode
+            }
+          }));
+
+          // Mostrar éxito
+          await Swal.fire({
+            title: '🎉 WhatsApp WAHA Configurado Exitosamente',
+            html: `
+              <div style="text-align: left;">
+                <div style="background-color: #d4edda; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #155724;">✅ Conexión exitosa</h4>
+                  <p style="margin: 0; font-size: 14px;">La API de WAHA está funcionando correctamente.</p>
+                </div>
+                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Información de la sesión:</h4>
+                  <p style="margin: 4px 0; font-size: 14px;">
+                    <strong>Sesión:</strong> ${formValues.sessionId}<br>
+                    <strong>Servidor:</strong> ${formValues.serverUrl}<br>
+                    <strong>Estado:</strong> ${testResult.sessionInfo?.status || 'Activa'}<br>
+                    <strong>Modo:</strong> ${formValues.testMode ? 'Prueba 🧪' : 'Producción 🚀'}
+                  </p>
+                </div>
+                <div style="background-color: #e8f4fd; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                  <h4 style="margin: 0 0 8px 0; color: #9333ea;">📊 Funcionalidades activas:</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>✅ Envío de mensajes individuales</li>
+                    <li>✅ Envío masivo de mensajes</li>
+                    <li>✅ Envío de archivos y documentos</li>
+                    <li>✅ Envío de ubicaciones</li>
+                    <li>✅ Gestión de sesiones</li>
+                    <li>✅ Integración con sistema de comunicación</li>
+                  </ul>
+                </div>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '¡Perfecto!',
+            confirmButtonColor: '#9333ea',
+            width: '500px'
+          });
+
+          toast.success('WhatsApp WAHA configurado exitosamente');
+        } else {
+          throw new Error(testResult.error || 'Error al conectar con WhatsApp WAHA');
+        }
+      } catch (error) {
+        console.error('Error configuring WhatsApp WAHA:', error);
+        
+        // Restaurar estado
+        setIntegrations(prev => ({
+          ...prev,
+          whatsappWaha: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null,
+            testMode: false
+          }
+        }));
+
+        // Limpiar configuración guardada
+        whatsappWahaService.clearConfiguration();
+
+        // Mostrar error
+        await Swal.fire({
+          title: '❌ Error de Conexión',
+          html: `
+            <div style="text-align: left;">
+              <div style="background-color: #f8d7da; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; color: #721c24;">No se pudo conectar con WhatsApp WAHA</h4>
+                <p style="margin: 0; font-size: 14px;"><strong>Error:</strong> ${error.message}</p>
+              </div>
+              <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">🔍 Posibles soluciones:</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                  <li>• Verifica que la API Key sea correcta</li>
+                  <li>• Asegúrate de que el Session ID sea válido</li>
+                  <li>• Revisa que la URL del servidor sea correcta</li>
+                  <li>• Verifica que tu sesión esté activa en WAHA</li>
+                  <li>• Revisa tu conexión a internet</li>
+                </ul>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
+        });
+
+        toast.error('Error al configurar WhatsApp WAHA');
+      }
+    }
+  };
+
   const disconnectIntegration = async (integration) => {
     const integrationNames = {
       google: 'Google Workspace',
@@ -2195,6 +2662,8 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
       brevo: 'Brevo',
       groq: 'Groq AI',
       whatsapp: 'WhatsApp',
+      whatsappOfficial: 'WhatsApp Official API',
+      whatsappWaha: 'WhatsApp WAHA API',
       telegram: 'Telegram'
     };
 
@@ -2229,6 +2698,16 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
         localStorage.removeItem('whatsapp_phone_number_id');
         localStorage.removeItem('whatsapp_webhook_verify_token');
         localStorage.removeItem('whatsapp_test_mode');
+      }
+
+      // Si es WhatsApp Official, limpiar la configuración guardada
+      if (integration === 'whatsappOfficial') {
+        whatsappOfficialService.clearConfiguration();
+      }
+
+      // Si es WhatsApp WAHA, limpiar la configuración guardada
+      if (integration === 'whatsappWaha') {
+        whatsappWahaService.clearConfiguration();
       }
 
       // Si es Telegram, limpiar la configuración guardada
@@ -4068,7 +4547,8 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
               )}
             </div>
 
-            {/* WhatsApp Business API - Configuración Principal */}
+
+            {/* WhatsApp Official API */}
             <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
@@ -4076,39 +4556,39 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                     <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">WhatsApp Business</h3>
-                    <p className="text-sm text-gray-600">API de mensajería</p>
+                    <h3 className="text-lg font-bold text-gray-900">WhatsApp Business API</h3>
+                    <p className="text-sm text-gray-600">API oficial de Meta</p>
                   </div>
                 </div>
-                {getStatusBadge('whatsapp')}
+                {getStatusBadge('whatsappOfficial')}
               </div>
 
               <div className="flex-grow">
                 <p className="text-sm text-gray-600 mb-4">
-                  Configura la API de WhatsApp Business para enviar mensajes automáticos y notificaciones.
+                  Configura la API oficial de WhatsApp Business para enviar mensajes automáticos y notificaciones con la plataforma de Meta.
                 </p>
 
                 <div className="space-y-2 mb-4">
-                  {integrations.whatsapp.lastSync && (
+                  {integrations.whatsappOfficial.lastSync && (
                     <div className="text-xs text-gray-500">
-                      Última sincronización: {new Date(integrations.whatsapp.lastSync).toLocaleString('es-ES')}
+                      Última sincronización: {new Date(integrations.whatsappOfficial.lastSync).toLocaleString('es-ES')}
                     </div>
                   )}
-                  {integrations.whatsapp.testMode && (
+                  {integrations.whatsappOfficial.testMode && (
                     <div className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full inline-block">
                       🧪 Modo prueba activo
                     </div>
                   )}
                 </div>
 
-                {integrations.whatsapp.connected && (
+                {integrations.whatsappOfficial.connected && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center mb-2">
                       <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
-                      <span className="text-sm font-medium text-green-800">WhatsApp configurado</span>
+                      <span className="text-sm font-medium text-green-800">WhatsApp Official configurado</span>
                     </div>
                     <div className="text-xs text-green-600">
-                      <p>• API de WhatsApp conectada</p>
+                      <p>• API oficial de Meta conectada</p>
                       <p>• Envío de mensajes activo</p>
                       <p>• Webhooks configurados</p>
                     </div>
@@ -4116,12 +4596,12 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                 )}
               </div>
 
-              {integrations.whatsapp.connected ? (
+              {integrations.whatsappOfficial.connected ? (
                 <div className="space-y-2">
                   <button
                     onClick={() => {
                       Swal.fire({
-                        title: '📱 Información de WhatsApp',
+                        title: '📱 Información de WhatsApp Official',
                         html: `
                           <div style="text-align: left;">
                             <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
@@ -4132,15 +4612,15 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                                 <li>✅ Plantillas pre-aprobadas</li>
                                 <li>✅ Webhooks en tiempo real</li>
                                 <li>✅ Estadísticas de uso</li>
-                                <li>✅ Modo prueba ${integrations.whatsapp.testMode ? 'activado' : 'desactivado'}</li>
+                                <li>✅ Modo prueba ${integrations.whatsappOfficial.testMode ? 'activado' : 'desactivado'}</li>
                               </ul>
                             </div>
                             <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
                               <h4 style="margin: 0 0 8px 0; color: #333;">Configuración</h4>
                               <p style="margin: 4px 0; font-size: 14px;">
                                 <strong>Estado:</strong> <span style="color: #28a745;">Conectado</span><br>
-                                <strong>Modo:</strong> ${integrations.whatsapp.testMode ? 'Prueba 🧪' : 'Producción 🚀'}<br>
-                                <strong>Última sincronización:</strong> ${new Date(integrations.whatsapp.lastSync).toLocaleString('es-ES')}
+                                <strong>Modo:</strong> ${integrations.whatsappOfficial.testMode ? 'Prueba 🧪' : 'Producción 🚀'}<br>
+                                <strong>Última sincronización:</strong> ${new Date(integrations.whatsappOfficial.lastSync).toLocaleString('es-ES')}
                               </p>
                             </div>
                           </div>
@@ -4151,24 +4631,129 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                         width: '500px'
                       });
                     }}
-                    className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     ℹ️ Ver Información
                   </button>
                   <button
-                    onClick={() => disconnectIntegration('whatsapp')}
+                    onClick={() => disconnectIntegration('whatsappOfficial')}
                     className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
-                    Desconectar WhatsApp
+                    Desconectar WhatsApp Official
                   </button>
                 </div>
               ) : (
                 <button
-                  onClick={configureWhatsApp}
-                  disabled={integrations.whatsapp.status === 'connecting'}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={configureWhatsAppOfficial}
+                  disabled={integrations.whatsappOfficial.status === 'connecting'}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {integrations.whatsapp.status === 'connecting' ? 'Conectando...' : 'Configurar WhatsApp'}
+                  {integrations.whatsappOfficial.status === 'connecting' ? 'Conectando...' : 'Configurar WhatsApp Official'}
+                </button>
+              )}
+            </div>
+
+            {/* WhatsApp WAHA API */}
+            <div className="bg-white rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg mr-4">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">WhatsApp WAHA API</h3>
+                    <p className="text-sm text-gray-600">API waha.devike.pro</p>
+                  </div>
+                </div>
+                {getStatusBadge('whatsappWaha')}
+              </div>
+
+              <div className="flex-grow">
+                <p className="text-sm text-gray-600 mb-4">
+                  Configura la API de WAHA (waha.devike.pro) para enviar mensajes a través de su plataforma.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  {integrations.whatsappWaha.lastSync && (
+                    <div className="text-xs text-gray-500">
+                      Última sincronización: {new Date(integrations.whatsappWaha.lastSync).toLocaleString('es-ES')}
+                    </div>
+                  )}
+                  {integrations.whatsappWaha.testMode && (
+                    <div className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full inline-block">
+                      🧪 Modo prueba activo
+                    </div>
+                  )}
+                </div>
+
+                {integrations.whatsappWaha.connected && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-green-800">WhatsApp WAHA configurado</span>
+                    </div>
+                    <div className="text-xs text-green-600">
+                      <p>• API WAHA conectada</p>
+                      <p>• Envío de mensajes activo</p>
+                      <p>• Sesión establecida</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {integrations.whatsappWaha.connected ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: '📱 Información de WhatsApp WAHA',
+                        html: `
+                          <div style="text-align: left;">
+                            <div style="background-color: #f0f8ff; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                              <h4 style="margin: 0 0 8px 0; color: #9333ea;">Funcionalidades Activas</h4>
+                              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                                <li>✅ Envío de mensajes individuales</li>
+                                <li>✅ Envío masivo de mensajes</li>
+                                <li>✅ Envío de archivos</li>
+                                <li>✅ Envío de ubicaciones</li>
+                                <li>✅ Gestión de sesiones</li>
+                                <li>✅ Modo prueba ${integrations.whatsappWaha.testMode ? 'activado' : 'desactivado'}</li>
+                              </ul>
+                            </div>
+                            <div style="background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
+                              <h4 style="margin: 0 0 8px 0; color: #333;">Configuración</h4>
+                              <p style="margin: 4px 0; font-size: 14px;">
+                                <strong>Estado:</strong> <span style="color: #28a745;">Conectado</span><br>
+                                <strong>Modo:</strong> ${integrations.whatsappWaha.testMode ? 'Prueba 🧪' : 'Producción 🚀'}<br>
+                                <strong>Última sincronización:</strong> ${new Date(integrations.whatsappWaha.lastSync).toLocaleString('es-ES')}
+                              </p>
+                            </div>
+                          </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#9333ea',
+                        width: '500px'
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    ℹ️ Ver Información
+                  </button>
+                  <button
+                    onClick={() => disconnectIntegration('whatsappWaha')}
+                    className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Desconectar WhatsApp WAHA
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={configureWhatsAppWaha}
+                  disabled={integrations.whatsappWaha.status === 'connecting'}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {integrations.whatsappWaha.status === 'connecting' ? 'Conectando...' : 'Configurar WhatsApp WAHA'}
                 </button>
               )}
             </div>
