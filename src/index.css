@@ -1,0 +1,319 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  /* Definir variables CSS para los colores de engagechile.cl */
+  :root {
+    --engage-black: #000000;
+    --engage-yellow: #fcb900;
+    --engage-blue: #0693e3;
+  }
+  
+  /* Aplicar colores de engagechile.cl */
+  body {
+    @apply bg-white text-engage-black;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-engage-blue hover:bg-engage-yellow text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-engage-black font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-yellow {
+    @apply bg-engage-yellow hover:bg-engage-blue text-engage-black font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-black {
+    @apply bg-engage-black hover:bg-engage-blue text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md border border-gray-200;
+  }
+  
+  .input-field {
+    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-engage-blue focus:ring-engage-blue;
+  }
+  
+  .navbar-container {
+    max-width: 98rem;
+    @apply mx-auto px-4;
+  }
+  
+  .logo-container {
+    @apply bg-engage-black rounded-lg p-1 flex items-center justify-center;
+  }
+  
+  .logo-image {
+    @apply h-8 w-auto object-contain;
+  }
+  
+  /* Aplicar colores a la barra de navegación */
+  .navbar {
+    @apply bg-white border-b border-gray-200;
+  }
+  
+  .nav-link {
+    @apply inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 text-gray-500 hover:border-gray-300 hover:text-gray-700;
+  }
+  
+  .nav-link-active {
+    @apply border-engage-blue text-engage-blue;
+  }
+  
+  .nav-link-inactive {
+    @apply border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700;
+  }
+  
+  /* Estilos para elementos de formulario */
+  .form-label {
+    @apply block text-sm font-medium text-engage-black mb-1;
+  }
+  
+  .form-input {
+    @apply input-field;
+  }
+  
+  .form-select {
+    @apply input-field;
+  }
+  
+  .form-textarea {
+    @apply input-field min-h-[120px];
+  }
+  
+  /* Estilos para alertas y notificaciones */
+  .alert-success {
+    @apply bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative;
+  }
+  
+  .alert-error {
+    @apply bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative;
+  }
+  
+  .alert-warning {
+    @apply bg-engage-yellow/20 border border-engage-yellow text-engage-black px-4 py-3 rounded relative;
+  }
+  
+  /* Estilos para tabs */
+  .tab-active {
+    @apply border-engage-blue text-engage-blue font-medium;
+  }
+  
+  .tab-inactive {
+    @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+  }
+  
+  /* Estilos para badges */
+  .badge-primary {
+    @apply bg-engage-blue text-white px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .badge-secondary {
+    @apply bg-engage-yellow text-engage-black px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .badge-dark {
+    @apply bg-engage-black text-white px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  /* Estilos para enlaces */
+  .link-primary {
+    @apply text-engage-blue hover:text-engage-yellow underline;
+  }
+
+  .link-secondary {
+    @apply text-engage-yellow hover:text-engage-blue underline;
+  }
+
+  /* Estilos para SweetAlert2 */
+  .swal-wide {
+    width: 600px !important;
+  }
+
+  .swal-schedule .swal2-popup {
+    width: 480px !important;
+    max-width: 95vw !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .swal-schedule .swal2-html-container {
+    text-align: center !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: hidden !important;
+    padding: 0 !important;
+  }
+
+  .swal-schedule .swal2-html-container > div {
+    display: inline-block !important;
+    text-align: left !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    box-sizing: border-box !important;
+    padding: 0 10px !important;
+  }
+
+  .swal-schedule input,
+  .swal-schedule select {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  .swal-schedule .swal2-actions {
+    overflow-x: hidden !important;
+  }
+
+  .swal-schedule .swal2-actions button {
+    max-width: 45% !important;
+    box-sizing: border-box !important;
+  }
+
+  .swal-iphone {
+    width: auto !important;
+    max-width: 400px !important;
+  }
+
+  .swal-analytics {
+    width: 900px !important;
+    max-width: 95vw !important;
+  }
+
+  .swal-confirmation {
+    width: 500px !important;
+  }
+
+  .swal-iphone {
+    width: auto !important;
+    padding: 20px !important;
+  }
+
+  .swal-iphone .swal2-popup {
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* Estilos para el modal de citas horizontal */
+  .appointment-modal .swal2-popup {
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .appointment-modal .swal2-title {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #1f2937 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .appointment-modal .swal2-html-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .appointment-modal .swal2-actions {
+    padding: 24px 32px 32px !important;
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin: 0 !important;
+  }
+
+  .appointment-modal .swal2-confirm {
+    background: linear-gradient(135deg, #0693e3 0%, #fcb900 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    padding: 12px 24px !important;
+    box-shadow: 0 4px 14px 0 rgba(6, 147, 227, 0.39) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .appointment-modal .swal2-confirm:hover {
+    background: linear-gradient(135deg, #0174c3 0%, #e6a800 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px 0 rgba(6, 147, 227, 0.5) !important;
+  }
+
+  .appointment-modal .swal2-cancel {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    padding: 12px 24px !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .appointment-modal .swal2-cancel:hover {
+    background: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Animaciones */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 30px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes fadeOutDown {
+    from {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      opacity: 0;
+      transform: translate3d(0, -30px, 0);
+    }
+  }
+
+  .animate__fadeInUp {
+    animation: fadeInUp 0.3s ease-out;
+  }
+
+  .animate__fadeOutDown {
+    animation: fadeOutDown 0.3s ease-in;
+  }
+
+  .animate__faster {
+    animation-duration: 0.2s !important;
+  }
+  
+  @screen sm {
+    .navbar-container {
+      @apply px-6;
+    }
+    
+    .logo-image {
+      @apply h-8;
+    }
+  }
+  
+  @screen lg {
+    .navbar-container {
+      @apply px-8;
+    }
+  }
+}
