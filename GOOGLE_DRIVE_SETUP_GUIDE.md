@@ -30,14 +30,11 @@
 2. Busca: **"Google Drive API"**
 3. Selecciona **"Google Drive API"** y haz clic en **"HABILITAR"**
 
-### 2.2 Habilitar Google Picker API (Opcional pero recomendado)
-1. Busca: **"Google Picker API"**
-2. Selecciona **"Google Picker API"** y haz clic en **"HABILITAR"**
-
-### 2.3 Verificar APIs Habilitadas
+### 2.2 Verificar APIs Habilitadas
 Ve a **"APIs y servicios"** → **"APIs habilitadas"** para confirmar que tienes:
 - ✅ Google Drive API
-- ✅ Google Picker API (opcional)
+
+**Nota:** Google Picker API ya no está disponible como API separada. Las funcionalidades de selección de archivos están incluidas en Google Drive API.
 
 ---
 
@@ -226,7 +223,7 @@ Antes de terminar, verifica:
 ### Documentación Oficial
 - [Google Drive API Documentation](https://developers.google.com/drive/api/v3/about)
 - [OAuth 2.0 for Google APIs](https://developers.google.com/identity/protocols/oauth2)
-- [Google Picker API Documentation](https://developers.google.com/picker/docs)
+- [Google Drive API File Picker](https://developers.google.com/drive/api/v3/reference/files/create)
 
 ### Soporte
 Si encuentras problemas:
