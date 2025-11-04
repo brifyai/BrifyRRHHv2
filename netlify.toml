@@ -1,31 +1,25 @@
 [build]
-  base = "/"
-  command = "npm run build"
   publish = "build"
+  command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "18"
+  NPM_VERSION = "9"
 
-# Redirecciones para API (backend separado)
 [[redirects]]
   from = "/api/*"
-  to = "https://brifyrrhhapp-backend.onrender.com/api/:splat"
-  status = 200
-  force = true
-
-# Redirecciones para autenticación de Google
-[[redirects]]
-  from = "/auth/google/callback"
-  to = "/index.html"
+  to = "/.netlify/functions/:splat"
   status = 200
 
-# Manejo de rutas de React (SPA)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Headers de seguridad
+[functions]
+  node_modules = "node_modules"
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -33,17 +27,24 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
-# Headers para archivos estáticos
 [[headers]]
   for = "/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Headers para API
-[[headers]]
-  for = "/api/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
+[context.production]
+  [context.production.environment]
+    REACT_APP_ENVIRONMENT = "production"
+    REACT_APP_DRIVE_MODE = "local"
+
+[context.deploy-preview]
+  [context.deploy-preview.environment]
+    REACT_APP_ENVIRONMENT = "preview"
+    REACT_APP_DRIVE_MODE = "local"
+
+[context.branch-deploy]
+  [context.branch-deploy.environment]
+    REACT_APP_ENVIRONMENT = "development"
+    REACT_APP_DRIVE_MODE = "hybrid"

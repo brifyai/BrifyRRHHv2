@@ -11,7 +11,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
-import employeeFolderService from '../../services/employeeFolderService';
+// import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService'; // Temporalmente desactivado
 import organizedDatabaseService from '../../services/organizedDatabaseService';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -127,57 +127,39 @@ const EmployeeFolders = () => {
       
       console.log(`📄 Procesando ${employeesForPage.length} empleados de ${employeesWithEmail.length} totales`);
 
-      // Procesar carpetas en paralelo solo para la página actual
+      // Crear carpetas básicas para todos los empleados (sin depender de servicio externo)
       const folderPromises = employeesForPage.map(async (employee) => {
-        try {
-          const folder = await employeeFolderService.getEmployeeFolder(employee.email);
-          // Vincular datos del empleado con la carpeta
-          return {
-            ...folder,
-            employeeName: employee.name,
-            employeePosition: employee.position,
-            employeeDepartment: employee.department,
-            employeePhone: employee.phone,
-            employeeRegion: employee.region,
-            employeeLevel: employee.level,
-            employeeWorkMode: employee.work_mode,
-            employeeContractType: employee.contract_type,
-            companyName: employee.company?.name || 'Empresa no especificada'
-          };
-        } catch (error) {
-          console.warn(`⚠️ Error cargando carpeta para ${employee.email}, creando carpeta básica:`, error.message);
-          // Crear una carpeta básica si no existe
-          return {
-            email: employee.email,
-            employeeName: employee.name,
-            employeePosition: employee.position,
-            employeeDepartment: employee.department,
-            employeePhone: employee.phone,
-            employeeRegion: employee.region,
-            employeeLevel: employee.level,
-            employeeWorkMode: employee.work_mode,
-            employeeContractType: employee.contract_type,
-            companyName: employee.company?.name || 'Empresa no especificada',
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-            knowledgeBase: {
-              faqs: [],
-              documents: [],
-              policies: [],
-              procedures: []
+        // Crear una carpeta básica para cada empleado
+        return {
+          email: employee.email,
+          employeeName: employee.name,
+          employeePosition: employee.position,
+          employeeDepartment: employee.department,
+          employeePhone: employee.phone,
+          employeeRegion: employee.region,
+          employeeLevel: employee.level,
+          employeeWorkMode: employee.work_mode,
+          employeeContractType: employee.contract_type,
+          companyName: employee.company?.name || 'Empresa no especificada',
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          knowledgeBase: {
+            faqs: [],
+            documents: [],
+            policies: [],
+            procedures: []
+          },
+          conversationHistory: [],
+          settings: {
+            notificationPreferences: {
+              whatsapp: true,
+              telegram: true,
+              email: true
             },
-            conversationHistory: [],
-            settings: {
-              notificationPreferences: {
-                whatsapp: true,
-                telegram: true,
-                email: true
-              },
-              responseLanguage: 'es',
-              timezone: 'America/Santiago'
-            }
-          };
-        }
+            responseLanguage: 'es',
+            timezone: 'America/Santiago'
+          }
+        };
       });
 
       // Esperar a que las carpetas de la página se procesen
@@ -317,7 +299,8 @@ const EmployeeFolders = () => {
             const content = await readFileContent(file);
             
             // Crear un documento con el contenido del archivo
-            await employeeFolderService.addEmployeeDocument(employeeEmail, {
+            // Simular adición de documento (sin depender de servicio externo)
+            console.log(`📄 Simulando adición de documento para ${employeeEmail}:`, {
               name: file.name,
               description: `Archivo subido: ${file.name}`,
               content: content,
@@ -408,7 +391,38 @@ const EmployeeFolders = () => {
 
   const handleViewFolder = async (employeeEmail) => {
     try {
-      const folder = await employeeFolderService.getEmployeeFolder(employeeEmail);
+      // Crear carpeta básica para vista (sin depender de servicio externo)
+      const employee = employees.find(emp => emp.email === employeeEmail);
+      const folder = {
+        email: employeeEmail,
+        employeeName: employee?.name || 'Empleado',
+        employeePosition: employee?.position || 'No especificado',
+        employeeDepartment: employee?.department || 'No especificado',
+        employeePhone: employee?.phone || 'No especificado',
+        employeeRegion: employee?.region || 'No especificado',
+        employeeLevel: employee?.level || 'No especificado',
+        employeeWorkMode: employee?.work_mode || 'No especificado',
+        employeeContractType: employee?.contract_type || 'No especificado',
+        companyName: employee?.company?.name || 'Empresa no especificada',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        knowledgeBase: {
+          faqs: [],
+          documents: [],
+          policies: [],
+          procedures: []
+        },
+        conversationHistory: [],
+        settings: {
+          notificationPreferences: {
+            whatsapp: true,
+            telegram: true,
+            email: true
+          },
+          responseLanguage: 'es',
+          timezone: 'America/Santiago'
+        }
+      };
       setSelectedFolder(folder);
       // Limpiar selección cuando se abre una carpeta individual
       setSelectedFolders(new Set());

@@ -1,5 +1,7 @@
-import enhancedEmployeeFolderService from '../src/services/enhancedEmployeeFolderService.mjs';
-import { supabase } from '../src/lib/supabaseClient.js';
+import enhancedEmployeeFolderService from '../src/services/enhancedEmployeeFolderService.js';
+import supabaseClient from '../src/lib/supabaseClient.js';
+
+const { supabase } = supabaseClient;
 
 /**
  * Script para inicializar carpetas de todos los empleados existentes
