@@ -53,6 +53,13 @@ import WhatsAppOnboarding from './components/whatsapp/WhatsAppOnboarding.js'
 // Gestor multi-WhatsApp para agencias (solo para usuarios avanzados)
 import MultiWhatsAppManager from './components/whatsapp/MultiWhatsAppManager.js'
 
+// Componentes de configuración de Google Drive
+import GoogleDriveIntegrationSelector from './components/integrations/GoogleDriveIntegrationSelector.js'
+import GoogleDriveAutoSetup from './components/integrations/GoogleDriveAutoSetup.js'
+import GoogleDriveSetupWizard from './components/integrations/GoogleDriveSetupWizard.js'
+import GoogleDriveSimplePage from './components/integrations/GoogleDriveSimplePage.js'
+import GoogleDriveTestPage from './components/integrations/GoogleDriveTestPage.js'
+
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación
 console.log('🔍 Verificando configuración de Supabase al iniciar...')
@@ -540,9 +547,63 @@ function App() {
               }
             />
             
+            {/* Rutas de configuración de Google Drive */}
+            <Route
+              path="/integrations/google-drive"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveIntegrationSelector />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integrations/google-drive/auto-setup"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveAutoSetup />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integrations/google-drive/wizard"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveSetupWizard />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/google-drive-quick-setup"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveSimplePage />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de prueba para diagnóstico */}
+            <Route
+              path="/test-google-drive"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveTestPage />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* Ruta 404 */}
-            <Route 
-              path="*" 
+            <Route
+              path="*"
               element={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
                   <div className="text-center">
@@ -556,7 +617,7 @@ function App() {
                     </a>
                   </div>
                 </div>
-              } 
+              }
             />
             </Routes>
           </div>
