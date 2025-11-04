@@ -17,8 +17,10 @@
   status = 200
 
 [functions]
-  node_modules = "node_modules"
   directory = "netlify/functions"
+  
+  [functions.node_modules]
+    external_node_modules = []
 
 [[headers]]
   for = "/*"
