@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { auth, db } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import enhancedEmployeeFolderService from '../services/enhancedEmployeeFolderService'
 
 const AuthContext = createContext({})
 
@@ -230,6 +231,41 @@ export const AuthProvider = ({ children }) => {
         if (tokenError) {
           console.error('Error creating initial token usage record:', tokenError)
           // No retornamos error aquí porque no es crítico para el registro
+        }
+
+        // Crear carpeta de empleado automáticamente si el usuario tiene email
+        if (email && profileData && profileData[0]) {
+          try {
+            console.log('🔄 Creando carpeta automática para nuevo empleado:', email)
+            
+            // Preparar datos del empleado para la carpeta
+            const employeeData = {
+              id: authData.user.id,
+              email: email,
+              name: userData.name || profileData[0]?.full_name || 'Usuario',
+              position: 'Empleado',
+              department: 'General',
+              phone: '',
+              region: 'Metropolitana',
+              level: 'Junior',
+              work_mode: 'Remoto',
+              contract_type: 'Indefinido',
+              company_id: null // Se asignará cuando se asocie a una empresa
+            }
+
+            const folderResult = await enhancedEmployeeFolderService.createEmployeeFolder(email, employeeData)
+            
+            if (folderResult.created) {
+              console.log('✅ Carpeta de empleado creada automáticamente para:', email)
+              toast.success('Carpeta personal creada exitosamente')
+            } else if (folderResult.updated) {
+              console.log('🔄 Carpeta de empleado actualizada para:', email)
+            }
+          } catch (folderError) {
+            console.error('❌ Error creando carpeta automática para empleado:', folderError)
+            // No bloqueamos el registro si falla la creación de la carpeta
+            toast.error('Usuario registrado, pero hubo un error al crear la carpeta personal')
+          }
         }
       }
 
