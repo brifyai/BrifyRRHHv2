@@ -1,5 +1,7 @@
--- Configuración completa de la base de datos para soportar 800 empleados y analíticas
--- Ejecutar en Supabase Dashboard → SQL Editor
+-- ========================================
+-- CONFIGURACIÓN SIMPLE PARA SUPABASE
+-- Compatible con Supabase SQL Editor
+-- ========================================
 
 -- 1. Agregar columnas faltantes a la tabla users
 ALTER TABLE public.users 
@@ -92,7 +94,7 @@ ADD COLUMN IF NOT EXISTS metadata JSONB;
 -- 9. Crear índice para metadata en user_tokens_usage
 CREATE INDEX IF NOT EXISTS idx_user_tokens_usage_metadata ON public.user_tokens_usage USING GIN(metadata);
 
--- 10. Verificar que todas las tablas tengan las columnas necesarias
+-- 10. Verificar estructura final
 SELECT 
     'users' as table_name,
     column_name,
@@ -126,14 +128,5 @@ ORDER BY ordinal_position;
 -- 11. Conteo final de usuarios
 SELECT COUNT(*) as total_users FROM public.users;
 
--- 12. Verificar estructura completa
-SELECT
-    table_name,
-    column_name,
-    data_type,
-    is_nullable,
-    column_default
-FROM information_schema.columns
-WHERE table_schema = 'public'
-    AND table_name IN ('users', 'companies', 'message_analysis', 'analytics_test_reports', 'user_tokens_usage')
-ORDER BY table_name, ordinal_position;
+-- 12. Confirmación final
+SELECT '✅ Base de datos configurada exitosamente para Supabase!' as status;
