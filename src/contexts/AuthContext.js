@@ -442,7 +442,7 @@ export const AuthProvider = ({ children }) => {
       if (profileLoadTimeout) clearTimeout(profileLoadTimeout)
       if (visibilityTimeout) clearTimeout(visibilityTimeout)
     }
-  }, [user, loading, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     user,

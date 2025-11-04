@@ -398,7 +398,7 @@ class EmployeeDataService {
   // Generar datos de empleados para todas las empresas (50 por empresa)
   async generateEmployeesForAllCompanies() {
     try {
-      console.log('Generando datos de empleados para todas las empresas...');
+      // console.log('Generando datos de empleados para todas las empresas...');
       
       // Obtener todas las empresas
       const { data: companies, error: companiesError } = await supabase
@@ -418,7 +418,7 @@ class EmployeeDataService {
       // Para cada empresa, generar exactamente 50 empleados
       for (const company of companies) {
         const employeeCount = 50; // Exactamente 50 empleados por empresa
-        console.log(`Generando ${employeeCount} empleados para ${company.name}`);
+        // console.log(`Generando ${employeeCount} empleados para ${company.name}`);
         
         // Primero verificar cuántos empleados existen actualmente
         const { count: currentCount, error: countError } = await supabase

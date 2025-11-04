@@ -83,7 +83,7 @@ class EmployeeFolderService {
       };
       
       this.employeeFolders.set(employeeEmail, folderStructure);
-      console.log(`Carpeta creada para empleado: ${employeeEmail} (${companyName})`);
+      // console.log(`Carpeta creada para empleado: ${employeeEmail} (${companyName})`);
       return folderStructure;
     } catch (error) {
       console.error(`Error creando carpeta para empleado ${employeeEmail}:`, error);

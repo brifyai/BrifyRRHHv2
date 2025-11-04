@@ -152,7 +152,7 @@ class InMemoryEmployeeService {
     
     // Para cada empresa, generar exactamente 50 empleados
     this.companies.forEach(company => {
-      console.log(`Generando 50 empleados para ${company.name}`);
+      // console.log(`Generando 50 empleados para ${company.name}`);
       
       for (let i = 0; i < 50; i++) {
         this.employees.push(this.generateEmployeeData(company.id, company.name));

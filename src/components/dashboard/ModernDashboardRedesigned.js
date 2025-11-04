@@ -894,10 +894,6 @@ const ModernDashboardRedesigned = () => {
             }}
             className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50"
           >
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Resumen Empresarial</h2>
-              <p className="text-gray-600">Vista general de tu actividad y rendimiento</p>
-            </div>
             <DatabaseCompanySummary />
           </motion.div>
         ) : (
