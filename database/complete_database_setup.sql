@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS brevo_campaigns (
     sender_email TEXT,
     subject TEXT,
     content TEXT NOT NULL,
-    template_id UUID REFERENCES brevo_templates(id) ON DELETE SET NULL,
+    template_id UUID,
     scheduled_at TIMESTAMP WITH TIME ZONE,
     sent_at TIMESTAMP WITH TIME ZONE,
     test_mode BOOLEAN DEFAULT false,
