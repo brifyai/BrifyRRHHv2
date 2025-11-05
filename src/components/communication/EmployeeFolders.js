@@ -11,7 +11,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
-// import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService'; // Temporalmente desactivado
+import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService';
 import organizedDatabaseService from '../../services/organizedDatabaseService';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -50,10 +50,10 @@ const EmployeeFolders = () => {
   }, [companyId, filters]);
 
   useEffect(() => {
-    if (employees.length > 0 && !loading) {
+    if (!loading) {
       loadFoldersForCurrentPage();
     }
-  }, [currentPage, employees.length]);
+  }, [currentPage, searchTerm, filters, loading]);
 
   // Actualizar totalItems cuando cambian los filtros o la búsqueda
   useEffect(() => {
@@ -117,72 +117,69 @@ const EmployeeFolders = () => {
   const loadFoldersForCurrentPage = async () => {
     try {
       setLoadingFolders(true);
-      console.log(`📁 Cargando carpetas para página ${currentPage}...`);
+      console.log(`📁 Cargando carpetas reales desde la base de datos...`);
       
-      // Filtrar empleados con email y aplicar paginación
-      const employeesWithEmail = employees.filter(emp => emp.email);
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const employeesForPage = employeesWithEmail.slice(startIndex, endIndex);
-      
-      console.log(`📄 Procesando ${employeesForPage.length} empleados de ${employeesWithEmail.length} totales`);
+      // Cargar carpetas reales desde la base de datos usando enhancedEmployeeFolderService
+      const { data: realFolders, error: foldersError } = await enhancedEmployeeFolderService.supabase
+        .from('employee_folders')
+        .select('*')
+        .order('employee_name', { ascending: true });
 
-      // Crear carpetas básicas para todos los empleados (sin depender de servicio externo)
-      const folderPromises = employeesForPage.map(async (employee) => {
-        // Crear una carpeta básica para cada empleado
-        return {
-          email: employee.email,
-          employeeName: employee.name,
-          employeePosition: employee.position,
-          employeeDepartment: employee.department,
-          employeePhone: employee.phone,
-          employeeRegion: employee.region,
-          employeeLevel: employee.level,
-          employeeWorkMode: employee.work_mode,
-          employeeContractType: employee.contract_type,
-          companyName: employee.company?.name || 'Empresa no especificada',
-          createdAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          knowledgeBase: {
-            faqs: [],
-            documents: [],
-            policies: [],
-            procedures: []
-          },
-          conversationHistory: [],
-          settings: {
-            notificationPreferences: {
-              whatsapp: true,
-              telegram: true,
-              email: true
-            },
-            responseLanguage: 'es',
-            timezone: 'America/Santiago'
-          }
-        };
-      });
+      if (foldersError) {
+        console.error('❌ Error cargando carpetas desde employee_folders:', foldersError);
+        throw foldersError;
+      }
 
-      // Esperar a que las carpetas de la página se procesen
-      const foldersData = await Promise.all(folderPromises);
-      console.log(`✅ Procesadas ${foldersData.length} carpetas para página ${currentPage}`);
+      console.log(`✅ Encontradas ${realFolders?.length || 0} carpetas reales en la base de datos`);
       
-      // Actualizar folders: reemplazar o agregar según la página
-      setFolders(prevFolders => {
-        if (currentPage === 1) {
-          // Primera página: reemplazar todo
-          return foldersData;
-        } else {
-          // Páginas siguientes: agregar a las existentes
-          const existingFolders = prevFolders.slice(0, startIndex);
-          return [...existingFolders, ...foldersData];
-        }
-      });
+      // Si no hay filtros, mostrar todas las carpetas
+      if (!searchTerm && !Object.values(filters).some(Boolean)) {
+        setFolders(realFolders || []);
+        setTotalItems(realFolders?.length || 0);
+        return;
+      }
+
+      // Aplicar filtros a las carpetas reales
+      let filteredFolders = realFolders || [];
+      
+      if (searchTerm) {
+        filteredFolders = filteredFolders.filter(folder =>
+          folder.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          folder.employee_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          folder.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          folder.employee_position?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      if (filters.companyId) {
+        filteredFolders = filteredFolders.filter(folder => folder.company_id === filters.companyId);
+      }
+
+      if (filters.department) {
+        filteredFolders = filteredFolders.filter(folder => folder.employee_department === filters.department);
+      }
+
+      if (filters.level) {
+        filteredFolders = filteredFolders.filter(folder => folder.employee_level === filters.level);
+      }
+
+      if (filters.workMode) {
+        filteredFolders = filteredFolders.filter(folder => folder.employee_work_mode === filters.workMode);
+      }
+
+      if (filters.contractType) {
+        filteredFolders = filteredFolders.filter(folder => folder.employee_contract_type === filters.contractType);
+      }
+
+      console.log(`📊 ${filteredFolders.length} carpetas después de aplicar filtros`);
+      setFolders(filteredFolders);
+      setTotalItems(filteredFolders.length);
       
     } catch (error) {
       console.error('❌ Error cargando carpetas:', error);
       MySwal.fire({
         title: 'Error',
-        text: 'Hubo un problema al cargar las carpetas',
+        text: 'Hubo un problema al cargar las carpetas desde la base de datos',
         icon: 'error',
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0693e3'
@@ -391,39 +388,25 @@ const EmployeeFolders = () => {
 
   const handleViewFolder = async (employeeEmail) => {
     try {
-      // Crear carpeta básica para vista (sin depender de servicio externo)
-      const employee = employees.find(emp => emp.email === employeeEmail);
-      const folder = {
-        email: employeeEmail,
-        employeeName: employee?.name || 'Empleado',
-        employeePosition: employee?.position || 'No especificado',
-        employeeDepartment: employee?.department || 'No especificado',
-        employeePhone: employee?.phone || 'No especificado',
-        employeeRegion: employee?.region || 'No especificado',
-        employeeLevel: employee?.level || 'No especificado',
-        employeeWorkMode: employee?.work_mode || 'No especificado',
-        employeeContractType: employee?.contract_type || 'No especificado',
-        companyName: employee?.company?.name || 'Empresa no especificada',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        knowledgeBase: {
-          faqs: [],
-          documents: [],
-          policies: [],
-          procedures: []
-        },
-        conversationHistory: [],
-        settings: {
-          notificationPreferences: {
-            whatsapp: true,
-            telegram: true,
-            email: true
-          },
-          responseLanguage: 'es',
-          timezone: 'America/Santiago'
+      // Buscar carpeta real en la base de datos
+      const { data: folder, error } = await enhancedEmployeeFolderService.supabase
+        .from('employee_folders')
+        .select('*')
+        .eq('employee_email', employeeEmail)
+        .single();
+
+      if (error || !folder) {
+        // Si no existe, crearla
+        console.log(`📁 Creando carpeta para ${employeeEmail}...`);
+        const employee = employees.find(emp => emp.email === employeeEmail);
+        if (employee) {
+          const result = await enhancedEmployeeFolderService.createEmployeeFolder(employeeEmail, employee);
+          setSelectedFolder(result.folder);
         }
-      };
-      setSelectedFolder(folder);
+      } else {
+        setSelectedFolder(folder);
+      }
+      
       // Limpiar selección cuando se abre una carpeta individual
       setSelectedFolders(new Set());
     } catch (error) {
@@ -435,6 +418,50 @@ const EmployeeFolders = () => {
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0693e3'
       });
+    }
+  };
+
+  // Función para crear todas las carpetas de empleados
+  const createAllEmployeeFolders = async () => {
+    try {
+      setLoadingFolders(true);
+      MySwal.fire({
+        title: 'Creando carpetas...',
+        text: 'Por favor espera mientras se crean las carpetas para todos los empleados',
+        icon: 'info',
+        showConfirmButton: false,
+        allowOutsideClick: false
+      });
+
+      const result = await enhancedEmployeeFolderService.createFoldersForAllEmployees();
+      
+      MySwal.fire({
+        title: '¡Proceso completado!',
+        html: `
+          <div class="text-left">
+            <p><strong>Carpetas creadas:</strong> ${result.createdCount}</p>
+            <p><strong>Carpetas actualizadas:</strong> ${result.updatedCount}</p>
+            <p><strong>Errores:</strong> ${result.errorCount}</p>
+          </div>
+        `,
+        icon: result.errorCount === 0 ? 'success' : 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0693e3'
+      });
+
+      // Recargar carpetas
+      await loadFoldersForCurrentPage();
+    } catch (error) {
+      console.error('Error creando carpetas:', error);
+      MySwal.fire({
+        title: 'Error',
+        text: 'Hubo un problema al crear las carpetas',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0693e3'
+      });
+    } finally {
+      setLoadingFolders(false);
     }
   };
 
@@ -889,6 +916,27 @@ const EmployeeFolders = () => {
                       ? 'No hay carpetas que coincidan con los filtros aplicados'
                       : 'No hay carpetas de empleados disponibles'}
                   </p>
+                  {!searchTerm && !Object.values(filters).some(Boolean) && (
+                    <div className="mt-6">
+                      <button
+                        onClick={createAllEmployeeFolders}
+                        disabled={loadingFolders}
+                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingFolders ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                            Creando carpetas...
+                          </>
+                        ) : (
+                          <>
+                            <FolderIcon className="h-5 w-5 mr-3" />
+                            Crear Carpetas para Todos los Empleados
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
