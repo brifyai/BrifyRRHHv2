@@ -63,6 +63,7 @@ import GoogleDriveLocalTest from './components/test/GoogleDriveLocalTest.js'
 import GoogleDriveProductionDiagnosis from './components/test/GoogleDriveProductionDiagnosis.js'
 import UserGoogleDriveConnector from './components/integrations/UserGoogleDriveConnector.js'
 import GoogleDriveURIChecker from './components/test/GoogleDriveURIChecker.js'
+import GoogleDriveConnectionVerifier from './components/test/GoogleDriveConnectionVerifier.js'
 
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación
@@ -646,6 +647,18 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <GoogleDriveURIChecker />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de verificación completa del sistema */}
+            <Route
+              path="/google-drive-connection-verifier"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveConnectionVerifier />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
