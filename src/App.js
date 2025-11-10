@@ -59,6 +59,7 @@ import GoogleDriveAutoSetup from './components/integrations/GoogleDriveAutoSetup
 import GoogleDriveSetupWizard from './components/integrations/GoogleDriveSetupWizard.js'
 import GoogleDriveSimplePage from './components/integrations/GoogleDriveSimplePage.js'
 import GoogleDriveTestPage from './components/integrations/GoogleDriveTestPage.js'
+import GoogleDriveLocalTest from './components/test/GoogleDriveLocalTest.js'
 
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación
@@ -596,6 +597,18 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <GoogleDriveTestPage />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de prueba de Google Drive Local */}
+            <Route
+              path="/test-google-drive-local"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveLocalTest />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
