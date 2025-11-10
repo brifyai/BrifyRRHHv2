@@ -60,6 +60,7 @@ import GoogleDriveSetupWizard from './components/integrations/GoogleDriveSetupWi
 import GoogleDriveSimplePage from './components/integrations/GoogleDriveSimplePage.js'
 import GoogleDriveTestPage from './components/integrations/GoogleDriveTestPage.js'
 import GoogleDriveLocalTest from './components/test/GoogleDriveLocalTest.js'
+import GoogleDriveProductionDiagnosis from './components/test/GoogleDriveProductionDiagnosis.js'
 
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación
@@ -609,6 +610,18 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <GoogleDriveLocalTest />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de diagnóstico de Google Drive para producción */}
+            <Route
+              path="/diagnostico-google-drive"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveProductionDiagnosis />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
