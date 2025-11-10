@@ -652,15 +652,13 @@ function App() {
               }
             />
 
-            {/* Ruta de verificación completa del sistema */}
+            {/* Ruta de verificación completa del sistema - PÚBLICA */}
             <Route
               path="/google-drive-connection-verifier"
               element={
-                <ProtectedRoute>
-                  <AuthenticatedLayout>
-                    <GoogleDriveConnectionVerifier />
-                  </AuthenticatedLayout>
-                </ProtectedRoute>
+                <div className="min-h-screen bg-gray-50">
+                  <GoogleDriveConnectionVerifier />
+                </div>
               }
             />
 

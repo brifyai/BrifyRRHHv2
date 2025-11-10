@@ -17,6 +17,7 @@ import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ExclamationTriangleIcon,
   PuzzlePieceIcon,
   CloudIcon,
   ChatBubbleLeftRightIcon,
@@ -547,8 +548,21 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   const handleConnectGoogleDrive = async () => {
     try {
       setConnectingGoogleDrive(true)
+      
+      // Verificar si hay credenciales válidas primero
+      if (!googleDriveService.hasValidCredentials()) {
+        // Redirigir a la herramienta de configuración
+        toast.loading('Redirigiendo a la herramienta de configuración...', { duration: 2000 })
+        setTimeout(() => {
+          window.location.href = '/google-drive-connection-verifier'
+        }, 1000)
+        return
+      }
+      
       const authUrl = googleDriveService.generateAuthUrl()
-      window.location.href = authUrl
+      if (authUrl) {
+        window.location.href = authUrl
+      }
     } catch (error) {
       console.error('Error getting auth URL:', error)
       toast.error('Error al conectar con Google Drive')
@@ -3986,7 +4000,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                   Sincroniza tus archivos y carpetas con Google Drive para acceso universal.
                 </p>
 
-                {isGoogleDriveConnected && (
+                {isGoogleDriveConnected ? (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex">
                       <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
@@ -3994,6 +4008,18 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                         <p className="font-medium">Google Drive está conectado</p>
                         <p className="mt-1">
                           Tus archivos se sincronizarán automáticamente con tu cuenta de Google Drive.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex">
+                      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 mr-2" />
+                      <div className="text-sm text-yellow-700">
+                        <p className="font-medium">Google Drive necesita configuración</p>
+                        <p className="mt-1">
+                          Al hacer clic en "Configurar Google Drive" serás redirigido a una herramienta de diagnóstico que te guiará paso a paso.
                         </p>
                       </div>
                     </div>
@@ -4023,15 +4049,16 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                 <button
                   onClick={handleConnectGoogleDrive}
                   disabled={connectingGoogleDrive}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {connectingGoogleDrive ? (
                     <>
                       <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
-                      Conectando...
+                      Redirigiendo...
                     </>
                   ) : (
                     <>
+                      <Cog6ToothIcon className="h-4 w-4 mr-2" />
                       Configurar Google Drive
                     </>
                   )}
