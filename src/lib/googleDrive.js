@@ -40,9 +40,30 @@ class GoogleDriveService {
   }
 
   generateAuthUrl() {
+    // Verificar si tenemos credenciales válidas
+    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
+    const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
+    
+    // Si no tenemos credenciales válidas, lanzar error informativo
+    if (!clientId || clientId.includes('tu_google_client_id') || clientId === 'your-google-client-id') {
+      throw new Error(`
+        ❌ ERROR: No se han configurado las credenciales de Google OAuth válidas.
+        
+        Para usar Google Drive real:
+        1. Ve a Google Cloud Console (https://console.cloud.google.com/)
+        2. Crea un nuevo proyecto o selecciona uno existente
+        3. Habilita las APIs: Google Drive API y Gmail API
+        4. Crea credenciales OAuth 2.0
+        5. Configura el URI de redirección: ${redirectUri}
+        6. Actualiza el archivo .env con tus credenciales reales
+        
+        Alternativa: Usa el modo local de Google Drive (sin conexión real)
+      `)
+    }
+    
     const params = new URLSearchParams({
-      client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-      redirect_uri: process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send',
       response_type: 'code',
       access_type: 'offline',

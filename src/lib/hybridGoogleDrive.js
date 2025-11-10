@@ -12,11 +12,18 @@ class HybridGoogleDriveService {
   async initialize() {
     try {
       // Detectar si estamos en producción (Netlify) o desarrollo
-      const isProduction = window.location.hostname.includes('netlify.app') || 
+      const isProduction = window.location.hostname.includes('netlify.app') ||
                           window.location.hostname !== 'localhost'
       
-      // Intentar inicializar Google Drive real
-      if (!isProduction) {
+      // Verificar si tenemos credenciales válidas de Google
+      const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
+      const hasValidCredentials = clientId &&
+                                !clientId.includes('tu_google_client_id') &&
+                                !clientId.includes('your-google-client-id') &&
+                                clientId !== 'your-google-client-id'
+      
+      // Intentar inicializar Google Drive real solo si tenemos credenciales válidas
+      if (!isProduction && hasValidCredentials) {
         try {
           const googleDriveInitialized = await googleDriveService.initialize()
           if (googleDriveInitialized) {
@@ -25,8 +32,10 @@ class HybridGoogleDriveService {
             console.log('✅ Usando Google Drive real')
           }
         } catch (error) {
-          console.warn('⚠️ Google Drive no disponible, usando servicio local')
+          console.warn('⚠️ Google Drive no disponible, usando servicio local:', error.message)
         }
+      } else if (!hasValidCredentials) {
+        console.log('🔧 No se encontraron credenciales válidas de Google OAuth, usando modo local')
       } else {
         console.log('🌐 Entorno de producción detectado, usando Google Drive local')
       }
@@ -36,7 +45,7 @@ class HybridGoogleDriveService {
         await localGoogleDriveService.initialize()
         this.currentService = localGoogleDriveService
         this.isGoogleDriveAvailable = false
-        console.log('✅ Usando Google Drive local')
+        console.log('✅ Usando Google Drive local (modo sin conexión)')
       }
 
       this.initialized = true
