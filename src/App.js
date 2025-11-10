@@ -61,6 +61,7 @@ import GoogleDriveSimplePage from './components/integrations/GoogleDriveSimplePa
 import GoogleDriveTestPage from './components/integrations/GoogleDriveTestPage.js'
 import GoogleDriveLocalTest from './components/test/GoogleDriveLocalTest.js'
 import GoogleDriveProductionDiagnosis from './components/test/GoogleDriveProductionDiagnosis.js'
+import UserGoogleDriveConnector from './components/integrations/UserGoogleDriveConnector.js'
 
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación
@@ -586,6 +587,16 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <GoogleDriveSimplePage />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integrations/my-google-drive"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <UserGoogleDriveConnector />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
