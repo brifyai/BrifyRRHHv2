@@ -62,6 +62,7 @@ import GoogleDriveTestPage from './components/integrations/GoogleDriveTestPage.j
 import GoogleDriveLocalTest from './components/test/GoogleDriveLocalTest.js'
 import GoogleDriveProductionDiagnosis from './components/test/GoogleDriveProductionDiagnosis.js'
 import UserGoogleDriveConnector from './components/integrations/UserGoogleDriveConnector.js'
+import GoogleDriveURIChecker from './components/test/GoogleDriveURIChecker.js'
 
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación
@@ -633,6 +634,18 @@ function App() {
                 <ProtectedRoute>
                   <AuthenticatedLayout>
                     <GoogleDriveProductionDiagnosis />
+                  </AuthenticatedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de diagnóstico específico para redirect_uri_mismatch */}
+            <Route
+              path="/google-drive-uri-checker"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedLayout>
+                    <GoogleDriveURIChecker />
                   </AuthenticatedLayout>
                 </ProtectedRoute>
               }
