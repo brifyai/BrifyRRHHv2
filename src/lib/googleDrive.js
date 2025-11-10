@@ -40,24 +40,15 @@ class GoogleDriveService {
   }
 
   generateAuthUrl() {
-    // Verificar si tenemos credenciales válidas
     const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
     const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
     
-    // Si no tenemos credenciales válidas, lanzar error informativo
-    if (!clientId || clientId.includes('tu_google_client_id') || clientId === 'your-google-client-id') {
-      throw new Error(`
-        ❌ CONFIGURACIÓN REQUERIDA: Credenciales de Google OAuth no configuradas
-        
-        Para usar Google Drive real, necesitas:
-        1. Configurar credenciales en Google Cloud Console
-        2. Actualizar las variables de entorno:
-           - REACT_APP_GOOGLE_CLIENT_ID
-           - REACT_APP_GOOGLE_CLIENT_SECRET
-        3. URI de redirección: ${redirectUri}
-        
-        Revisa la guía completa: GOOGLE_OAUTH_SETUP_GUIDE.md
-      `)
+    // Verificar credenciales válidas
+    if (!clientId ||
+        clientId.includes('tu_google_client_id') ||
+        clientId.includes('YOUR_GOOGLE_CLIENT_ID_HERE') ||
+        clientId === 'your-google-client-id') {
+      return null // Retorna null en lugar de lanzar error
     }
     
     const params = new URLSearchParams({
@@ -70,6 +61,34 @@ class GoogleDriveService {
     })
     
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  }
+
+  // Verificar si hay credenciales configuradas
+  hasValidCredentials() {
+    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
+    const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET
+    
+    return !!(clientId &&
+             clientSecret &&
+             !clientId.includes('tu_google_client_id') &&
+             !clientId.includes('YOUR_GOOGLE_CLIENT_ID_HERE') &&
+             !clientSecret.includes('tu_google_client_secret') &&
+             !clientSecret.includes('YOUR_GOOGLE_CLIENT_SECRET_HERE'))
+  }
+
+  // Obtener información de configuración
+  getConfigInfo() {
+    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
+    const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET
+    const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
+    
+    return {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      redirectUri: redirectUri,
+      isValid: this.hasValidCredentials(),
+      needsConfiguration: !this.hasValidCredentials()
+    }
   }
 
   async exchangeCodeForTokens(code) {
