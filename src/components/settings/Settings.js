@@ -548,25 +548,58 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   const handleConnectGoogleDrive = async () => {
     try {
       setConnectingGoogleDrive(true)
-      
-      // Verificar si hay credenciales válidas primero
-      if (!googleDriveService.hasValidCredentials()) {
-        // Redirigir a la herramienta de configuración
-        toast.loading('Redirigiendo a la herramienta de configuración...', { duration: 2000 })
-        setTimeout(() => {
-          window.location.href = '/google-drive-connection-verifier'
-        }, 1000)
-        return
-      }
-      
       const authUrl = googleDriveService.generateAuthUrl()
-      if (authUrl) {
-        window.location.href = authUrl
-      }
+      window.location.href = authUrl
     } catch (error) {
       console.error('Error getting auth URL:', error)
-      toast.error('Error al conectar con Google Drive')
       setConnectingGoogleDrive(false)
+      
+      // Mostrar mensaje profesional con detalles y opciones
+      Swal.fire({
+        title: '🔧 Configuración de Google Drive Requerida',
+        html: `
+          <div style="text-align: left; max-width: 600px;">
+            <div style="background-color: #f0f8ff; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 8px 0; color: #0066cc;">⚙️ Configuración Necesaria</h4>
+              <p style="margin: 0; font-size: 14px; line-height: 1.5;">
+                Para usar Google Drive necesitas configurar las credenciales de OAuth 2.0 en Google Cloud Console.
+              </p>
+            </div>
+            
+            <div style="background-color: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 8px 0; color: #333;">📋 Pasos a seguir:</h4>
+              <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.5;">
+                <li>Crear proyecto en <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li>Habilitar Google Drive API</li>
+                <li>Crear credenciales OAuth 2.0</li>
+                <li>Configurar URI: <code>${window.location.origin}/auth/google/callback</code></li>
+                <li>Actualizar variables en archivo .env</li>
+              </ol>
+            </div>
+            
+            <div style="background-color: #e8f5e8; padding: 12px; border-radius: 8px; text-align: center;">
+              <p style="margin: 0; font-size: 13px; color: #2d5a2d;">
+                <strong>📖 Guía completa disponible:</strong><br>
+                <a href="/GOOGLE_OAUTH_SETUP_GUIDE.md" target="_blank" style="color: #0066cc; text-decoration: underline;">
+                  GOOGLE_OAUTH_SETUP_GUIDE.md
+                </a>
+              </p>
+            </div>
+          </div>
+        `,
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0066cc',
+        width: '700px',
+        showCancelButton: true,
+        cancelButtonText: 'Ver Guía Detallada',
+        cancelButtonColor: '#28a745'
+      }).then((result) => {
+        if (result.isDenied) {
+          // Abrir la herramienta de diagnóstico
+          window.open('/google-drive-connection-verifier', '_blank')
+        }
+      })
     }
   }
 
