@@ -35,13 +35,13 @@ http://localhost:3000/auth/google/callback
 
 #### **Para Producción (NUEVO - agregar esto):**
 ```
-https://[tu-app-netlify].netlify.app/auth/google/callback
+https://brifyrrhhv2.netlify.app/auth/google/callback
 ```
 
 #### **Ejemplo completo:**
-Si tu app de Netlify es `https://brifyrrh.com.netlify.app`, agrega:
+Si tu app de Netlify es `https://brifyrrhhv2.netlify.app`, agrega:
 ```
-https://brifyrrh.com.netlify.app/auth/google/callback
+https://brifyrrhhv2.netlify.app/auth/google/callback
 ```
 
 ### **Paso 3: Verificar la configuración**
