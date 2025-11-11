@@ -41,7 +41,13 @@ class GoogleDriveService {
 
   generateAuthUrl() {
     const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
-    const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
+    
+    // Detectar automáticamente el redirect URI según el ambiente
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI ||
+                       (isDevelopment ?
+                        'http://localhost:3000/auth/google/callback' :
+                        `${window.location.origin}/auth/google/callback`)
     
     // Verificar credenciales válidas
     if (!clientId ||
@@ -59,6 +65,9 @@ class GoogleDriveService {
       access_type: 'offline',
       prompt: 'consent'
     })
+    
+    console.log(`🔄 OAuth Google Drive - Ambiente: ${isDevelopment ? 'Desarrollo' : 'Producción'}`)
+    console.log(`📍 Redirect URI: ${redirectUri}`)
     
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
   }
