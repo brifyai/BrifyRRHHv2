@@ -133,8 +133,31 @@ class OrganizedDatabaseService {
   // MÉTODOS DE EMPLEADOS
   // ========================================
 
-  async getEmployees(companyId = null) {
-    const cacheKey = `employees_${companyId || 'all'}`;
+  // Obtener empleados (acepta companyId directo o un objeto de filtros)
+  async getEmployees(params = null) {
+    // Normalizar parámetros
+    let companyId = null;
+    let filters = {};
+
+    if (params && typeof params === 'object' && !Array.isArray(params)) {
+      filters = params;
+      companyId = params.companyId || null;
+    } else if (typeof params === 'string') {
+      companyId = params;
+    } else if (params !== null && params !== undefined) {
+      // Permitir números u otros tipos simples
+      companyId = String(params);
+    }
+
+    // Construir clave de caché segura
+    const cacheKey = `employees_${companyId || 'all'}_${JSON.stringify({
+      department: filters.department || null,
+      region: filters.region || null,
+      search: filters.search || null,
+      limit: filters.limit || null,
+      offset: filters.offset || null
+    })}`;
+
     const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
 
@@ -150,14 +173,52 @@ class OrganizedDatabaseService {
           )
         `);
 
+      // Filtros base
       if (companyId) {
         query = query.eq('company_id', companyId);
+      }
+
+      // Filtros opcionales (sin asumir columnas que no existan como is_active)
+      if (filters.department) {
+        query = query.eq('department', filters.department);
+      }
+      if (filters.region) {
+        query = query.ilike('region', `%${filters.region}%`);
+      }
+      if (filters.level) {
+        query = query.eq('level', filters.level);
+      }
+      if (filters.workMode) {
+        query = query.eq('work_mode', filters.workMode);
+      }
+      if (filters.contractType) {
+        query = query.eq('contract_type', filters.contractType);
+      }
+      if (filters.search) {
+        // Buscar por nombre/apellido/email
+        const term = filters.search.replace(/%/g, '').trim();
+        if (term.length > 0) {
+          query = query.or(
+            `first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`
+          );
+        }
+      }
+
+      // Paginación
+      if (Number.isInteger(filters.limit) && filters.limit > 0) {
+        query = query.limit(filters.limit);
+        if (Number.isInteger(filters.offset) && filters.offset >= 0) {
+          const start = filters.offset;
+          const end =
+            start + (filters.limit || (LIMITS_CONFIG?.DEFAULT_PAGE_SIZE || 50)) - 1;
+          query = query.range(start, end);
+        }
       }
 
       const { data, error } = await query.order('last_name', { ascending: true });
 
       if (error) throw error;
-      
+
       this.setCache(cacheKey, data);
       return data || [];
     } catch (error) {

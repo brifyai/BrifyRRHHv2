@@ -24,7 +24,8 @@ const EmployeeFolders = () => {
   const { companyId } = useParams();
   const [employees, setEmployees] = useState([]);
   const [folders, setFolders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  const [allFoldersNormalized, setAllFoldersNormalized] = useState([]);const [loading, setLoading] = useState(true);
   const [loadingFolders, setLoadingFolders] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -43,33 +44,94 @@ const EmployeeFolders = () => {
   const [uniqueWorkModes, setUniqueWorkModes] = useState([]);
   const [uniqueContractTypes, setUniqueContractTypes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+// Índice global email -> company_id para resolver empresa real del empleado
+const [employeeCompanyIndex, setEmployeeCompanyIndex] = useState(new Map());
+
+// Construir el índice una sola vez al montar
+useEffect(() => {
+  let cancelled = false;
+
+  const buildEmployeeCompanyIndex = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('email, company_id');
+
+      if (error) {
+        console.error('❌ Error construyendo índice empleados->empresa:', error);
+        return;
+      }
+
+      const map = new Map();
+      (data || []).forEach((e) => {
+        const key = String(e.email || '').trim().toLowerCase();
+        if (key) map.set(key, e.company_id);
+      });
+
+      if (!cancelled) setEmployeeCompanyIndex(map);
+    } catch (err) {
+      console.error('❌ Error inesperado construyendo índice empleados->empresa:', err);
+    }
+  };
+
+  buildEmployeeCompanyIndex();
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
+// Recalcular carpetas cuando el índice esté listo (aplica cambios en UI)
+useEffect(() => {
+  if (!loading) {
+    try {
+      // Forzar recarga para que se refleje la empresa correcta por empleado
+      // Nota: loadFoldersForCurrentPage está definido más abajo; el efecto se ejecuta después del render.
+      // eslint-disable-next-line no-use-before-define
+      loadFoldersForCurrentPage();
+    } catch (e) {
+      // Silencioso: si la función aún no está definida en el primer render, el siguiente render la tendrá disponible
+    }
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [employeeCompanyIndex, loading]);
 
   useEffect(() => {
     loadEmployeesOnly();
   }, [companyId, filters]);
 
+  // Alinear filtro de empresa con el parámetro de ruta para evitar desajustes
+  useEffect(() => {
+    if (companyId && filters.companyId !== companyId) {
+      setFilters(prev => ({ ...prev, companyId }));
+    }
+  }, [companyId]);
+
   useEffect(() => {
     if (!loading) {
       loadFoldersForCurrentPage();
     }
-  }, [currentPage, searchTerm, filters, loading]);
+  }, [currentPage, searchTerm, filters, loading, companies, employees]);
 
   // Actualizar totalItems cuando cambian los filtros o la búsqueda
   useEffect(() => {
     const filteredEmployees = employees.filter(employee => {
-      if (!employee.email) return false;
-      
-      const matchesSearch = !searchTerm ||
-        employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (employee.company?.name && employee.company.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.department && employee.department.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+      if (!employee?.email) return false;
+
+      const companyName = (employee.company && employee.company.name) || (employee.companies && employee.companies.name) || '';
+      const term = (searchTerm || '').toLowerCase();
+
+      const matchesSearch =
+        !term ||
+        (employee.name && employee.name.toLowerCase().includes(term)) ||
+        (employee.email && employee.email.toLowerCase().includes(term)) ||
+        (companyName && companyName.toLowerCase().includes(term)) ||
+        (employee.department && employee.department.toLowerCase().includes(term));
+
       return matchesSearch;
     });
-    
+
     setTotalItems(filteredEmployees.length);
     setCurrentPage(1); // Resetear a primera página cuando cambian los filtros
     setFolders([]); // Limpiar carpetas al cambiar filtros
@@ -80,22 +142,37 @@ const EmployeeFolders = () => {
       setLoading(true);
       console.log('🚀 Iniciando carga de empleados...');
       
-      // Cargar empresas
+      // Cargar empresas - misma fuente que EmployeeSelector
       const companyData = await organizedDatabaseService.getCompanies();
       setCompanies(companyData);
       
-      // Obtener empleados de la empresa con filtros
+      // Obtener empleados de la empresa con filtros - misma fuente que EmployeeSelector
       let employeesData = [];
       if (companyId) {
         employeesData = await organizedDatabaseService.getEmployees({ companyId });
       } else {
-        // Aplicar filtros
+        // Aplicar filtros directamente en el servicio (ahora soporta todos los filtros)
         employeesData = await organizedDatabaseService.getEmployees(filters);
       }
 
-      console.log(`📊 Cargados ${employeesData.length} empleados`);
-      setEmployees(employeesData);
-      setTotalItems(employeesData.filter(emp => emp.email).length);
+      console.log(`📊 Cargados ${employeesData.length} empleados (${Object.values(filters).filter(Boolean).length} filtros aplicados)`);
+      // Normalizar para asegurar compatibilidad: employee.company disponible aunque venga como 'companies' en la relación
+      const normalizedEmployees = (employeesData || []).map(e => ({
+        ...e,
+        company: e.companies || e.company || null, // Priorizar companies como en EmployeeSelector
+        // Campos adicionales para compatibilidad con vista de carpetas
+        employeeName: e.first_name && e.last_name ? `${e.first_name} ${e.last_name}` : e.first_name || e.last_name || 'Sin nombre',
+        employeeEmail: e.email,
+        employeeDepartment: e.department,
+        employeePosition: e.position,
+        employeePhone: e.phone,
+        employeeLevel: e.level,
+        employeeWorkMode: e.work_mode,
+        employeeContractType: e.contract_type,
+        companyName: e.companies?.name || e.company?.name || ''
+      }));
+      setEmployees(normalizedEmployees);
+      setTotalItems(normalizedEmployees.filter(emp => emp.email).length);
 
       // Extraer valores únicos para los filtros
       extractUniqueFilters(employeesData);
@@ -118,61 +195,81 @@ const EmployeeFolders = () => {
   const loadFoldersForCurrentPage = async () => {
     try {
       setLoadingFolders(true);
-      console.log(`📁 Cargando carpetas reales desde la base de datos...`);
+      console.log(`📁 Generando carpetas desde datos de empleados (misma fuente que EmployeeSelector)...`);
       
-      // Cargar carpetas reales desde la base de datos usando enhancedEmployeeFolderService
-      const { data: realFolders, error: foldersError } = await supabase
-        .from('employee_folders')
-        .select('*')
-        .order('employee_name', { ascending: true });
+      // Generar carpetas virtuales desde los datos de empleados (misma fuente que EmployeeSelector)
+      const virtualFolders = (employees || []).map(employee => ({
+        id: employee.id,
+        email: employee.email,
+        employeeEmail: employee.email,
+        employeeName: employee.employeeName,
+        companyName: employee.companyName,
+        companyIdResolved: employee.company_id,
+        employeeDepartment: employee.employeeDepartment,
+        employeePosition: employee.employeePosition,
+        employeePhone: employee.employeePhone,
+        employeeLevel: employee.employeeLevel,
+        employeeWorkMode: employee.employeeWorkMode,
+        employeeContractType: employee.employeeContractType,
+        lastUpdated: new Date().toISOString(),
+        // Datos simulados para compatibilidad con la UI existente
+        knowledgeBase: {
+          faqs: [],
+          documents: [],
+          policies: [],
+          procedures: []
+        }
+      }));
 
-      if (foldersError) {
-        console.error('❌ Error cargando carpetas desde employee_folders:', foldersError);
-        throw foldersError;
-      }
+      console.log(`✅ Generadas ${virtualFolders.length} carpetas virtuales desde empleados`);
 
-      console.log(`✅ Encontradas ${realFolders?.length || 0} carpetas reales en la base de datos`);
-      
       // Si no hay filtros, mostrar todas las carpetas
       if (!searchTerm && !Object.values(filters).some(Boolean)) {
-        setFolders(realFolders || []);
-        setTotalItems(realFolders?.length || 0);
+        setFolders(virtualFolders);
+        setTotalItems(virtualFolders.length);
         return;
       }
 
-      // Aplicar filtros a las carpetas reales
-      let filteredFolders = realFolders || [];
-      
-      if (searchTerm) {
+      // Aplicar filtros a las carpetas virtuales
+      let filteredFolders = virtualFolders || [];
+
+      const term = (searchTerm || '').toLowerCase();
+      if (term) {
         filteredFolders = filteredFolders.filter(folder =>
-          folder.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          folder.employee_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          folder.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          folder.employee_position?.toLowerCase().includes(searchTerm.toLowerCase())
+          (folder.employeeName || '').toLowerCase().includes(term) ||
+          (folder.employeeEmail || '').toLowerCase().includes(term) ||
+          (folder.companyName || '').toLowerCase().includes(term) ||
+          (folder.employeePosition || '').toLowerCase().includes(term)
         );
       }
 
       if (filters.companyId) {
-        filteredFolders = filteredFolders.filter(folder => folder.company_id === filters.companyId);
+        // Usar company_id directamente como en EmployeeSelector
+        filteredFolders = filteredFolders.filter(
+          (folder) => folder.companyIdResolved === filters.companyId
+        );
       }
 
       if (filters.department) {
-        filteredFolders = filteredFolders.filter(folder => folder.employee_department === filters.department);
+        filteredFolders = filteredFolders.filter(folder => (folder.employeeDepartment || '') === filters.department);
       }
 
       if (filters.level) {
-        filteredFolders = filteredFolders.filter(folder => folder.employee_level === filters.level);
+        filteredFolders = filteredFolders.filter(folder => (folder.employeeLevel || '') === filters.level);
       }
 
       if (filters.workMode) {
-        filteredFolders = filteredFolders.filter(folder => folder.employee_work_mode === filters.workMode);
+        filteredFolders = filteredFolders.filter(folder => (folder.employeeWorkMode || '') === filters.workMode);
       }
 
       if (filters.contractType) {
-        filteredFolders = filteredFolders.filter(folder => folder.employee_contract_type === filters.contractType);
+        filteredFolders = filteredFolders.filter(folder => (folder.employeeContractType || '') === filters.contractType);
       }
 
       console.log(`📊 ${filteredFolders.length} carpetas después de aplicar filtros`);
+      console.log('🏢 Empresas disponibles (desde companies):', (companies || []).map(c => [c.id, c.name]));
+      console.log('🧭 Filtro de empresa aplicado:', filters.companyId);
+      
       setFolders(filteredFolders);
       setTotalItems(filteredFolders.length);
       
@@ -219,32 +316,19 @@ const EmployeeFolders = () => {
   };
 
   const getFilteredFolders = () => {
-    // Filtrar empleados primero (más eficiente)
-    let filteredEmployees = employees.filter(employee => {
-      if (!employee.email) return false;
-      
-      const matchesSearch = !searchTerm ||
-        employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (employee.company?.name && employee.company.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.department && employee.department.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      return matchesSearch;
-    });
-
-    // Filtrar carpetas basadas en los empleados filtrados
-    return folders.filter(folder => {
-      return filteredEmployees.some(emp => emp.email === folder.email);
-    });
-  };
-
-  const getPaginatedFolders = () => {
-    // Como ya cargamos por páginas, simplemente devolver las carpetas actuales
+    // Las carpetas ya vienen filtradas por búsqueda y filtros activos
     return folders;
   };
 
+  const getPaginatedFolders = () => {
+    const all = getFilteredFolders();
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return all.slice(start, end);
+  };
+
   const getTotalPages = () => {
-    return Math.ceil(totalItems / itemsPerPage);
+    return Math.ceil(getFilteredFolders().length / itemsPerPage || 1);
   };
 
   const handlePageChange = (page) => {
@@ -578,19 +662,23 @@ const EmployeeFolders = () => {
 
   // Calcular filteredEmployees para el conteo total
   const filteredEmployeesForCount = employees.filter(employee => {
-    if (!employee.email) return false;
-    
-    const matchesSearch = !searchTerm ||
-      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (employee.company?.name && employee.company.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (employee.department && employee.department.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+    if (!employee?.email) return false;
+
+    const companyName = (employee.company && employee.company.name) || (employee.companies && employee.companies.name) || '';
+    const term = (searchTerm || '').toLowerCase();
+
+    const matchesSearch =
+      !term ||
+      (employee.name && employee.name.toLowerCase().includes(term)) ||
+      (employee.email && employee.email.toLowerCase().includes(term)) ||
+      (companyName && companyName.toLowerCase().includes(term)) ||
+      (employee.department && employee.department.toLowerCase().includes(term));
+
     return matchesSearch;
   });
 
   // Calcular páginas totales
-  const totalPages = Math.ceil(filteredEmployeesForCount.length / itemsPerPage);
+  const totalPages = getTotalPages();
   const hasMorePages = currentPage < totalPages;
 
   if (loading) {
@@ -655,8 +743,7 @@ const EmployeeFolders = () => {
         <div className="mb-6 p-4 bg-gray-50 rounded-xl">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
-              Mostrando {folders.length} de {filteredEmployeesForCount.length} empleados con email
-              {filteredEmployeesForCount.length > itemsPerPage && ` (página ${currentPage} de ${totalPages})`}
+              Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, getFilteredFolders().length)} a {Math.min(currentPage * itemsPerPage, getFilteredFolders().length)} de {getFilteredFolders().length} carpetas {getFilteredFolders().length > itemsPerPage && `(página ${currentPage} de ${getTotalPages()})`}
             </p>
             <div className="flex space-x-2">
               <button
@@ -735,7 +822,7 @@ const EmployeeFolders = () => {
                 >
                   <option value="">Todas las empresas</option>
                   {companies.map(company => (
-                    <option key={company.id} value={company.id} className="truncate">{company.name}</option>
+                    <option key={company.id} value={company.id}>{company.name}</option>
                   ))}
                 </select>
               </div>
@@ -918,7 +1005,7 @@ const EmployeeFolders = () => {
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-14 w-14 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg mr-4">
                             <span className="text-white font-bold text-lg">
-                              {(folder.employeeName || folder.email).charAt(0).toUpperCase()}
+                              {((folder.employeeName || folder.email || folder.employee_email || '?').charAt(0)).toUpperCase()}
                             </span>
                           </div>
                           <div className="employee-info">
