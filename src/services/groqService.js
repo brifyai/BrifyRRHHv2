@@ -450,6 +450,41 @@ Criterios para confidence:
   }
 
   /**
+   * Genera una completion de chat a partir de un arreglo de mensajes
+   * compatible con groq.chat.completions.create()
+   * @param {Object} options
+   * @param {Array} options.messages - Mensajes [{ role, content }]
+   * @param {string} [options.model] - Modelo a usar
+   * @param {number} [options.temperature] - Temperatura
+   * @param {number} [options.maxTokens] - Máximo de tokens de salida
+   * @returns {Promise<{content: string}>}
+   */
+  async generateCompletion({ messages = [], model = this.model, temperature = this.temperature, maxTokens = this.maxTokens } = {}) {
+    if (!this.groq) {
+      throw new Error('Servicio de IA no disponible. Configure la API key de GROQ.');
+    }
+    try {
+      if (!Array.isArray(messages) || messages.length === 0) {
+        throw new Error('Parámetro "messages" inválido: se requiere un arreglo de mensajes no vacío');
+      }
+
+      const completion = await this.groq.chat.completions.create({
+        messages,
+        model,
+        temperature,
+        max_tokens: maxTokens,
+        top_p: 1,
+        stream: false
+      });
+
+      const content = completion.choices?.[0]?.message?.content || '';
+      return { content };
+    } catch (error) {
+      console.error('Error en generateCompletion:', error);
+      throw new Error(`Error en GROQ generateCompletion: ${error.message}`);
+    }
+  }
+  /**
    * Verifica si el servicio está disponible
    * @returns {Promise<boolean>} - True si está disponible
    */

@@ -90,7 +90,7 @@ class TrendsAnalysisService {
         .from('companies')
         .select('*')
         .ilike('name', `%${companyName}%`)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return company;
@@ -163,8 +163,7 @@ class TrendsAnalysisService {
       const { data: employees, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('company_id', companyId)
-        .eq('is_active', true);
+        .eq('company_id', companyId);
 
       if (error) throw error;
 
