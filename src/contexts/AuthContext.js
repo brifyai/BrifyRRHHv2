@@ -21,6 +21,18 @@ export const AuthProvider = ({ children }) => {
   const registrationProcessed = useRef(new Set())
   const profileLoadProcessed = useRef(new Set())
 
+  // Función para extraer nombre del email si no hay nombre disponible
+  const extractNameFromEmail = (email) => {
+    if (!email) return 'Usuario'
+    const parts = email.split('@')
+    const namePart = parts[0]
+    // Reemplazar puntos y guiones con espacios y capitalizar
+    return namePart.replace(/[.-]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
+
   // Cargar perfil del usuario desde la base de datos
   const loadUserProfile = async (userId, forceReload = false) => {
     try {
@@ -46,18 +58,6 @@ export const AuthProvider = ({ children }) => {
       if (!data && !error) {
         console.log('Usuario no encontrado en la tabla users, creando perfil...')
         
-        // Función para extraer nombre del email si no hay nombre disponible
-        const extractNameFromEmail = (email) => {
-          if (!email) return 'Usuario'
-          const parts = email.split('@')
-          const namePart = parts[0]
-          // Reemplazar puntos y guiones con espacios y capitalizar
-          return namePart.replace(/[.-]/g, ' ')
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')
-        }
-        
         const userProfileData = {
           id: userId,
           email: user?.email || '',
@@ -65,14 +65,31 @@ export const AuthProvider = ({ children }) => {
                     user?.user_metadata?.full_name ||
                     extractNameFromEmail(user?.email),
           telegram_id: null,
+          company_id: null,
           is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          name: user?.user_metadata?.name || extractNameFromEmail(user?.email),
           current_plan_id: null,
           plan_expiration: null,
           used_storage_bytes: 0,
           registered_via: 'web',
           admin: false,
           onboarding_status: 'pending',
-          registro_previo: true
+          registro_previo: true,
+          // Campos específicos para empleados
+          department: null,
+          position: 'Empleado',
+          phone: null,
+          status: 'active',
+          role: 'employee',
+          employee_id: `EMP-${userId.substring(0, 8).toUpperCase()}`,
+          hire_date: new Date().toISOString().split('T')[0], // Fecha actual en formato YYYY-MM-DD
+          salary: null,
+          manager_id: null,
+          location: 'Chile',
+          bio: null,
+          avatar_url: user?.user_metadata?.avatar_url || null
         }
         
         const { data: newUserData, error: createError } = await db.users.upsert(userProfileData)
@@ -193,16 +210,33 @@ export const AuthProvider = ({ children }) => {
         const userProfileData = {
           id: authData.user.id,
           email: email,
-          full_name: userData.name || '',
+          full_name: userData.name || extractNameFromEmail(email),
           telegram_id: userData.telegram_id || null,
+          company_id: null,
           is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          name: userData.name || extractNameFromEmail(email),
           current_plan_id: null,
           plan_expiration: null,
           used_storage_bytes: 0,
           registered_via: 'web',
           admin: false,
           onboarding_status: 'pending',
-          registro_previo: true
+          registro_previo: true,
+          // Campos específicos para empleados
+          department: userData.department || 'General',
+          position: userData.position || 'Empleado',
+          phone: userData.phone || null,
+          status: 'active',
+          role: userData.role || 'employee',
+          employee_id: `EMP-${authData.user.id.substring(0, 8).toUpperCase()}`,
+          hire_date: userData.hire_date || new Date().toISOString().split('T')[0],
+          salary: userData.salary || null,
+          manager_id: userData.manager_id || null,
+          location: userData.location || 'Chile',
+          bio: userData.bio || null,
+          avatar_url: userData.avatar_url || null
         }
 
         // Usar upsert para evitar duplicados en caso de re-ejecución
@@ -360,6 +394,95 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Actualizar credenciales de Google Drive
+  const updateGoogleDriveCredentials = async (tokens, userInfo = {}) => {
+    try {
+      if (!user) {
+        throw new Error('No hay usuario autenticado')
+      }
+
+      // Importar el servicio de persistencia
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+
+      // Guardar credenciales en Supabase
+      const { success, error } = await googleDrivePersistenceService.saveCredentials(
+        user.id,
+        tokens,
+        userInfo
+      )
+
+      if (!success) {
+        throw new Error(error?.message || 'Error guardando credenciales')
+      }
+
+      // Recargar perfil para actualizar estado de Google Drive
+      await loadUserProfile(user.id, true)
+      toast.success('Google Drive conectado exitosamente')
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('Error en updateGoogleDriveCredentials:', error)
+      toast.error('Error conectando Google Drive')
+      return { success: false, error: { message: error.message } }
+    }
+  }
+
+  // Obtener estado de conexión de Google Drive
+  const getGoogleDriveStatus = async () => {
+    try {
+      if (!user) {
+        return { connected: false, email: null }
+      }
+
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      return await googleDrivePersistenceService.getConnectionStatus(user.id)
+    } catch (error) {
+      console.error('Error obteniendo estado de Google Drive:', error)
+      return { connected: false, email: null }
+    }
+  }
+
+  // Desconectar Google Drive
+  const disconnectGoogleDrive = async () => {
+    try {
+      if (!user) {
+        throw new Error('No hay usuario autenticado')
+      }
+
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      const { success, error } = await googleDrivePersistenceService.disconnect(user.id)
+
+      if (!success) {
+        throw new Error(error?.message || 'Error desconectando Google Drive')
+      }
+
+      // Recargar perfil
+      await loadUserProfile(user.id, true)
+      toast.success('Google Drive desconectado exitosamente')
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('Error en disconnectGoogleDrive:', error)
+      toast.error('Error desconectando Google Drive')
+      return { success: false, error: { message: error.message } }
+    }
+  }
+
+  // Obtener token de acceso válido de Google Drive
+  const getValidGoogleDriveToken = async () => {
+    try {
+      if (!user) {
+        return { token: null, error: { message: 'No hay usuario autenticado' } }
+      }
+
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      return await googleDrivePersistenceService.getValidAccessToken(user.id)
+    } catch (error) {
+      console.error('Error obteniendo token válido:', error)
+      return { token: null, error: { message: error.message } }
+    }
+  }
+
   // Verificar si el usuario tiene un plan activo
   // Siempre devuelve true para eliminar todas las restricciones de planes
   const hasActivePlan = () => {
@@ -491,7 +614,11 @@ export const AuthProvider = ({ children }) => {
     updateUserProfile,
     loadUserProfile,
     hasActivePlan,
-    getDaysRemaining
+    getDaysRemaining,
+    updateGoogleDriveCredentials,
+    getGoogleDriveStatus,
+    disconnectGoogleDrive,
+    getValidGoogleDriveToken
   }
 
   return (

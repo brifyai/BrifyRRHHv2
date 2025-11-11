@@ -1,21 +1,66 @@
 import { supabase } from '../lib/supabaseClient.js';
 import inMemoryEmployeeService from './inMemoryEmployeeService.js';
 import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
-
-class EnhancedEmployeeFolderService {
-  constructor() {
-    this.initialized = false;
-    this.hybridDriveInitialized = false;
-  }
+ 
+ // Helper para validar UUID y evitar errores "invalid input syntax for type uuid"
+ const isValidUUID = (value) => {
+   if (typeof value !== 'string') value = String(value || '');
+   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+   return uuidRegex.test(value);
+ };
+ 
+ // Normalización de errores de Supabase/PostgREST para diagnóstico
+ const normalizeSupabaseError = (err) => {
+   try {
+     if (!err) return 'Error desconocido';
+     if (typeof err === 'string') return err;
+     if (err.message) return err.message;
+     if (err.error_description) return err.error_description;
+     if (err.statusText) return `${err.status} ${err.statusText}`;
+     return JSON.stringify(err);
+   } catch {
+     return 'Error desconocido';
+   }
+ };
+ 
+ // Detectar error típico de esquema faltante (relación no existe)
+ const isRelationMissingError = (err) => {
+   try {
+     const msg = (err?.message || err?.hint || '').toLowerCase();
+     return err?.code === '42P01' || (msg.includes('relation') && msg.includes('does not exist'));
+   } catch {
+     return false;
+   }
+ };
+ 
+ // Detectar error de RLS (row-level security)
+ const isRlsDeniedError = (err) => {
+   try {
+     const msg = (err?.message || '').toLowerCase();
+     return msg.includes('row-level security') || msg.includes('violates row-level security policy');
+   } catch {
+     return false;
+   }
+ };
+ 
+ class EnhancedEmployeeFolderService {
+   constructor() {
+     this.initialized = false;
+     this.hybridDriveInitialized = false;
+     // Exponer el cliente para componentes que lo usan directamente (p.ej. EmployeeFolderManager)
+     this.supabase = supabase;
+   }
 
   // Inicializar el servicio
   async initialize() {
     if (this.initialized) return true;
     
     try {
-      // Verificar conexión con Supabase
-      const { data, error } = await supabase.from('employee_folders').select('count').limit(1);
-      if (error) throw error;
+      // Verificar conexión con Supabase (no bloquear si falla por RLS/Accept)
+      const { error } = await supabase.from('employee_folders').select('count').limit(1);
+      if (error) {
+        console.warn('⚠️ Verificación rápida de employee_folders falló (continuamos):', error.message || error);
+      }
       
       // Inicializar Hybrid Google Drive
       await this.initializeHybridDrive();
@@ -58,13 +103,16 @@ class EnhancedEmployeeFolderService {
       let createdCount = 0;
       let updatedCount = 0;
       let errorCount = 0;
-
+      const errors = [];
+      let schemaSuspect = false;
+      let rlsDenied = false;
+ 
       for (const employee of employees) {
         if (!employee.email) {
           console.warn(`⚠️ Empleado sin email: ${employee.name}`);
           continue;
         }
-
+ 
         try {
           const result = await this.createEmployeeFolder(employee.email, employee);
           if (result.created) {
@@ -72,15 +120,25 @@ class EnhancedEmployeeFolderService {
           } else if (result.updated) {
             updatedCount++;
           }
-          console.log(`✅ Carpeta procesada: ${employee.email} (${employee.company_name || 'Sin empresa'})`);
+          // Log abreviado para alto volumen
+          if ((createdCount + updatedCount) % 50 === 0) {
+            console.log(`✅ Procesadas ${createdCount + updatedCount} carpetas...`);
+          }
         } catch (error) {
           errorCount++;
-          console.error(`❌ Error procesando carpeta para ${employee.email}:`, error.message);
+          const msg = normalizeSupabaseError(error);
+          if (isRelationMissingError(error)) schemaSuspect = true;
+          if (isRlsDeniedError(error)) rlsDenied = true;
+          errors.push(`${employee.email}: ${msg}`);
+          // Registrar cada 25 errores para no saturar
+          if (errorCount <= 10 || errorCount % 25 === 0) {
+            console.error(`❌ Error procesando carpeta para ${employee.email}:`, error);
+          }
         }
       }
-
+ 
       console.log(`📊 Resumen: ${createdCount} creadas, ${updatedCount} actualizadas, ${errorCount} errores`);
-      return { createdCount, updatedCount, errorCount };
+      return { createdCount, updatedCount, errorCount, sampleErrors: errors.slice(0, 10), schemaSuspect, rlsDenied };
     } catch (error) {
       console.error('❌ Error creando carpetas para todos los empleados:', error);
       throw error;
@@ -97,7 +155,7 @@ class EnhancedEmployeeFolderService {
         .from('employee_folders')
         .select('*')
         .eq('employee_email', employeeEmail)
-        .single();
+        .maybeSingle();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         throw fetchError;
@@ -112,8 +170,9 @@ class EnhancedEmployeeFolderService {
         const company = companies.find(comp => comp.id === employeeData.company_id);
         if (company) {
           companyName = company.name;
-          companyId = company.id;
         }
+        // Guardar company_id solo si es un UUID válido (evita errores 400/invalid input syntax)
+        companyId = isValidUUID(employeeData.company_id) ? String(employeeData.company_id) : null;
       }
 
       const folderData = {
@@ -143,15 +202,20 @@ class EnhancedEmployeeFolderService {
       let driveFolderId = null;
       let driveFolderUrl = null;
 
-      // Crear carpeta en Hybrid Drive si está inicializado
-      if (this.hybridDriveInitialized) {
+      // Crear carpeta en Hybrid Drive si está inicializado y autenticado (en caso de Drive real)
+      const serviceInfo = this.hybridDriveInitialized ? hybridGoogleDriveService.getServiceInfo() : null;
+      const isAuth = serviceInfo?.isReal
+        ? (hybridGoogleDriveService.isAuthenticated ? hybridGoogleDriveService.isAuthenticated() : false)
+        : this.hybridDriveInitialized;
+      const canUseDrive = this.hybridDriveInitialized && isAuth;
+
+      if (canUseDrive) {
         try {
           const driveFolder = await this.createDriveFolder(employeeEmail, employeeData.name, companyName);
           if (driveFolder && driveFolder.id) {
             driveFolderId = driveFolder.id;
             
             // Crear URL según el servicio
-            const serviceInfo = hybridGoogleDriveService.getServiceInfo();
             if (serviceInfo.isReal) {
               driveFolderUrl = `https://drive.google.com/drive/folders/${driveFolder.id}`;
             } else {
@@ -162,8 +226,10 @@ class EnhancedEmployeeFolderService {
             await this.shareDriveFolder(driveFolder.id, employeeEmail);
           }
         } catch (driveError) {
-          console.warn(`⚠️ No se pudo crear carpeta en Drive para ${employeeEmail}:`, driveError.message);
+          console.warn(`⚠️ No se pudo crear carpeta en Drive para ${employeeEmail}:`, driveError.message || driveError);
         }
+      } else {
+        console.warn(`⚠️ Omitiendo interacción con Drive para ${employeeEmail}: servicio no autenticado o no inicializado`);
       }
 
       folderData.drive_folder_id = driveFolderId;
@@ -179,7 +245,7 @@ class EnhancedEmployeeFolderService {
           })
           .eq('employee_email', employeeEmail)
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
@@ -193,7 +259,7 @@ class EnhancedEmployeeFolderService {
           .from('employee_folders')
           .insert(folderData)
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
@@ -294,7 +360,7 @@ class EnhancedEmployeeFolderService {
         .from('employee_notification_settings')
         .select('id')
         .eq('folder_id', folderId)
-        .single();
+        .maybeSingle();
 
       if (!existing) {
         await this.createNotificationSettings(folderId);
@@ -313,7 +379,7 @@ class EnhancedEmployeeFolderService {
         .from('employee_folders')
         .select('*')
         .eq('employee_email', employeeEmail)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -358,7 +424,7 @@ class EnhancedEmployeeFolderService {
         .from('employee_documents')
         .insert(documentData)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -389,7 +455,7 @@ class EnhancedEmployeeFolderService {
         .from('employee_faqs')
         .insert(faqData)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -418,7 +484,7 @@ class EnhancedEmployeeFolderService {
         .from('employee_conversations')
         .insert(messageData)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 

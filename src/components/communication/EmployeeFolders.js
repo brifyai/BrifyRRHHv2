@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService';
 import organizedDatabaseService from '../../services/organizedDatabaseService';
+import { supabase } from '../../lib/supabaseClient';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import '../../styles/responsive-tables.css';
@@ -120,7 +121,7 @@ const EmployeeFolders = () => {
       console.log(`📁 Cargando carpetas reales desde la base de datos...`);
       
       // Cargar carpetas reales desde la base de datos usando enhancedEmployeeFolderService
-      const { data: realFolders, error: foldersError } = await enhancedEmployeeFolderService.supabase
+      const { data: realFolders, error: foldersError } = await supabase
         .from('employee_folders')
         .select('*')
         .order('employee_name', { ascending: true });
@@ -389,11 +390,11 @@ const EmployeeFolders = () => {
   const handleViewFolder = async (employeeEmail) => {
     try {
       // Buscar carpeta real en la base de datos
-      const { data: folder, error } = await enhancedEmployeeFolderService.supabase
+      const { data: folder, error } = await supabase
         .from('employee_folders')
         .select('*')
         .eq('employee_email', employeeEmail)
-        .single();
+        .maybeSingle();
 
       if (error || !folder) {
         // Si no existe, crearla
@@ -450,12 +451,122 @@ const EmployeeFolders = () => {
       });
 
       // Recargar carpetas
+      if (result && result.errorCount > 0) {
+        const errors = (result.sampleErrors || []).slice(0, 10);
+        const errorsHtml = errors.length
+          ? `<ul class="list-disc pl-5 text-left">${errors.map(e => `<li class="mb-1 text-sm text-red-700">${e}</li>`).join('')}</ul>`
+          : '<p class="text-gray-600">No hay detalles adicionales de error</p>';
+        const schemaNote = result.schemaSuspect
+          ? `<div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+               <p class="text-yellow-800 text-sm">
+                 Se sospecha un problema de esquema en la base de datos. Verifica que las tablas estén creadas en Supabase ejecutando el SQL:
+                 <code class="bg-yellow-100 px-1 py-0.5 rounded">database/employee_folders_setup.sql</code>
+               </p>
+             </div>`
+          : '';
+        await MySwal.fire({
+          title: 'Se detectaron errores durante la sincronización',
+          html: `
+            <div class="text-left">
+              <p class="mb-2"><strong>Errores:</strong> ${result.errorCount}</p>
+              <p class="mb-2"><strong>Creadas:</strong> ${result.createdCount} &nbsp;&nbsp; <strong>Actualizadas:</strong> ${result.updatedCount}</p>
+              <div class="mt-2">
+                <p class="mb-1 font-semibold">Muestras de error:</p>
+                ${errorsHtml}
+              </div>
+              ${schemaNote}
+            </div>
+          `,
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#0693e3',
+          width: '800px'
+        });
+      }
       await loadFoldersForCurrentPage();
     } catch (error) {
       console.error('Error creando carpetas:', error);
       MySwal.fire({
         title: 'Error',
         text: 'Hubo un problema al crear las carpetas',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0693e3'
+      });
+    } finally {
+      setLoadingFolders(false);
+    }
+  };
+
+  // Sincronizar manualmente con Google Drive (crea/actualiza carpetas)
+  const handleSyncWithDrive = async () => {
+    try {
+      setLoadingFolders(true);
+      MySwal.fire({
+        title: 'Sincronizando con Drive...',
+        text: 'Creando y actualizando carpetas para los empleados',
+        icon: 'info',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          MySwal.showLoading();
+        }
+      });
+
+      const result = await enhancedEmployeeFolderService.createFoldersForAllEmployees();
+
+      MySwal.fire({
+        title: 'Sincronización completada',
+        html: `
+          <div class="text-left">
+            <p><strong>Carpetas creadas:</strong> ${result.createdCount}</p>
+            <p><strong>Carpetas actualizadas:</strong> ${result.updatedCount}</p>
+            <p><strong>Errores:</strong> ${result.errorCount}</p>
+          </div>
+        `,
+        icon: result.errorCount === 0 ? 'success' : 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0693e3'
+      });
+
+      if (result && result.errorCount > 0) {
+        const errors = (result.sampleErrors || []).slice(0, 10);
+        const errorsHtml = errors.length
+          ? `<ul class="list-disc pl-5 text-left">${errors.map(e => `<li class="mb-1 text-sm text-red-700">${e}</li>`).join('')}</ul>`
+          : '<p class="text-gray-600">No hay detalles adicionales de error</p>';
+        const schemaNote = result.schemaSuspect
+          ? `<div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+               <p class="text-yellow-800 text-sm">
+                 Se sospecha un problema de esquema en la base de datos. Verifica que las tablas estén creadas en Supabase ejecutando el SQL:
+                 <code class="bg-yellow-100 px-1 py-0.5 rounded">database/employee_folders_setup.sql</code>
+               </p>
+             </div>`
+          : '';
+        await MySwal.fire({
+          title: 'Se detectaron errores durante la sincronización',
+          html: `
+            <div class="text-left">
+              <p class="mb-2"><strong>Errores:</strong> ${result.errorCount}</p>
+              <p class="mb-2"><strong>Creadas:</strong> ${result.createdCount} &nbsp;&nbsp; <strong>Actualizadas:</strong> ${result.updatedCount}</p>
+              <div class="mt-2">
+                <p class="mb-1 font-semibold">Muestras de error:</p>
+                ${errorsHtml}
+              </div>
+              ${schemaNote}
+            </div>
+          `,
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#0693e3',
+          width: '800px'
+        });
+      }
+      await loadFoldersForCurrentPage();
+    } catch (error) {
+      console.error('Error sincronizando con Drive:', error);
+      MySwal.fire({
+        title: 'Error',
+        text: `No se pudo sincronizar con Google Drive: ${error.message || error}`,
         icon: 'error',
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0693e3'
@@ -548,6 +659,13 @@ const EmployeeFolders = () => {
               {filteredEmployeesForCount.length > itemsPerPage && ` (página ${currentPage} de ${totalPages})`}
             </p>
             <div className="flex space-x-2">
+              <button
+                onClick={handleSyncWithDrive}
+                disabled={loadingFolders}
+                className="px-3 py-1 bg-green-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+              >
+                {loadingFolders ? 'Sincronizando...' : 'Sincronizar con Drive'}
+              </button>
               <button
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}

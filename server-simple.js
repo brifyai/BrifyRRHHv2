@@ -17,7 +17,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3003',
-      'https://staffhubapp.netlify.app',
+      'https://brifyrrhhv2.netlify.app',
       'https://staffhub.vercel.app',
       'https://tmqglnycivlcjijoymwe.supabase.co'
     ];

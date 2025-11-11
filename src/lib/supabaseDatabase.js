@@ -648,6 +648,110 @@ export const db = {
     }
   },
 
+   // Credenciales de Google Drive
+   googleDriveCredentials: {
+     create: async (credentialsData) => {
+       try {
+         if (!credentialsData || typeof credentialsData !== 'object') {
+           throw new Error('credentialsData debe ser un objeto válido');
+         }
+         if (!credentialsData.user_id) {
+           throw new Error('user_id es requerido');
+         }
+
+         const { data, error } = await supabase
+           .from('user_google_drive_credentials')
+           .insert([credentialsData])
+           .select()
+         return { data, error }
+       } catch (error) {
+         console.error('Error en googleDriveCredentials.create:', error);
+         return { data: null, error: { message: error.message } }
+       }
+     },
+     
+     upsert: async (credentialsData) => {
+       try {
+         if (!credentialsData || typeof credentialsData !== 'object') {
+           throw new Error('credentialsData debe ser un objeto válido');
+         }
+         if (!credentialsData.user_id) {
+           throw new Error('user_id es requerido para upsert');
+         }
+
+         const { data, error } = await supabase
+           .from('user_google_drive_credentials')
+           .upsert([credentialsData], {
+             onConflict: 'user_id',
+             ignoreDuplicates: false
+           })
+           .select()
+         return { data, error }
+       } catch (error) {
+         console.error('Error en googleDriveCredentials.upsert:', error);
+         return { data: null, error: { message: error.message } }
+       }
+     },
+     
+     getByUserId: async (userId) => {
+       try {
+         if (!userId) {
+           throw new Error('User ID es requerido');
+         }
+
+         const { data, error } = await supabase
+           .from('user_google_drive_credentials')
+           .select('*')
+           .eq('user_id', userId)
+           .maybeSingle()
+         return { data, error }
+       } catch (error) {
+         console.error('Error en googleDriveCredentials.getByUserId:', error);
+         return { data: null, error: { message: error.message } }
+       }
+     },
+     
+     update: async (userId, updates) => {
+       try {
+         if (!userId) {
+           throw new Error('User ID es requerido');
+         }
+         if (!updates || typeof updates !== 'object') {
+           throw new Error('Updates debe ser un objeto válido');
+         }
+
+         const { data, error } = await supabase
+           .from('user_google_drive_credentials')
+           .update(updates)
+           .eq('user_id', userId)
+           .select()
+         return { data, error }
+       } catch (error) {
+         console.error('Error en googleDriveCredentials.update:', error);
+         return { data: null, error: { message: error.message } }
+       }
+     },
+     
+     delete: async (userId) => {
+       try {
+         if (!userId) {
+           throw new Error('User ID es requerido');
+         }
+
+         const { data, error } = await supabase
+           .from('user_google_drive_credentials')
+           .delete()
+           .eq('user_id', userId)
+         return { data, error }
+       } catch (error) {
+         console.error('Error en googleDriveCredentials.delete:', error);
+         return { data: null, error: { message: error.message } }
+       }
+     }
+   },
+
+
+
   // Uso de tokens de usuario
   userTokensUsage: {
     create: async (tokenData) => {

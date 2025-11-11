@@ -1,19 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_CONFIG, APP_CONFIG } from '../config/constants.js'
 
+// Usar variables de entorno reales - NO SIMULADAS
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || SUPABASE_CONFIG.URL
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || SUPABASE_CONFIG.ANON_KEY
+
 // Validar configuración de Supabase
-if (!SUPABASE_CONFIG.URL || !SUPABASE_CONFIG.ANON_KEY) {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error('Missing Supabase configuration. Please check your environment variables.')
 }
 
-// Usar siempre la clave anónima para evitar problemas de RLS
-const keyToUse = SUPABASE_CONFIG.ANON_KEY
-
-// Create and export the Supabase client con opciones optimizadas y forzadas
+// Create and export the Supabase client con opciones optimizadas y REALES
 export const supabase = createClient(
-  // Forzar siempre el proyecto correcto
-  'https://tmqglnycivlcjijoymwe.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcWdsbnljaXZsY2ppam95bXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTQ1NDYsImV4cCI6MjA3NjEzMDU0Nn0.ILwxm7pKdFZtG-Xz8niMSHaTwMvE4S7VlU8yDSgxOpE',
+  // Usar URL de variables de entorno
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
   {
     auth: {
       persistSession: true,
@@ -21,7 +22,23 @@ export const supabase = createClient(
       detectSessionInUrl: true,
       storage: window.localStorage,
       flow: 'pkce',
-      debug: process.env.NODE_ENV === 'development'
+      debug: false, // Deshabilitar logs de debug para evitar spam
+      storageKey: 'brifyrrhhv2-auth-token',
+      storageGetItem: (key) => {
+        try {
+          return window.localStorage.getItem(key)
+        } catch (e) {
+          console.warn('Failed to get storage item:', key)
+          return null
+        }
+      },
+      storageSetItem: (key, value) => {
+        try {
+          window.localStorage.setItem(key, value)
+        } catch (e) {
+          console.warn('Failed to set storage item:', key, e)
+        }
+      }
     },
     global: {
       headers: {
@@ -31,6 +48,11 @@ export const supabase = createClient(
     },
     db: {
       schema: 'public'
+    },
+    realtime: {
+      disabled: false,
+      encodeChannels: (channel) => channel,
+      decodeChannels: (channel) => channel
     }
   }
 )

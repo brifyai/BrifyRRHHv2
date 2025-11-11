@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import googleDriveService from '../../lib/googleDrive'
+import googleDrivePersistenceService from '../../services/googleDrivePersistenceService'
+import googleDriveCallbackHandler from '../../lib/googleDriveCallbackHandler'
 import brevoService from '../../services/brevoService'
 import companySyncService from '../../services/companySyncService'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
@@ -430,22 +432,47 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   }, [])
 
   // Función para verificar conexión de Google Drive
-  const checkGoogleDriveConnection = useCallback(() => {
-    // Usar la información ya disponible en userProfile desde AuthContext
-    // que incluye las credenciales de Google Drive
-    const isConnected = !!(userProfile?.google_refresh_token && userProfile.google_refresh_token.trim() !== '')
-    setIsGoogleDriveConnected(isConnected)
-    
-    // También actualizar el estado de integraciones para Google Drive
-    setIntegrations(prev => ({
-      ...prev,
-      google: {
-        connected: isConnected,
-        status: isConnected ? 'connected' : 'disconnected',
-        lastSync: isConnected ? new Date().toISOString() : null
+  const checkGoogleDriveConnection = useCallback(async () => {
+    try {
+      // Verificar si el usuario está conectado a Google Drive usando el servicio de persistencia
+      const isConnected = await googleDrivePersistenceService.isConnected(user?.id)
+      setIsGoogleDriveConnected(isConnected)
+      
+      // Obtener estado detallado si está conectado
+      if (isConnected) {
+        const status = await googleDrivePersistenceService.getConnectionStatus(user?.id)
+        setIntegrations(prev => ({
+          ...prev,
+          google: {
+            connected: status.connected,
+            status: status.connected ? 'connected' : 'disconnected',
+            lastSync: status.lastSync || new Date().toISOString(),
+            email: status.email
+          }
+        }))
+      } else {
+        setIntegrations(prev => ({
+          ...prev,
+          google: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null
+          }
+        }))
       }
-    }))
-  }, [userProfile])
+    } catch (error) {
+      console.error('Error verificando conexión de Google Drive:', error)
+      setIsGoogleDriveConnected(false)
+      setIntegrations(prev => ({
+        ...prev,
+        google: {
+          connected: false,
+          status: 'disconnected',
+          lastSync: null
+        }
+      }))
+    }
+  }, [user?.id])
 
   // Función para verificar configuración de Brevo
   const checkBrevoConfiguration = useCallback(() => {
@@ -595,9 +622,11 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
         return
       }
       
-      // Si hay credenciales válidas, proceder con OAuth
-      const authUrl = googleDriveService.generateAuthUrl()
+      // Generar URL de autorización con el callback handler (incluye CSRF protection)
+      const authUrl = googleDriveCallbackHandler.generateAuthorizationUrl()
       if (authUrl) {
+        // El state ya fue guardado en sessionStorage por generateAuthorizationUrl()
+        // Redirigir a Google OAuth
         window.location.href = authUrl
       } else {
         setConnectingGoogleDrive(false)
@@ -610,17 +639,59 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
   }
 
-  // Función para desconectar Google Drive
+  // Función para reinstalar completamente la conexión de Google Drive (revocar + eliminar + reconectar)
   const handleDisconnectGoogleDrive = async () => {
     try {
       setConnectingGoogleDrive(true)
-      // Aquí podrías agregar la lógica para desconectar Google Drive
-      // Por ahora, solo mostraremos un mensaje
-      toast.success('Para desconectar Google Drive, contacta al administrador')
-      setConnectingGoogleDrive(false)
+      
+      // Confirmar reinstalación
+      const result = await Swal.fire({
+        title: '¿Reinstalar conexión de Google Drive?',
+        text: 'Se revocarán los tokens en Google y se eliminarán las credenciales guardadas. Luego serás redirigido para reconectar.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Reinstalar ahora',
+        cancelButtonText: 'Cancelar'
+      })
+      
+      if (!result.isConfirmed) {
+        setConnectingGoogleDrive(false)
+        return
+      }
+      
+      // Reinicio completo: revocar en Google y eliminar en Supabase
+      const resetResult = await googleDrivePersistenceService.hardReset(user?.id)
+      
+      if (resetResult.success) {
+        // Actualizar estados locales
+        setIsGoogleDriveConnected(false)
+        setIntegrations(prev => ({
+          ...prev,
+          google: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null
+          }
+        }))
+        
+        toast.success('Conexión de Google Drive restablecida. Redirigiendo a Google...')
+        
+        // Redirigir inmediatamente a OAuth para reinstalar
+        const authUrl = googleDriveCallbackHandler.generateAuthorizationUrl()
+        if (authUrl) {
+          window.location.href = authUrl
+        } else {
+          toast.error('No se pudo generar la URL de autenticación')
+          setConnectingGoogleDrive(false)
+        }
+      } else {
+        throw new Error(resetResult.error?.message || 'Error al reinstalar conexión')
+      }
     } catch (error) {
-      console.error('Error disconnecting Google Drive:', error)
-      toast.error('Error al desconectar Google Drive')
+      console.error('Error reinstalling Google Drive:', error)
+      toast.error('Error al reinstalar la conexión de Google Drive')
       setConnectingGoogleDrive(false)
     }
   }

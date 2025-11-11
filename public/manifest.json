@@ -1,6 +1,6 @@
 {
-  "short_name": "StaffHub",
-  "name": "StaffHub - Plataforma de Comunicación Interna",
+  "short_name": "BrifyRRHHv2",
+  "name": "BrifyRRHHv2 - Plataforma de Gestión de RRHH",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +8,20 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
-      "type": "image/png",
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIGZpbGw9IiM0RjQ2RTUiLz48Y2lyY2xlIGN4PSI5NiIgcj0iMzAiIGZpbGw9IndoaXRlIi8+PHN2ZyB4PSIxNCIgeT0iMTQiIHdpZHRoPSIxNjQiIGhlaWdodD0iMTY0IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM0RjQ2RTUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyek0xMyAxN3YtdjhsLTItMnYtM2w0LTQgNGgtMXptLTUgN3YtM2gydjNoLTF6Ii8+PC9zdmc+PC9zdmc+",
+      "type": "image/svg+xml",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
-      "type": "image/png",
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0RjQ2RTUiLz48Y2lyY2xlIGN4PSIyNTYiIHI9IjgwIiBmaWxsPSJ3aGl0ZSIvPjxzdmcgeD0iMzYiIHk9IjM2IiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjQ0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNEY0NkU1Ij48cGF0aCBkPSJNMjIgMmMtNS41MiAwLTEwIDQuNDgtMTAgMTBzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzI3LjUyIDIgMjIgMnpNMjMgMTdsLTctN2wtNyA3bC00LTRoMXptLTEwIDlsLTIzLTIzaDJ6Ii8+PC9zdmc+PC9zdmc+",
+      "type": "image/svg+xml",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#4F46E5",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "es"
 }

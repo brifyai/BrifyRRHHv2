@@ -49,12 +49,15 @@ class GoogleDriveService {
                         'http://localhost:3000/auth/google/callback' :
                         `${window.location.origin}/auth/google/callback`)
     
-    // Verificar credenciales válidas
+    // Verificar credenciales válidas - manejar apropiadamente sin credenciales
     if (!clientId ||
         clientId.includes('tu_google_client_id') ||
         clientId.includes('YOUR_GOOGLE_CLIENT_ID_HERE') ||
         clientId === 'your-google-client-id') {
-      return null // Retorna null en lugar de lanzar error
+      
+      // Si no hay credenciales, retornar mensaje informativo en lugar de error
+      console.log('ℹ️  Google Drive: Mostrando información de configuración')
+      return 'show-credentials-info'
     }
     
     const params = new URLSearchParams({
@@ -68,6 +71,7 @@ class GoogleDriveService {
     
     console.log(`🔄 OAuth Google Drive - Ambiente: ${isDevelopment ? 'Desarrollo' : 'Producción'}`)
     console.log(`📍 Redirect URI: ${redirectUri}`)
+    console.log(`🔑 Client ID: ${clientId ? 'Configurado' : 'No configurado'}`)
     
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
   }
