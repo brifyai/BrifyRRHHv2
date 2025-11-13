@@ -110,7 +110,7 @@ useEffect(() => {
   }, [companyId]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && employees.length > 0) {
       loadFoldersForCurrentPage();
     }
   }, [currentPage, searchTerm, filters, loading, companies, employees]);
