@@ -79,10 +79,10 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
     if (this.hybridDriveInitialized) return true;
     
     try {
-      const success = await hybridGoogleDriveService.initialize();
+      const success = await hybridGoogleDrive.initialize();
       if (success) {
         this.hybridDriveInitialized = true;
-        const serviceInfo = hybridGoogleDriveService.getServiceInfo();
+        const serviceInfo = hybridGoogleDrive.getServiceInfo();
         console.log(`✅ ${serviceInfo.service} inicializado para carpetas de empleados`);
         return true;
       }
@@ -199,9 +199,9 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
       let driveFolderUrl = null;
 
       // Crear carpeta en Hybrid Drive si está inicializado y autenticado (en caso de Drive real)
-      const serviceInfo = this.hybridDriveInitialized ? hybridGoogleDriveService.getServiceInfo() : null;
+      const serviceInfo = this.hybridDriveInitialized ? hybridGoogleDrive.getServiceInfo() : null;
       const isAuth = serviceInfo?.isReal
-        ? (hybridGoogleDriveService.isAuthenticated ? hybridGoogleDriveService.isAuthenticated() : false)
+        ? (hybridGoogleDrive.isAuthenticated ? hybridGoogleDrive.isAuthenticated() : false)
         : this.hybridDriveInitialized;
       const canUseDrive = this.hybridDriveInitialized && isAuth;
 
@@ -323,7 +323,7 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
       
       // Crear carpeta del empleado
       const folderName = `${employeeName} (${employeeEmail})`;
-      const employeeFolder = await hybridGoogleDriveService.createFolder(folderName, parentFolder.id);
+      const employeeFolder = await hybridGoogleDrive.createFolder(folderName, parentFolder.id);
       
       return employeeFolder;
     } catch (error) {
@@ -336,7 +336,7 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
   async findOrCreateParentFolder(folderName) {
     try {
       // Listar carpetas para buscar la carpeta principal
-      const folders = await hybridGoogleDriveService.listFiles();
+      const folders = await hybridGoogleDrive.listFiles();
       const parentFolder = folders.find(folder =>
         folder.name === folderName &&
         folder.mimeType === 'application/vnd.google-apps.folder'
@@ -346,7 +346,7 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
         return parentFolder;
       } else {
         // Crear nueva carpeta principal
-        return await hybridGoogleDriveService.createFolder(folderName);
+        return await hybridGoogleDrive.createFolder(folderName);
       }
     } catch (error) {
       console.error(`❌ Error buscando/creando carpeta principal ${folderName}:`, error);
@@ -357,8 +357,8 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
   // Compartir carpeta de Drive con el empleado
   async shareDriveFolder(folderId, employeeEmail) {
     try {
-      await hybridGoogleDriveService.shareFolder(folderId, employeeEmail, 'writer');
-      const serviceInfo = hybridGoogleDriveService.getServiceInfo();
+      await hybridGoogleDrive.shareFolder(folderId, employeeEmail, 'writer');
+      const serviceInfo = hybridGoogleDrive.getServiceInfo();
       console.log(`📤 Carpeta compartida con ${employeeEmail} en ${serviceInfo.service}`);
     } catch (error) {
       console.warn(`⚠️ No se pudo compartir carpeta con ${employeeEmail}:`, error.message);
@@ -608,7 +608,7 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
       }
 
       const folder = await this.getEmployeeFolder(employeeEmail);
-      const serviceInfo = hybridGoogleDriveService.getServiceInfo();
+      const serviceInfo = hybridGoogleDrive.getServiceInfo();
       
       // Actualizar estado de sincronización
       await supabase
@@ -671,8 +671,8 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
 
   // Obtener estadísticas del servicio
   getServiceStats() {
-    const serviceInfo = this.hybridDriveInitialized ? hybridGoogleDriveService.getServiceInfo() : null;
-    const driveStats = this.hybridDriveInitialized ? hybridGoogleDriveService.getStats() : null;
+    const serviceInfo = this.hybridDriveInitialized ? hybridGoogleDrive.getServiceInfo() : null;
+    const driveStats = this.hybridDriveInitialized ? hybridGoogleDrive.getStats() : null;
     
     return {
       hybridDriveInitialized: this.hybridDriveInitialized,
@@ -693,9 +693,9 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
   // Método para cambiar entre servicios (testing)
   async switchDriveService(useRealGoogleDrive) {
     if (this.hybridDriveInitialized) {
-      const success = await hybridGoogleDriveService.switchService(useRealGoogleDrive);
+      const success = await hybridGoogleDrive.switchService(useRealGoogleDrive);
       if (success) {
-        const serviceInfo = hybridGoogleDriveService.getServiceInfo();
+        const serviceInfo = hybridGoogleDrive.getServiceInfo();
         console.log(`✅ Cambiado a ${serviceInfo.service}`);
       }
       return success;
@@ -706,7 +706,7 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
   // Limpiar almacenamiento local (solo para servicio local)
   clearLocalStorage() {
     if (this.hybridDriveInitialized) {
-      hybridGoogleDriveService.clearLocalStorage();
+      hybridGoogleDrive.clearLocalStorage();
     }
   }
 }

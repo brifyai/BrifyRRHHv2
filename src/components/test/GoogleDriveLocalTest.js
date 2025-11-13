@@ -18,12 +18,12 @@ const GoogleDriveLocalTest = () => {
       setError(null);
       setStatus('Inicializando...');
       
-      const initialized = await hybridGoogleDriveService.initialize();
+      const initialized = await hybridGoogleDrive.initialize();
       
       if (initialized) {
         setStatus('✅ Inicializado correctamente');
-        const info = hybridGoogleDriveService.getServiceInfo();
-        const stats = hybridGoogleDriveService.getStats();
+        const info = hybridGoogleDrive.getServiceInfo();
+        const stats = hybridGoogleDrive.getStats();
         
         setServiceInfo({
           ...info,
@@ -46,7 +46,7 @@ const GoogleDriveLocalTest = () => {
 
   const loadFiles = async () => {
     try {
-      const fileList = await hybridGoogleDriveService.listFiles();
+      const fileList = await hybridGoogleDrive.listFiles();
       setFiles(fileList);
     } catch (error) {
       console.error('Error cargando archivos:', error);
@@ -58,7 +58,7 @@ const GoogleDriveLocalTest = () => {
     try {
       setLoading(true);
       const folderName = `Carpeta Prueba ${new Date().toLocaleTimeString()}`;
-      const folder = await hybridGoogleDriveService.createFolder(folderName);
+      const folder = await hybridGoogleDrive.createFolder(folderName);
       console.log('Carpeta creada:', folder);
       await loadFiles();
     } catch (error) {
@@ -77,7 +77,7 @@ const GoogleDriveLocalTest = () => {
         type: 'text/plain'
       });
       
-      const uploadedFile = await hybridGoogleDriveService.uploadFile(testFile);
+      const uploadedFile = await hybridGoogleDrive.uploadFile(testFile);
       console.log('Archivo subido:', uploadedFile);
       await loadFiles();
     } catch (error) {
@@ -89,7 +89,7 @@ const GoogleDriveLocalTest = () => {
   };
 
   const clearStorage = () => {
-    hybridGoogleDriveService.clearLocalStorage();
+    hybridGoogleDrive.clearLocalStorage();
     setFiles([]);
     initializeService();
   };

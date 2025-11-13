@@ -59,11 +59,11 @@ const GoogleDriveProductionDiagnosis = () => {
     try {
       console.log('🔍 Iniciando diagnóstico del servicio de Google Drive...');
       
-      const initialized = await hybridGoogleDriveService.initialize();
+      const initialized = await hybridGoogleDrive.initialize();
       
       if (initialized) {
-        const serviceInfo = hybridGoogleDriveService.getServiceInfo();
-        const stats = hybridGoogleDriveService.getStats();
+        const serviceInfo = hybridGoogleDrive.getServiceInfo();
+        const stats = hybridGoogleDrive.getStats();
         
         setDiagnosis(prev => ({
           ...prev,
