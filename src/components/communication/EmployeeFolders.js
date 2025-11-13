@@ -597,6 +597,41 @@ useEffect(() => {
           MySwal.showLoading();
         }
       });
+       
+       // Verificar que Google Drive esté autenticado ANTES de intentar sincronizar
+       if (!googleDriveSyncService.isAuthenticated?.()) {
+         MySwal.fire({
+           title: '❌ Google Drive no autenticado',
+           html: `
+             <div class="text-left">
+               <p class="mb-4 text-gray-700">
+                 <strong>No se puede sincronizar:</strong> Google Drive no está conectado.
+               </p>
+               <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                 <p class="text-sm text-yellow-800 mb-2">
+                   <strong>¿Qué necesitas hacer?</strong>
+                 </p>
+                 <ol class="list-decimal list-inside text-sm text-yellow-800 space-y-1">
+                   <li>Ve a <strong>Integraciones</strong></li>
+                   <li>Haz clic en <strong>"Conectar Google Drive"</strong></li>
+                   <li>Autoriza el acceso a tu cuenta de Google</li>
+                   <li>Vuelve aquí e intenta sincronizar nuevamente</li>
+                 </ol>
+               </div>
+               <p class="text-xs text-gray-600">
+                 Sin autenticación, las carpetas no se pueden crear en Google Drive real.
+               </p>
+             </div>
+           `,
+           icon: 'warning',
+           confirmButtonText: 'Entendido',
+           confirmButtonColor: '#0693e3',
+           width: '600px'
+         });
+         setLoadingFolders(false);
+         return;
+       }
+
 
       // Inicializar el servicio de sincronización
       console.log('🔄 Inicializando servicio de sincronización...');
