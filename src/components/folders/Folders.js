@@ -13,7 +13,7 @@ import {
   UserIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import toast from 'react-hot-toast'
 
 const Folders = () => {

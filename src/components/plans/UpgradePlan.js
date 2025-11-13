@@ -10,7 +10,7 @@ import {
   StarIcon,
   ArrowUpIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 
 const UpgradePlan = ({ isOpen, onClose, currentPlan, userExtensions, onUpgradeComplete }) => {
   const { user, userProfile } = useAuth()

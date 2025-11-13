@@ -12,7 +12,7 @@ import {
   ExclamationTriangleIcon,
   PlusIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import TokenUsage from '../embeddings/TokenUsage'
 import TemplateDownload from '../templates/TemplateDownload'
 import toast from 'react-hot-toast'

@@ -3,8 +3,8 @@ import { useAuth } from '../../contexts/AuthContext.js'
 import embeddingsService from '../../lib/embeddings.js'
 import groqService from '../../services/groqService'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
-import LoadingSpinner from '../common/LoadingSpinner'
-import SubtleSpinner from '../common/SubtleSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
+import SubtleSpinner from '../common/SubtleSpinner.js'
 import {
   ChatBubbleLeftRightIcon,
   PaperAirplaneIcon,

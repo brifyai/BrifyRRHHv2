@@ -16,7 +16,7 @@ import {
   PlusIcon,
   ArrowUpIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import UpgradePlan from './UpgradePlan'
 
 const Plans = () => {

@@ -8,7 +8,7 @@ import {
   Cog6ToothIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import toast from 'react-hot-toast'
 
 const Integrations = () => {

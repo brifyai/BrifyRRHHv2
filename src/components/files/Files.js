@@ -19,9 +19,9 @@ import {
   MagnifyingGlassIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import RoutineUpload from '../routines/RoutineUpload'
-import DragDropUpload from '../common/DragDropUpload'
+import DragDropUpload from '../common/DragDropUpload.js'
 import toast from 'react-hot-toast'
 import '../../styles/responsive-tables.css'
 
