@@ -5,7 +5,7 @@
  * con diferentes niveles y destinos.
  */
 
-import { errorHandler } from './errorHandler.js';
+import errorHandler from './errorHandler.js';
 
 // Niveles de logging
 export const LogLevel = {
