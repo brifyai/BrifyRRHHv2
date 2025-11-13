@@ -11,10 +11,6 @@ class HybridGoogleDriveService {
 
   async initialize() {
     try {
-      // Detectar si estamos en producción (Netlify) o desarrollo
-      const isProduction = window.location.hostname.includes('netlify.app') ||
-                          window.location.hostname !== 'localhost'
-      
       // Verificar si tenemos credenciales válidas de Google
       const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
       const hasValidCredentials = clientId &&
@@ -22,8 +18,8 @@ class HybridGoogleDriveService {
                                 !clientId.includes('your-google-client-id') &&
                                 clientId !== 'your-google-client-id'
       
-      // Intentar inicializar Google Drive real solo si tenemos credenciales válidas
-      if (!isProduction && hasValidCredentials) {
+      // Forzar Google Drive real si tenemos credenciales válidas
+      if (hasValidCredentials) {
         try {
           console.log('🔍 Intentando inicializar Google Drive real...')
           const googleDriveInitialized = await googleDriveService.initialize()
@@ -31,6 +27,8 @@ class HybridGoogleDriveService {
             this.currentService = googleDriveService
             this.isGoogleDriveAvailable = true
             console.log('✅ Google Drive real inicializado correctamente')
+            this.initialized = true
+            return true
           } else {
             throw new Error('No se pudo inicializar Google Drive real')
           }
@@ -38,32 +36,28 @@ class HybridGoogleDriveService {
           console.warn('⚠️ Google Drive real no disponible, usando servicio local:', error.message)
           console.log('📝 Razón del fallo:', error)
         }
-      } else if (!hasValidCredentials) {
-        console.log('🔧 No se encontraron credenciales válidas de Google OAuth, usando modo local automáticamente')
       } else {
-        console.log('🌐 Entorno de producción detectado, usando Google Drive local')
+        console.log('🔧 No se encontraron credenciales válidas de Google OAuth, usando modo local automáticamente')
       }
 
-      // Si Google Drive no está disponible o estamos en producción, usar servicio local
-      if (!this.currentService) {
-        try {
-          console.log('🚀 Inicializando Google Drive local...')
-          const localInitialized = await localGoogleDriveService.initialize()
-          if (localInitialized) {
-            this.currentService = localGoogleDriveService
-            this.isGoogleDriveAvailable = false
-            console.log('✅ Google Drive local inicializado correctamente (modo sin conexión)')
-            
-            // Mostrar estadísticas del servicio local
-            const stats = localGoogleDriveService.getStats()
-            console.log('📊 Estadísticas del servicio local:', stats)
-          } else {
-            throw new Error('No se pudo inicializar Google Drive local')
-          }
-        } catch (localError) {
-          console.error('❌ Error crítico: No se pudo inicializar ningún servicio de Google Drive:', localError)
-          throw new Error('Error al inicializar Google Drive: ' + localError.message)
+      // Si Google Drive real no está disponible, usar servicio local como fallback
+      try {
+        console.log('🚀 Inicializando Google Drive local como fallback...')
+        const localInitialized = await localGoogleDriveService.initialize()
+        if (localInitialized) {
+          this.currentService = localGoogleDriveService
+          this.isGoogleDriveAvailable = false
+          console.log('✅ Google Drive local inicializado correctamente (modo sin conexión)')
+          
+          // Mostrar estadísticas del servicio local
+          const stats = localGoogleDriveService.getStats()
+          console.log('📊 Estadísticas del servicio local:', stats)
+        } else {
+          throw new Error('No se pudo inicializar Google Drive local')
         }
+      } catch (localError) {
+        console.error('❌ Error crítico: No se pudo inicializar ningún servicio de Google Drive:', localError)
+        throw new Error('Error al inicializar Google Drive: ' + localError.message)
       }
 
       this.initialized = true
