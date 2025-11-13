@@ -599,7 +599,12 @@ useEffect(() => {
       });
 
       // Inicializar el servicio de sincronización
-      await googleDriveSyncService.initialize();
+      console.log('🔄 Inicializando servicio de sincronización...');
+      const initResult = await googleDriveSyncService.initialize();
+      if (!initResult) {
+        throw new Error('No se pudo inicializar el servicio de sincronización');
+      }
+      console.log('✅ Servicio de sincronización inicializado correctamente');
 
       // Crear carpetas para todos los empleados en Google Drive Y Supabase simultáneamente
       let createdCount = 0;
@@ -609,6 +614,7 @@ useEffect(() => {
       for (const employee of employees) {
         try {
           if (employee.email) {
+            console.log(`📁 Procesando empleado: ${employee.email}`);
             const result = await googleDriveSyncService.createEmployeeFolderInDrive(
               employee.email,
               employee.employeeName || employee.first_name || 'Sin nombre',
@@ -618,6 +624,7 @@ useEffect(() => {
 
             if (result && result.driveFolder) {
               createdCount++;
+              console.log(`✅ Carpeta creada para ${employee.email}`);
               
               // Iniciar sincronización periódica para este empleado
               googleDriveSyncService.startPeriodicSync(
@@ -630,7 +637,7 @@ useEffect(() => {
         } catch (error) {
           errorCount++;
           errors.push(`${employee.email}: ${error.message}`);
-          console.error(`Error creando carpeta para ${employee.email}:`, error);
+          console.error(`❌ Error creando carpeta para ${employee.email}:`, error);
         }
       }
 

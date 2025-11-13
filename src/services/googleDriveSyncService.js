@@ -23,8 +23,13 @@ class GoogleDriveSyncService {
   // Crear carpeta en Google Drive Y en Supabase simultáneamente
   async createEmployeeFolderInDrive(employeeEmail, employeeName, companyName, employeeData = {}) {
     try {
-      if (!hybridGoogleDriveService.isUsingRealGoogleDrive()) {
-        throw new Error('Google Drive real no está disponible')
+      // Verificar que el servicio está inicializado
+      if (!this.isInitialized) {
+        console.warn('⚠️ Servicio no inicializado, intentando inicializar...');
+        const initResult = await this.initialize();
+        if (!initResult) {
+          throw new Error('No se pudo inicializar el servicio de sincronización');
+        }
       }
 
       console.log(`📁 Creando carpeta en Google Drive y Supabase para ${employeeEmail}...`)
