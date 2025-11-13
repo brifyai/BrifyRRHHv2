@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.js'
 import { toast } from 'react-hot-toast'
 import DatabaseCompanySummary from './DatabaseCompanySummary'
 import AnalyticsDashboard from '../analytics/AnalyticsDashboard'

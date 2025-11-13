@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { db, supabase } from '../../lib/supabase'
-import googleDriveService from '../../lib/googleDrive'
-import embeddingsService from '../../lib/embeddings'
+import { useAuth } from '../../contexts/AuthContext.js'
+import { db, supabase } from '../../lib/supabase.js'
+import googleDriveService from '../../lib/googleDrive.js'
+import embeddingsService from '../../lib/embeddings.js'
 import {
   FolderIcon,
   DocumentIcon,

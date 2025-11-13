@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import userGoogleDriveService from '../../services/userGoogleDriveService'
+import { useAuth } from '../../contexts/AuthContext.js'
+import userGoogleDriveService from '../../services/userGoogleDriveService.js'
 import './UserGoogleDriveConnector.css'
 
 const UserGoogleDriveConnector = () => {

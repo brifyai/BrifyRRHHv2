@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.js'
 import { supabase } from '../../lib/supabaseClient.js'
 import organizedDatabaseService from '../../services/organizedDatabaseService'
 import companyKnowledgeService from '../../services/companyKnowledgeService'

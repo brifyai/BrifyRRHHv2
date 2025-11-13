@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase.js'
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline'
 
 const CompanySummary = () => {

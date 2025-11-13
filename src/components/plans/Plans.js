@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext.js'
-import { db, supabase } from '../../lib/supabase'
+import { db, supabase } from '../../lib/supabase.js'
 import { toast } from 'react-hot-toast'
-import googleDriveService from '../../lib/googleDrive'
-import DriveWatchService from '../../lib/driveWatchService'
-import emailService from '../../lib/emailService'
+import googleDriveService from '../../lib/googleDrive.js'
+import DriveWatchService from '../../lib/driveWatchService.js'
+import emailService from '../../lib/emailService.js'
 import { useUserExtensions } from '../../hooks/useUserExtensions'
-import { executeQuery } from '../../lib/queryQueue'
+import { executeQuery } from '../../lib/queryQueue.js'
 import {
   CheckIcon,
   CreditCardIcon,

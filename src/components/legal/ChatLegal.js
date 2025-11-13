@@ -7,10 +7,10 @@ import {
   UserIcon,
   CpuChipIcon
 } from '@heroicons/react/24/outline'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase.js'
 import fileExtractor from '../../services/fileContentExtractor'
 import groqService from '../../services/groqService'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.js'
 
 const ChatLegal = () => {
   const { user } = useAuth()

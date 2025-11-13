@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService';
 import organizedDatabaseService from '../../services/organizedDatabaseService';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import '../../styles/responsive-tables.css';

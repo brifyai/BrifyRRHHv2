@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import googleDriveService from '../../lib/googleDrive'
+import { useAuth } from '../../contexts/AuthContext.js'
+import googleDriveService from '../../lib/googleDrive.js'
 import {
   CloudIcon,
   CheckCircleIcon,

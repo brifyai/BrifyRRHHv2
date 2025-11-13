@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { db, supabase } from '../../lib/supabase'
-import googleDriveService from '../../lib/googleDrive'
+import { useAuth } from '../../contexts/AuthContext.js'
+import { db, supabase } from '../../lib/supabase.js'
+import googleDriveService from '../../lib/googleDrive.js'
 import {
   UserIcon,
   CreditCardIcon,

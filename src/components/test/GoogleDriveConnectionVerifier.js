@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.js'
 import userGoogleDriveService from '../../services/userGoogleDriveService'
 import userSpecificGoogleDriveService from '../../services/userSpecificGoogleDriveService'
 import './GoogleDriveConnectionVerifier.css'

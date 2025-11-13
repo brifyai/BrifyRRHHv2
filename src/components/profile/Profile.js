@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { db, supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext.js'
+import { db, supabase } from '../../lib/supabase.js'
 import {
   UserIcon,
   KeyIcon,

@@ -9,7 +9,7 @@ import {
   DocumentTextIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.js';
 import whatsappComplianceService from '../../services/whatsappComplianceService';
 
 /**

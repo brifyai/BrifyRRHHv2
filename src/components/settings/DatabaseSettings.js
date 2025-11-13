@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CircleStackIcon, CloudIcon, ServerIcon, ArrowPathIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
 import organizedDatabaseService from '../../services/organizedDatabaseService';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.js';
 
 const DatabaseSettings = () => {
   const [currentMode, setCurrentMode] = useState('supabase');

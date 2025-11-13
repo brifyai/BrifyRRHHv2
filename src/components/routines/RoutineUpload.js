@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
-import googleDriveService from '../../lib/googleDrive'
+import { useAuth } from '../../contexts/AuthContext.js'
+import { supabase } from '../../lib/supabase.js'
+import googleDriveService from '../../lib/googleDrive.js'
 import * as XLSX from 'xlsx'
 import {
   CloudArrowUpIcon,

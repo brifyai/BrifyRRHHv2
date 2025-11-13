@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import embeddingsService from '../../lib/embeddings';
+import { useAuth } from '../../contexts/AuthContext.js';
+import embeddingsService from '../../lib/embeddings.js';
 import organizedDatabaseService from '../../services/organizedDatabaseService';
 import LoadingSpinner from '../common/LoadingSpinner';
 import SubtleSpinner from '../common/SubtleSpinner';

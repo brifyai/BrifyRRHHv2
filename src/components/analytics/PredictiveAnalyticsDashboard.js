@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.js';
 import enhancedCommunicationService from '../../services/enhancedCommunicationService';
 import companySyncService from '../../services/companySyncService';
 import './PredictiveAnalyticsDashboard.css';
