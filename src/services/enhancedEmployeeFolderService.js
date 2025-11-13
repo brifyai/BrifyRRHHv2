@@ -106,6 +106,7 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
       const errors = [];
       let schemaSuspect = false;
       let rlsDenied = false;
+      let usingLocalStorage = false;
  
       for (const employee of employees) {
         if (!employee.email) {
@@ -119,6 +120,9 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
             createdCount++;
           } else if (result.updated) {
             updatedCount++;
+          }
+          if (result.usingLocalStorage) {
+            usingLocalStorage = true;
           }
           // Log abreviado para alto volumen
           if ((createdCount + updatedCount) % 50 === 0) {
@@ -138,7 +142,10 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
       }
  
       console.log(`📊 Resumen: ${createdCount} creadas, ${updatedCount} actualizadas, ${errorCount} errores`);
-      return { createdCount, updatedCount, errorCount, sampleErrors: errors.slice(0, 10), schemaSuspect, rlsDenied };
+      if (usingLocalStorage) {
+        console.log('💾 Usando almacenamiento local como fallback');
+      }
+      return { createdCount, updatedCount, errorCount, sampleErrors: errors.slice(0, 10), schemaSuspect, rlsDenied, usingLocalStorage };
     } catch (error) {
       console.error('❌ Error creando carpetas para todos los empleados:', error);
       throw error;
@@ -149,17 +156,6 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
   async createEmployeeFolder(employeeEmail, employeeData) {
     try {
       await this.initialize();
-
-      // Verificar si ya existe la carpeta en Supabase
-      const { data: existingFolder, error: fetchError } = await supabase
-        .from('employee_folders')
-        .select('*')
-        .eq('employee_email', employeeEmail)
-        .maybeSingle();
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
-      }
 
       // Obtener información de la empresa
       let companyName = 'Empresa no especificada';
@@ -235,6 +231,48 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
       folderData.drive_folder_id = driveFolderId;
       folderData.drive_folder_url = driveFolderUrl;
 
+      // Intentar usar Supabase, con fallback a localStorage
+      let usingLocalStorage = false;
+      let existingFolder = null;
+
+      try {
+        // Verificar si ya existe la carpeta en Supabase
+        const { data: existing, error: fetchError } = await supabase
+          .from('employee_folders')
+          .select('*')
+          .eq('employee_email', employeeEmail)
+          .maybeSingle();
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          // Si es error de RLS o tabla no encontrada, usar localStorage
+          if (isRlsDeniedError(fetchError) || isRelationMissingError(fetchError)) {
+            console.warn(`⚠️ Usando localStorage para ${employeeEmail} (Supabase no disponible)`);
+            usingLocalStorage = true;
+          } else {
+            throw fetchError;
+          }
+        } else {
+          existingFolder = existing;
+        }
+      } catch (error) {
+        // Si falla completamente, usar localStorage
+        console.warn(`⚠️ Fallback a localStorage para ${employeeEmail}:`, error.message);
+        usingLocalStorage = true;
+      }
+
+      if (usingLocalStorage) {
+        // Guardar en localStorage
+        const storageKey = `employee_folder_${employeeEmail}`;
+        const folderWithId = {
+          id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ...folderData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        localStorage.setItem(storageKey, JSON.stringify(folderWithId));
+        return { folder: folderWithId, created: true, updated: false, usingLocalStorage: true };
+      }
+
       if (existingFolder) {
         // Actualizar carpeta existente
         const { data, error } = await supabase
@@ -252,7 +290,7 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
         // Crear configuración de notificaciones si no existe
         await this.createNotificationSettingsIfNotExists(data.id);
 
-        return { folder: data, updated: true, created: false };
+        return { folder: data, updated: true, created: false, usingLocalStorage: false };
       } else {
         // Crear nueva carpeta
         const { data, error } = await supabase
@@ -266,7 +304,7 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
         // Crear configuración de notificaciones
         await this.createNotificationSettings(data.id);
 
-        return { folder: data, created: true, updated: false };
+        return { folder: data, created: true, updated: false, usingLocalStorage: false };
       }
     } catch (error) {
       console.error(`❌ Error creando carpeta para empleado ${employeeEmail}:`, error);
