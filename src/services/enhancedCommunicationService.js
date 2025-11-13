@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import communicationService from './communicationService.js';
 import groqService from './groqService.js';
-import inMemoryEmployeeService from './inMemoryEmployeeService.js';
+import organizedDatabaseService from './organizedDatabaseService.js';
 import gamificationService from './gamificationService.js';
 
 /**

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase.js';
-import inMemoryEmployeeService from './inMemoryEmployeeService.js';
+import organizedDatabaseService from './organizedDatabaseService.js';
 import whatsappService from './whatsappService.js';
 import whatsappOfficialService from './whatsappOfficialService.js';
 import whatsappWahaService from './whatsappWahaService.js';
@@ -1816,7 +1816,7 @@ class CommunicationService {
   async generateCompanyInsights(companyName) {
     try {
       // Get company data from in-memory service
-      const companies = await inMemoryEmployeeService.getCompanies();
+      const companies = await organizedDatabaseService.getCompanies();
       const companyData = companies.find(c => c.name === companyName);
 
       if (!companyData) {
@@ -1824,7 +1824,7 @@ class CommunicationService {
       }
 
       // Get employees for this company
-      const employees = await inMemoryEmployeeService.getEmployees({ companyId: companyData.id });
+      const employees = await organizedDatabaseService.getEmployees({ companyId: companyData.id });
 
       // Generate mock communication logs based on employees
       const logs = this.generateMockCommunicationLogs(employees, companyData);

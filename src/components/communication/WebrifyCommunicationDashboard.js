@@ -119,9 +119,9 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
 
   // Lista de compañías para análisis (ordenadas alfabéticamente) - useMemo para evitar recreación
   const companies = useMemo(() => [
-    'Achs', 'AFP Habitat', 'Antofagasta Minerals', 'Arcoprime', 'Ariztia',
-    'CMPC', 'Colbun', 'Copec', 'Corporación Chilena', 'Empresas SB',
-    'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'
+    'Aguas Andinas', 'Andes Iron', 'Banco de Chile', 'Banco Santander', 'BHP',
+    'Cencosud', 'Codelco', 'Colbún', 'Copec', 'Enel',
+    'Entel', 'Falabella', 'Latam Airlines', 'Lider', 'Movistar'
   ], []);
 
   // Función para cargar insights de IA para todas las compañías usando datos reales
@@ -287,7 +287,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
       console.log('Compañía seleccionada desde navegación:', selectedCompany);
       
       // Lista de compañías para comparación
-      const companiesList = ['Achs', 'AFP Habitat', 'Antofagasta Minerals', 'Arcoprime', 'Ariztia', 'CMPC', 'Colbun', 'Copec', 'Corporación Chilena', 'Empresas SB', 'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'];
+      const companiesList = ['Aguas Andinas', 'Andes Iron', 'Banco de Chile', 'Banco Santander', 'BHP', 'Cencosud', 'Codelco', 'Colbún', 'Copec', 'Enel', 'Entel', 'Falabella', 'Latam Airlines', 'Lider', 'Movistar'];
       console.log('Compañías disponibles:', companiesList);
 
       // Buscar la compañía que coincida exactamente

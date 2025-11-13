@@ -1,6 +1,6 @@
 /**
  * Servicio de Brevo para envío masivo de SMS y Email
- * 
+ *
  * Este servicio proporciona una interfaz completa para:
  * - Configuración de API de Brevo
  * - Envío masivo de SMS
@@ -8,7 +8,12 @@
  * - Gestión de plantillas
  * - Estadísticas de envío
  * - Pruebas de conexión
+ *
+ * NOTA: Este servicio ahora usa configurationService para persistencia
+ * en lugar de localStorage directamente.
  */
+
+import configurationService from './configurationService.js'
 
 class BrevoService {
   constructor() {
@@ -23,42 +28,62 @@ class BrevoService {
    * @param {string} apiKey - API Key de Brevo
    * @param {boolean} testMode - Modo de prueba (opcional)
    */
-  configure(apiKey, testMode = false) {
+  async configure(apiKey, testMode = false) {
     this.apiKey = apiKey
     this.testMode = testMode
     this.isConfigured = !!apiKey
-    
-    // Guardar en localStorage para persistencia
+
+    // Guardar usando configurationService
     if (apiKey) {
-      localStorage.setItem('brevo_api_key', apiKey)
-      localStorage.setItem('brevo_test_mode', testMode.toString())
+      await configurationService.setBrevoConfig({
+        apiKey: apiKey,
+        smsSender: '',
+        emailSender: '',
+        emailName: '',
+        testMode: testMode
+      })
     }
   }
 
   /**
-   * Cargar configuración desde localStorage
+   * Cargar configuración desde configurationService
    */
-  loadConfiguration() {
-    const apiKey = localStorage.getItem('brevo_api_key')
-    const testMode = localStorage.getItem('brevo_test_mode') === 'true'
-    
-    if (apiKey) {
-      this.configure(apiKey, testMode)
+  async loadConfiguration() {
+    try {
+      const config = await configurationService.getBrevoConfig()
+
+      if (config.apiKey) {
+        this.apiKey = config.apiKey
+        this.testMode = config.testMode || false
+        this.isConfigured = true
+      }
+
+      return { apiKey: this.apiKey, testMode: this.testMode }
+    } catch (error) {
+      console.error('Error loading Brevo configuration:', error)
+      return { apiKey: null, testMode: false }
     }
-    
-    return { apiKey: this.apiKey, testMode: this.testMode }
   }
 
   /**
    * Limpiar configuración
    */
-  clearConfiguration() {
+  async clearConfiguration() {
     this.apiKey = null
     this.testMode = false
     this.isConfigured = false
-    
-    localStorage.removeItem('brevo_api_key')
-    localStorage.removeItem('brevo_test_mode')
+
+    try {
+      await configurationService.setBrevoConfig({
+        apiKey: '',
+        smsSender: '',
+        emailSender: '',
+        emailName: '',
+        testMode: false
+      })
+    } catch (error) {
+      console.error('Error clearing Brevo configuration:', error)
+    }
   }
 
   /**
@@ -633,7 +658,9 @@ class BrevoService {
 // Crear instancia global del servicio
 const brevoService = new BrevoService()
 
-// Cargar configuración guardada al iniciar
-brevoService.loadConfiguration()
+// Cargar configuración guardada al iniciar (asíncronamente)
+brevoService.loadConfiguration().catch(error => {
+  console.error('Error loading Brevo configuration on startup:', error)
+})
 
 export default brevoService

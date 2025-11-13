@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
-import inMemoryEmployeeService from './inMemoryEmployeeService.js';
+import organizedDatabaseService from './organizedDatabaseService.js';
 import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
  
  // Helper para validar UUID y evitar errores "invalid input syntax for type uuid"
@@ -99,7 +99,7 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
       console.log('🚀 Iniciando creación de carpetas para todos los empleados...');
       
       // Obtener todos los empleados
-      const employees = await inMemoryEmployeeService.getEmployees();
+      const employees = await organizedDatabaseService.getEmployees();
       let createdCount = 0;
       let updatedCount = 0;
       let errorCount = 0;
@@ -166,7 +166,7 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
       let companyId = null;
       
       if (employeeData.company_id) {
-        const companies = inMemoryEmployeeService.companies;
+        const companies = await organizedDatabaseService.getCompanies();
         const company = companies.find(comp => comp.id === employeeData.company_id);
         if (company) {
           companyName = company.name;
@@ -384,7 +384,7 @@ import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
       if (error) {
         if (error.code === 'PGRST116') {
           // No existe la carpeta, intentar crearla
-          const employees = await inMemoryEmployeeService.getEmployees();
+          const employees = await organizedDatabaseService.getEmployees();
           const employee = employees.find(emp => emp.email === employeeEmail);
           
           if (employee) {

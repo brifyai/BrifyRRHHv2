@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import embeddingsService from '../../lib/embeddings'
 import groqService from '../../services/groqService'
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService'
+import organizedDatabaseService from '../../services/organizedDatabaseService'
 import LoadingSpinner from '../common/LoadingSpinner'
 import SubtleSpinner from '../common/SubtleSpinner'
 import {
@@ -56,7 +56,7 @@ const AIChat = () => {
   useEffect(() => {
     const loadCompanies = async () => {
       try {
-        const companyData = await inMemoryEmployeeService.getCompanies()
+        const companyData = await organizedDatabaseService.getCompanies()
         setCompanies(companyData)
       } catch (error) {
         console.error('Error loading companies:', error)

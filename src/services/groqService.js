@@ -1,27 +1,52 @@
 import Groq from 'groq-sdk'
 import embeddingsService from '../lib/embeddings.js'
+import configurationService from './configurationService.js'
 
 class GroqService {
   constructor() {
-    // Priorizar la API key de localStorage sobre la de environment variables
-    const localStorageApiKey = localStorage.getItem('groq_api_key')
-    const envApiKey = process.env.REACT_APP_GROQ_API_KEY
-    const apiKey = localStorageApiKey || envApiKey
-    
-    if (!apiKey || apiKey === 'tu_groq_api_key_aqui') {
-      console.warn('GROQ API key not configured. AI chat features will not be available.')
+    this.initialized = false
+    this.initPromise = this.initialize()
+  }
+
+  async initialize() {
+    try {
+      // Cargar configuración usando configurationService
+      const config = await configurationService.getGroqConfig()
+
+      // Priorizar la configuración de Supabase sobre environment variables
+      const apiKey = config.apiKey || process.env.REACT_APP_GROQ_API_KEY
+
+      if (!apiKey || apiKey === 'tu_groq_api_key_aqui' || apiKey === 'gsk_placeholder_configure_real_api_key') {
+        console.warn('GROQ API key not configured. AI chat features will not be available.')
+        this.groq = null
+      } else {
+        this.groq = new Groq({
+          apiKey: apiKey,
+          dangerouslyAllowBrowser: true // Permitir uso en el navegador
+        })
+      }
+
+      // Usar configuración de Supabase o valores por defecto
+      this.model = config.model || 'llama-3.3-70b-versatile'
+      this.temperature = config.temperature || 0.7
+      this.maxTokens = config.maxTokens || 800
+
+      this.initialized = true
+    } catch (error) {
+      console.error('Error initializing GroqService:', error)
+      // Fallback a configuración por defecto
       this.groq = null
-    } else {
-      this.groq = new Groq({
-        apiKey: apiKey,
-        dangerouslyAllowBrowser: true // Permitir uso en el navegador
-      })
+      this.model = 'llama-3.3-70b-versatile'
+      this.temperature = 0.7
+      this.maxTokens = 800
+      this.initialized = true
     }
-    
-    // Cargar configuración desde localStorage o usar valores por defecto
-    this.model = localStorage.getItem('groq_model') || 'llama-3.3-70b-versatile'
-    this.temperature = parseFloat(localStorage.getItem('groq_temperature') || '0.7')
-    this.maxTokens = parseInt(localStorage.getItem('groq_max_tokens') || '800')
+  }
+
+  async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initPromise
+    }
   }
 
   /**
@@ -149,6 +174,7 @@ class GroqService {
    * @returns {Promise<Object>} - Respuesta del modelo y tokens utilizados
    */
   async generateChatResponse(userMessage, context = [], chatHistory = [], userId = null) {
+    await this.ensureInitialized()
     if (!this.groq) {
       throw new Error('Servicio de IA no disponible. Configure la API key de GROQ.')
     }
@@ -268,6 +294,7 @@ Instrucciones:
    * @returns {Promise<Object>} - Resumen generado y tokens utilizados
    */
   async summarizeDocuments(documents, userId = null) {
+    await this.ensureInitialized()
     if (!this.groq) {
       throw new Error('Servicio de IA no disponible. Configure la API key de GROQ.')
     }
@@ -331,6 +358,7 @@ Instrucciones:
    * @returns {Promise<Object>} - Objeto con score, label, confidence y tokensUsed
    */
   async analyzeSentiment(text, userId = null) {
+    await this.ensureInitialized()
     if (!this.groq) {
       throw new Error('Servicio de IA no disponible. Configure la API key de GROQ.')
     }
@@ -460,6 +488,7 @@ Criterios para confidence:
    * @returns {Promise<{content: string}>}
    */
   async generateCompletion({ messages = [], model = this.model, temperature = this.temperature, maxTokens = this.maxTokens } = {}) {
+    await this.ensureInitialized()
     if (!this.groq) {
       throw new Error('Servicio de IA no disponible. Configure la API key de GROQ.');
     }
@@ -489,6 +518,7 @@ Criterios para confidence:
    * @returns {Promise<boolean>} - True si está disponible
    */
   async isAvailable() {
+    await this.ensureInitialized()
     if (!this.groq) {
       return false
     }
@@ -508,28 +538,64 @@ Criterios para confidence:
 }
 
 // Métodos para obtener la configuración actual
-GroqService.prototype.getConfig = function() {
-  return {
-    apiKey: !!localStorage.getItem('groq_api_key'),
-    model: this.model,
-    temperature: this.temperature,
-    maxTokens: this.maxTokens
+GroqService.prototype.getConfig = async function() {
+  await this.ensureInitialized()
+  try {
+    const config = await configurationService.getGroqConfig()
+    return {
+      apiKey: !!config.apiKey,
+      model: config.model || this.model,
+      temperature: config.temperature || this.temperature,
+      maxTokens: config.maxTokens || this.maxTokens
+    }
+  } catch (error) {
+    console.error('Error getting Groq config:', error)
+    return {
+      apiKey: false,
+      model: this.model,
+      temperature: this.temperature,
+      maxTokens: this.maxTokens
+    }
   }
 }
 
 // Método para actualizar la configuración
-GroqService.prototype.updateConfig = function(config) {
-  if (config.model) {
-    this.model = config.model
-    localStorage.setItem('groq_model', config.model)
-  }
-  if (config.temperature !== undefined) {
-    this.temperature = config.temperature
-    localStorage.setItem('groq_temperature', config.temperature.toString())
-  }
-  if (config.maxTokens) {
-    this.maxTokens = config.maxTokens
-    localStorage.setItem('groq_max_tokens', config.maxTokens.toString())
+GroqService.prototype.updateConfig = async function(config) {
+  await this.ensureInitialized()
+  try {
+    const currentConfig = await configurationService.getGroqConfig()
+
+    const updatedConfig = {
+      apiKey: config.apiKey || currentConfig.apiKey || '',
+      model: config.model || currentConfig.model || this.model,
+      temperature: config.temperature !== undefined ? config.temperature : (currentConfig.temperature || this.temperature),
+      maxTokens: config.maxTokens || currentConfig.maxTokens || this.maxTokens
+    }
+
+    await configurationService.setGroqConfig(updatedConfig)
+
+    // Actualizar propiedades locales
+    this.model = updatedConfig.model
+    this.temperature = updatedConfig.temperature
+    this.maxTokens = updatedConfig.maxTokens
+
+    // Recrear instancia de Groq si la API key cambió
+    if (config.apiKey && config.apiKey !== currentConfig.apiKey) {
+      if (config.apiKey && config.apiKey !== 'tu_groq_api_key_aqui' && config.apiKey !== 'gsk_placeholder_configure_real_api_key') {
+        this.groq = new Groq({
+          apiKey: config.apiKey,
+          dangerouslyAllowBrowser: true
+        })
+      } else {
+        this.groq = null
+      }
+    }
+  } catch (error) {
+    console.error('Error updating Groq config:', error)
+    // Fallback: actualizar solo propiedades locales
+    if (config.model) this.model = config.model
+    if (config.temperature !== undefined) this.temperature = config.temperature
+    if (config.maxTokens) this.maxTokens = config.maxTokens
   }
 }
 

@@ -1,7 +1,12 @@
 /**
  * Servicio para la API de WAHA (waha.devike.pro)
  * Maneja la integración con la API de WAHA para WhatsApp
+ *
+ * NOTA: Este servicio ahora usa configurationService para persistencia
+ * en lugar de localStorage directamente.
  */
+
+import configurationService from './configurationService.js'
 
 class WhatsAppWahaService {
   constructor() {
@@ -21,34 +26,55 @@ class WhatsAppWahaService {
   }
 
   /**
-   * Carga configuración desde localStorage
+   * Carga configuración desde configurationService
    */
-  loadConfiguration() {
-    return {
-      apiKey: localStorage.getItem('whatsapp_waha_api_key'),
-      sessionId: localStorage.getItem('whatsapp_waha_session_id'),
-      testMode: localStorage.getItem('whatsapp_waha_test_mode') === 'true'
-    };
+  async loadConfiguration() {
+    try {
+      const config = await configurationService.getConfig('integrations', 'whatsappWaha', 'global', null, {
+        apiKey: '',
+        sessionId: '',
+        testMode: false
+      });
+
+      // Configurar el servicio con los valores cargados
+      this.configure(config);
+
+      return config;
+    } catch (error) {
+      console.error('Error loading WhatsApp WAHA configuration:', error);
+      return {
+        apiKey: '',
+        sessionId: '',
+        testMode: false
+      };
+    }
   }
 
   /**
-   * Guarda configuración en localStorage
+   * Guarda configuración usando configurationService
    */
-  saveConfiguration(config) {
-    if (config.apiKey) localStorage.setItem('whatsapp_waha_api_key', config.apiKey);
-    if (config.sessionId) localStorage.setItem('whatsapp_waha_session_id', config.sessionId);
-    if (config.testMode !== undefined) localStorage.setItem('whatsapp_waha_test_mode', config.testMode.toString());
+  async saveConfiguration(config) {
+    try {
+      await configurationService.setConfig('integrations', 'whatsappWaha', config, 'global', null,
+        'Configuración de WhatsApp WAHA API');
 
-    this.configure(config);
+      this.configure(config);
+    } catch (error) {
+      console.error('Error saving WhatsApp WAHA configuration:', error);
+      // Fallback: configurar solo en memoria
+      this.configure(config);
+    }
   }
 
   /**
    * Limpia configuración
    */
-  clearConfiguration() {
-    localStorage.removeItem('whatsapp_waha_api_key');
-    localStorage.removeItem('whatsapp_waha_session_id');
-    localStorage.removeItem('whatsapp_waha_test_mode');
+  async clearConfiguration() {
+    try {
+      await configurationService.deleteConfig('integrations', 'whatsappWaha', 'global', null);
+    } catch (error) {
+      console.error('Error clearing WhatsApp WAHA configuration:', error);
+    }
 
     this.apiKey = null;
     this.sessionId = null;
@@ -303,7 +329,13 @@ class WhatsAppWahaService {
 
       const result = await response.json();
       this.sessionId = result.id;
-      localStorage.setItem('whatsapp_waha_session_id', this.sessionId);
+
+      // Actualizar configuración con el nuevo sessionId
+      await this.saveConfiguration({
+        apiKey: this.apiKey,
+        sessionId: this.sessionId,
+        testMode: this.testMode
+      });
 
       return {
         success: true,
@@ -484,6 +516,12 @@ class WhatsAppWahaService {
   }
 }
 
-// Exportar instancia singleton
+// Crear instancia singleton con inicialización asíncrona
 const whatsappWahaService = new WhatsAppWahaService();
+
+// Inicializar configuración al cargar el módulo
+whatsappWahaService.loadConfiguration().catch(error => {
+  console.error('Error loading WhatsApp WAHA configuration on startup:', error);
+});
+
 export default whatsappWahaService;

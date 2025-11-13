@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
-import inMemoryEmployeeService from './inMemoryEmployeeService'
+import organizedDatabaseService from './organizedDatabaseService'
 import brevoService from './brevoService'
 import brevoCampaignService from './brevoCampaignService'
 
@@ -503,8 +503,8 @@ class MultiChannelCommunicationService {
   async loadEmployeeData() {
     try {
       // Cargar empleados desde el servicio en memoria
-      this.employees = inMemoryEmployeeService.employees || []
-      this.companies = inMemoryEmployeeService.companies || []
+      this.employees = await organizedDatabaseService.getEmployees() || []
+      this.companies = await organizedDatabaseService.getCompanies() || []
       
       console.log(`Cargados ${this.employees.length} empleados y ${this.companies.length} empresas`)
     } catch (error) {

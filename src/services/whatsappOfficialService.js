@@ -1,7 +1,12 @@
 /**
  * Servicio para la API oficial de WhatsApp Business
  * Maneja la integración con la API oficial de Meta para WhatsApp Business
+ *
+ * NOTA: Este servicio ahora usa configurationService para persistencia
+ * en lugar de localStorage directamente.
  */
+
+import configurationService from './configurationService.js'
 
 class WhatsAppOfficialService {
   constructor() {
@@ -23,37 +28,57 @@ class WhatsAppOfficialService {
   }
 
   /**
-   * Carga configuración desde localStorage
+   * Carga configuración desde configurationService
    */
-  loadConfiguration() {
-    return {
-      accessToken: localStorage.getItem('whatsapp_official_access_token'),
-      phoneNumberId: localStorage.getItem('whatsapp_official_phone_number_id'),
-      webhookVerifyToken: localStorage.getItem('whatsapp_official_webhook_verify_token'),
-      testMode: localStorage.getItem('whatsapp_official_test_mode') === 'true'
-    };
+  async loadConfiguration() {
+    try {
+      const config = await configurationService.getConfig('integrations', 'whatsappOfficial', 'global', null, {
+        accessToken: '',
+        phoneNumberId: '',
+        webhookVerifyToken: '',
+        testMode: false
+      });
+
+      // Configurar el servicio con los valores cargados
+      this.configure(config);
+
+      return config;
+    } catch (error) {
+      console.error('Error loading WhatsApp Official configuration:', error);
+      return {
+        accessToken: '',
+        phoneNumberId: '',
+        webhookVerifyToken: '',
+        testMode: false
+      };
+    }
   }
 
   /**
-   * Guarda configuración en localStorage
+   * Guarda configuración usando configurationService
    */
-  saveConfiguration(config) {
-    if (config.accessToken) localStorage.setItem('whatsapp_official_access_token', config.accessToken);
-    if (config.phoneNumberId) localStorage.setItem('whatsapp_official_phone_number_id', config.phoneNumberId);
-    if (config.webhookVerifyToken) localStorage.setItem('whatsapp_official_webhook_verify_token', config.webhookVerifyToken);
-    if (config.testMode !== undefined) localStorage.setItem('whatsapp_official_test_mode', config.testMode.toString());
+  async saveConfiguration(config) {
+    try {
+      await configurationService.setConfig('integrations', 'whatsappOfficial', config, 'global', null,
+        'Configuración de WhatsApp Business API oficial');
 
-    this.configure(config);
+      this.configure(config);
+    } catch (error) {
+      console.error('Error saving WhatsApp Official configuration:', error);
+      // Fallback: configurar solo en memoria
+      this.configure(config);
+    }
   }
 
   /**
    * Limpia configuración
    */
-  clearConfiguration() {
-    localStorage.removeItem('whatsapp_official_access_token');
-    localStorage.removeItem('whatsapp_official_phone_number_id');
-    localStorage.removeItem('whatsapp_official_webhook_verify_token');
-    localStorage.removeItem('whatsapp_official_test_mode');
+  async clearConfiguration() {
+    try {
+      await configurationService.deleteConfig('integrations', 'whatsappOfficial', 'global', null);
+    } catch (error) {
+      console.error('Error clearing WhatsApp Official configuration:', error);
+    }
 
     this.accessToken = null;
     this.phoneNumberId = null;
@@ -312,6 +337,12 @@ class WhatsAppOfficialService {
   }
 }
 
-// Exportar instancia singleton
+// Crear instancia singleton con inicialización asíncrona
 const whatsappOfficialService = new WhatsAppOfficialService();
+
+// Inicializar configuración al cargar el módulo
+whatsappOfficialService.loadConfiguration().catch(error => {
+  console.error('Error loading WhatsApp Official configuration on startup:', error);
+});
+
 export default whatsappOfficialService;

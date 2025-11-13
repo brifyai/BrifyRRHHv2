@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import employeeFolderService from '../services/employeeFolderService';
-import inMemoryEmployeeService from '../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../services/organizedDatabaseService';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -50,15 +50,15 @@ export const useEmployeeFolders = (companyId) => {
       console.log('🚀 Iniciando carga de empleados...');
       
       // Cargar empresas
-      const companyData = await inMemoryEmployeeService.getCompanies();
+      const companyData = await organizedDatabaseService.getCompanies();
       setCompanies(companyData);
       
       // Obtener empleados con filtros
       let employeesData = [];
       if (companyId) {
-        employeesData = await inMemoryEmployeeService.getEmployees({ companyId });
+        employeesData = await organizedDatabaseService.getEmployees({ companyId });
       } else {
-        employeesData = await inMemoryEmployeeService.getEmployees(filters);
+        employeesData = await organizedDatabaseService.getEmployees(filters);
       }
 
       console.log(`📊 Cargados ${employeesData.length} empleados`);

@@ -1,4 +1,4 @@
-import inMemoryEmployeeService from './inMemoryEmployeeService.js';
+import organizedDatabaseService from './organizedDatabaseService.js';
 
 class EmployeeFolderService {
   // Simulamos un sistema de archivos en memoria
@@ -13,7 +13,7 @@ class EmployeeFolderService {
   async initializeEmployeeFolders() {
     try {
       console.log('Inicializando carpetas de empleados...');
-      const employees = await inMemoryEmployeeService.getEmployees();
+      const employees = await organizedDatabaseService.getEmployees();
       
       employees.forEach(employee => {
         if (employee.email) {
@@ -40,7 +40,7 @@ class EmployeeFolderService {
       let companyName = 'Empresa no especificada';
       if (employeeData.company_id) {
         // Buscar la empresa en el servicio de empresas
-        const companies = inMemoryEmployeeService.companies;
+        const companies = await organizedDatabaseService.getCompanies();
         const company = companies.find(comp => comp.id === employeeData.company_id);
         if (company) {
           companyName = company.name;
@@ -98,7 +98,7 @@ class EmployeeFolderService {
       
       // Si no existe la carpeta, crear una nueva basada en los datos del empleado
       if (!folder) {
-        const employees = await inMemoryEmployeeService.getEmployees();
+        const employees = await organizedDatabaseService.getEmployees();
         const employee = employees.find(emp => emp.email === employeeEmail);
         
         if (employee) {
@@ -110,7 +110,7 @@ class EmployeeFolderService {
       }
       
       // Actualizar datos del empleado si es necesario
-      const employees = await inMemoryEmployeeService.getEmployees();
+      const employees = await organizedDatabaseService.getEmployees();
       const employee = employees.find(emp => emp.email === employeeEmail);
       
       if (employee) {
@@ -127,7 +127,7 @@ class EmployeeFolderService {
         
         // Actualizar el nombre de la empresa
         if (employee.company_id) {
-          const companies = inMemoryEmployeeService.companies;
+          const companies = await organizedDatabaseService.getCompanies();
           const company = companies.find(comp => comp.id === employee.company_id);
           if (company) {
             folder.companyName = company.name;
@@ -237,7 +237,7 @@ class EmployeeFolderService {
   // Obtener todas las carpetas de empleados de una empresa
   async getEmployeeFoldersByCompany(companyId) {
     try {
-      const employees = await inMemoryEmployeeService.getEmployees({ companyId: companyId });
+      const employees = await organizedDatabaseService.getEmployees({ companyId: companyId });
       const folders = [];
       
       for (const employee of employees) {

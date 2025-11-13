@@ -10,7 +10,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import calendarService from '../../services/calendarService';
-import inMemoryEmployeeService from '../../services/inMemoryEmployeeService';
+import organizedDatabaseService from '../../services/organizedDatabaseService';
 import enhancedCommunicationService from '../../services/enhancedCommunicationService';
 
 const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
@@ -50,7 +50,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
 
   const loadEmployees = async () => {
     try {
-      const employeeData = await inMemoryEmployeeService.getEmployees();
+      const employeeData = await organizedDatabaseService.getEmployees();
       setEmployees(employeeData);
     } catch (error) {
       console.error('Error cargando empleados:', error);

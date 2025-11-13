@@ -127,6 +127,31 @@ REACT_APP_SUPABASE_ANON_KEY=xxx
 - **Autenticación**: Supabase Auth
 - **Seguridad**: Encriptación, MFA, RBAC
 
+## ⚙️ Arquitectura de Configuración
+
+### Sistema de Configuración Centralizado
+
+El sistema implementa una arquitectura híbrida de configuración que combina Supabase como almacenamiento principal con localStorage como cache/respaldo:
+
+#### Características
+- 🔄 **Sincronización automática** entre Supabase y localStorage
+- 📦 **Cache inteligente** con TTL de 5 minutos
+- 🛡️ **Row Level Security** en todas las configuraciones
+- 🔄 **Migración automática** de datos legacy
+- 📊 **Categorización jerárquica** (global, empresa, usuario)
+
+#### Servicios Migrados
+- ✅ **Integraciones**: WhatsApp, Telegram, Groq, Brevo
+- ✅ **Notificaciones**: Email, push, reportes
+- ✅ **Seguridad**: MFA, sesiones, backup
+- ✅ **Sistema**: Jerarquía de configuración, dashboard
+
+#### Beneficios
+- 🚀 **Rendimiento**: Cache local para acceso rápido
+- 🔒 **Seguridad**: Datos sensibles en BD encriptada
+- 🔄 **Resiliencia**: Funciona sin conexión a BD
+- 📈 **Escalabilidad**: Soporte multi-empresa y multi-usuario
+
 ## 🚀 Despliegue
 
 ### Netlify (Frontend)

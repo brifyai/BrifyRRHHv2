@@ -1,6 +1,6 @@
 /**
  * Servicio de WhatsApp usando API oficial de Meta
- * 
+ *
  * Este servicio proporciona una interfaz completa para:
  * - Configuración de API de Meta WhatsApp
  * - Envío de mensajes individuales y masivos
@@ -8,7 +8,12 @@
  * - Manejo de webhooks para estado de entrega
  * - Validación de números de teléfono
  * - Estadísticas de uso
+ *
+ * NOTA: Este servicio ahora usa configurationService para persistencia
+ * en lugar de localStorage directamente.
  */
+
+import configurationService from './configurationService.js'
 
 class WhatsAppService {
   constructor() {
@@ -29,62 +34,71 @@ class WhatsAppService {
    * @param {string} config.webhookVerifyToken - Token de verificación de webhook
    * @param {boolean} config.testMode - Modo de prueba (opcional)
    */
-  configure(config) {
+  async configure(config) {
     this.accessToken = config.accessToken
     this.phoneNumberId = config.phoneNumberId
     this.webhookVerifyToken = config.webhookVerifyToken
     this.testMode = config.testMode || false
     this.isConfigured = !!(config.accessToken && config.phoneNumberId)
-    
-    // Guardar en localStorage para persistencia
+
+    // Guardar usando configurationService
     if (config.accessToken) {
-      localStorage.setItem('whatsapp_access_token', config.accessToken)
-      localStorage.setItem('whatsapp_phone_number_id', config.phoneNumberId)
-      localStorage.setItem('whatsapp_webhook_verify_token', config.webhookVerifyToken || '')
-      localStorage.setItem('whatsapp_test_mode', this.testMode.toString())
+      await configurationService.setConfig('integrations', 'whatsapp', {
+        accessToken: config.accessToken,
+        phoneNumberId: config.phoneNumberId,
+        webhookVerifyToken: config.webhookVerifyToken || '',
+        testMode: this.testMode
+      }, 'global', null, 'Configuración de WhatsApp Business API')
     }
   }
 
   /**
-   * Cargar configuración desde localStorage
+   * Cargar configuración desde configurationService
    */
-  loadConfiguration() {
-    const accessToken = localStorage.getItem('whatsapp_access_token')
-    const phoneNumberId = localStorage.getItem('whatsapp_phone_number_id')
-    const webhookVerifyToken = localStorage.getItem('whatsapp_webhook_verify_token')
-    const testMode = localStorage.getItem('whatsapp_test_mode') === 'true'
-    
-    if (accessToken && phoneNumberId) {
-      this.configure({
-        accessToken,
-        phoneNumberId,
-        webhookVerifyToken,
-        testMode
-      })
-    }
-    
-    return { 
-      accessToken: this.accessToken, 
-      phoneNumberId: this.phoneNumberId,
-      webhookVerifyToken: this.webhookVerifyToken,
-      testMode: this.testMode 
+  async loadConfiguration() {
+    try {
+      const config = await configurationService.getConfig('integrations', 'whatsapp', 'global', null, {})
+
+      if (config.accessToken && config.phoneNumberId) {
+        this.accessToken = config.accessToken
+        this.phoneNumberId = config.phoneNumberId
+        this.webhookVerifyToken = config.webhookVerifyToken || ''
+        this.testMode = config.testMode || false
+        this.isConfigured = true
+      }
+
+      return {
+        accessToken: this.accessToken,
+        phoneNumberId: this.phoneNumberId,
+        webhookVerifyToken: this.webhookVerifyToken,
+        testMode: this.testMode
+      }
+    } catch (error) {
+      console.error('Error loading WhatsApp configuration:', error)
+      return {
+        accessToken: null,
+        phoneNumberId: null,
+        webhookVerifyToken: null,
+        testMode: false
+      }
     }
   }
 
   /**
    * Limpiar configuración
    */
-  clearConfiguration() {
+  async clearConfiguration() {
     this.accessToken = null
     this.phoneNumberId = null
     this.webhookVerifyToken = null
     this.testMode = false
     this.isConfigured = false
-    
-    localStorage.removeItem('whatsapp_access_token')
-    localStorage.removeItem('whatsapp_phone_number_id')
-    localStorage.removeItem('whatsapp_webhook_verify_token')
-    localStorage.removeItem('whatsapp_test_mode')
+
+    try {
+      await configurationService.setConfig('integrations', 'whatsapp', {}, 'global', null, 'Configuración de WhatsApp Business API - Limpiada')
+    } catch (error) {
+      console.error('Error clearing WhatsApp configuration:', error)
+    }
   }
 
   /**
@@ -616,7 +630,9 @@ class WhatsAppService {
 // Crear instancia global del servicio
 const whatsappService = new WhatsAppService()
 
-// Cargar configuración guardada al iniciar
-whatsappService.loadConfiguration()
+// Cargar configuración guardada al iniciar (asíncronamente)
+whatsappService.loadConfiguration().catch(error => {
+  console.error('Error loading WhatsApp configuration on startup:', error)
+})
 
 export default whatsappService

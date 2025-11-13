@@ -10,6 +10,7 @@ import organizedDatabaseService from '../../services/organizedDatabaseService'
 import communicationService from '../../services/communicationService'
 import whatsappOfficialService from '../../services/whatsappOfficialService'
 import whatsappWahaService from '../../services/whatsappWahaService'
+import configurationService from '../../services/configurationService'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -226,21 +227,20 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
 
   // Eliminado el useEffect que causaba parpadeo - ahora el tab se maneja de forma estática
 
-  // Cargar configuraciones de notificaciones desde localStorage
-  const loadNotificationSettings = useCallback(() => {
+  // Cargar configuraciones de notificaciones desde el servicio centralizado
+  const loadNotificationSettings = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('notificationSettings')
+      const saved = await configurationService.getNotificationSettings()
       if (saved) {
-        const parsedSettings = JSON.parse(saved)
         // Asegurar que recipients sea siempre un array
         const settingsWithArrayRecipients = {
-          ...parsedSettings,
+          ...saved,
           reports: {
-            ...parsedSettings.reports,
-            recipients: Array.isArray(parsedSettings.reports?.recipients)
-              ? parsedSettings.reports.recipients
-              : parsedSettings.reports?.recipients
-                ? [parsedSettings.reports.recipients] // Convertir string a array
+            ...saved.reports,
+            recipients: Array.isArray(saved.reports?.recipients)
+              ? saved.reports.recipients
+              : saved.reports?.recipients
+                ? [saved.reports.recipients] // Convertir string a array
                 : [user?.email || ''] // Valor por defecto
           }
         }
@@ -255,19 +255,20 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   const handleHierarchyModeChange = async (newMode) => {
     try {
       setHierarchyMode(newMode)
-      
-      // Guardar en localStorage para persistencia
-      localStorage.setItem('hierarchyMode', newMode)
-      
+
+      // Guardar en el servicio de configuración centralizado
+      await configurationService.setConfig('system', 'hierarchy_mode', newMode, 'global', null,
+        'Modo de jerarquía de configuración del sistema')
+
       // Mostrar mensaje informativo sobre el cambio
       const modeDescriptions = {
         global_only: 'Solo se usarán configuraciones globales. Las configuraciones por empresa serán ignoradas.',
         company_first: 'Se priorizarán configuraciones por empresa. Si no existen, se usarán las globales.',
         both: 'Se combinarán ambas configuraciones. Las específicas de empresa sobreescribirán las globales.'
       }
-      
+
       toast.success(`Modo de configuración actualizado: ${newMode.replace('_', ' ').toUpperCase()}`)
-      
+
       // Mostrar detalles del modo
       setTimeout(() => {
         Swal.fire({
@@ -294,17 +295,17 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           width: '500px'
         });
       }, 500)
-      
+
     } catch (error) {
       console.error('Error changing hierarchy mode:', error)
       toast.error('Error al cambiar el modo de configuración')
     }
   }
 
-  // Cargar configuración de jerarquía desde localStorage
-  const loadHierarchyMode = useCallback(() => {
+  // Cargar configuración de jerarquía desde el servicio centralizado
+  const loadHierarchyMode = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('hierarchyMode')
+      const saved = await configurationService.getConfig('system', 'hierarchy_mode', 'global', null, 'company_first')
       if (saved && ['global_only', 'company_first', 'both'].includes(saved)) {
         setHierarchyMode(saved)
       }
@@ -316,7 +317,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   // Guardar configuraciones de notificaciones
   const saveNotificationSettings = async (settings) => {
     try {
-      localStorage.setItem('notificationSettings', JSON.stringify(settings))
+      await configurationService.setNotificationSettings(settings)
       toast.success('Configuración de notificaciones guardada')
     } catch (error) {
       console.error('Error saving notification settings:', error)
@@ -325,12 +326,11 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   }
 
   // Cargar configuraciones de seguridad
-  const loadSecuritySettings = useCallback(() => {
+  const loadSecuritySettings = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('securitySettings')
+      const saved = await configurationService.getSecuritySettings()
       if (saved) {
-        const parsedSettings = JSON.parse(saved)
-        setSecuritySettings(prev => ({ ...prev, ...parsedSettings }))
+        setSecuritySettings(prev => ({ ...prev, ...saved }))
       }
     } catch (error) {
       console.error('Error loading security settings:', error)
@@ -410,22 +410,16 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   }, [])
 
   // Cargar configuraciones de backup
-  const loadBackupSettings = useCallback(() => {
+  const loadBackupSettings = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('backupSettings')
-      if (saved) {
-        const parsedSettings = JSON.parse(saved)
-        setBackupSettings(prev => ({ ...prev, ...parsedSettings }))
-      } else {
-        // Configuración por defecto
-        setBackupSettings({
-          autoBackup: true,
-          backupFrequency: 'weekly',
-          retentionDays: 30,
-          lastBackup: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 días atrás
-          backupSize: '2.3 GB'
-        })
-      }
+      const saved = await configurationService.getConfig('system', 'backup_settings', 'global', null, {
+        autoBackup: true,
+        backupFrequency: 'weekly',
+        retentionDays: 30,
+        lastBackup: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 días atrás
+        backupSize: '2.3 GB'
+      })
+      setBackupSettings(prev => ({ ...prev, ...saved }))
     } catch (error) {
       console.error('Error loading backup settings:', error)
     }
@@ -489,56 +483,90 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   }, [])
 
   // Función para verificar configuración de Groq
-  const checkGroqConfiguration = useCallback(() => {
-    const apiKey = process.env.REACT_APP_GROQ_API_KEY
-    const model = localStorage.getItem('groq_model') || 'gemma2-9b-it'
-    
-    setIntegrations(prev => ({
-      ...prev,
-      groq: {
-        connected: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui'),
-        status: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? 'connected' : 'disconnected',
-        lastSync: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? new Date().toISOString() : null,
-        model: model
-      }
-    }))
+  const checkGroqConfiguration = useCallback(async () => {
+    try {
+      const apiKey = process.env.REACT_APP_GROQ_API_KEY
+      const groqConfig = await configurationService.getConfig('integrations', 'groq', 'global', null, {})
+
+      setIntegrations(prev => ({
+        ...prev,
+        groq: {
+          connected: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui'),
+          status: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? 'connected' : 'disconnected',
+          lastSync: !!(apiKey && apiKey !== 'tu_groq_api_key_aqui') ? new Date().toISOString() : null,
+          model: groqConfig.model || 'gemma2-9b-it'
+        }
+      }))
+    } catch (error) {
+      console.error('Error checking Groq configuration:', error)
+      setIntegrations(prev => ({
+        ...prev,
+        groq: {
+          connected: false,
+          status: 'disconnected',
+          lastSync: null,
+          model: 'gemma2-9b-it'
+        }
+      }))
+    }
   }, [])
 
   // Función para verificar configuración de WhatsApp
-  const checkWhatsAppConfiguration = useCallback(() => {
-    const config = {
-      accessToken: localStorage.getItem('whatsapp_access_token'),
-      phoneNumberId: localStorage.getItem('whatsapp_phone_number_id'),
-      webhookVerifyToken: localStorage.getItem('whatsapp_webhook_verify_token'),
-      testMode: localStorage.getItem('whatsapp_test_mode') === 'true'
-    };
-    
-    setIntegrations(prev => ({
-      ...prev,
-      whatsapp: {
-        connected: !!(config.accessToken && config.phoneNumberId),
-        status: !!(config.accessToken && config.phoneNumberId) ? 'connected' : 'disconnected',
-        lastSync: !!(config.accessToken && config.phoneNumberId) ? new Date().toISOString() : null,
-        testMode: config.testMode
-      }
-    }))
+  const checkWhatsAppConfiguration = useCallback(async () => {
+    try {
+      const whatsappConfig = await configurationService.getConfig('integrations', 'whatsapp', 'global', null, {})
+
+      setIntegrations(prev => ({
+        ...prev,
+        whatsapp: {
+          connected: !!(whatsappConfig.accessToken && whatsappConfig.phoneNumberId),
+          status: !!(whatsappConfig.accessToken && whatsappConfig.phoneNumberId) ? 'connected' : 'disconnected',
+          lastSync: !!(whatsappConfig.accessToken && whatsappConfig.phoneNumberId) ? new Date().toISOString() : null,
+          testMode: whatsappConfig.testMode || false
+        }
+      }))
+    } catch (error) {
+      console.error('Error checking WhatsApp configuration:', error)
+      setIntegrations(prev => ({
+        ...prev,
+        whatsapp: {
+          connected: false,
+          status: 'disconnected',
+          lastSync: null,
+          testMode: false
+        }
+      }))
+    }
   }, [])
 
   // Función para verificar configuración de Telegram
-  const checkTelegramConfiguration = useCallback(() => {
-    const botToken = localStorage.getItem('telegram_bot_token');
-    const botUsername = localStorage.getItem('telegram_bot_username');
-    
-    setIntegrations(prev => ({
-      ...prev,
-      telegram: {
-        connected: !!(botToken && botUsername),
-        status: !!(botToken && botUsername) ? 'connected' : 'disconnected',
-        lastSync: !!(botToken && botUsername) ? new Date().toISOString() : null,
-        botToken: botToken,
-        botUsername: botUsername
-      }
-    }))
+  const checkTelegramConfiguration = useCallback(async () => {
+    try {
+      const telegramConfig = await configurationService.getConfig('integrations', 'telegram', 'global', null, {})
+
+      setIntegrations(prev => ({
+        ...prev,
+        telegram: {
+          connected: !!(telegramConfig.botToken && telegramConfig.botUsername),
+          status: !!(telegramConfig.botToken && telegramConfig.botUsername) ? 'connected' : 'disconnected',
+          lastSync: !!(telegramConfig.botToken && telegramConfig.botUsername) ? new Date().toISOString() : null,
+          botToken: telegramConfig.botToken,
+          botUsername: telegramConfig.botUsername
+        }
+      }))
+    } catch (error) {
+      console.error('Error checking Telegram configuration:', error)
+      setIntegrations(prev => ({
+        ...prev,
+        telegram: {
+          connected: false,
+          status: 'disconnected',
+          lastSync: null,
+          botToken: null,
+          botUsername: null
+        }
+      }))
+    }
   }, [])
 
   // Función para verificar configuración de WhatsApp Official
@@ -1750,11 +1778,13 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
       setIntegrations(prev => ({ ...prev, groq: { ...prev.groq, status: 'connecting' } }));
 
       try {
-        // Guardar configuración en localStorage
-        localStorage.setItem('groq_api_key', formValues.apiKey);
-        localStorage.setItem('groq_model', formValues.model);
-        localStorage.setItem('groq_temperature', formValues.temperature.toString());
-        localStorage.setItem('groq_max_tokens', formValues.maxTokens.toString());
+        // Guardar configuración usando el servicio centralizado
+        await configurationService.setConfig('integrations', 'groq', {
+          apiKey: formValues.apiKey,
+          model: formValues.model,
+          temperature: formValues.temperature,
+          maxTokens: formValues.maxTokens
+        }, 'global', null, 'Configuración de Groq AI')
 
         // Probar conexión con Groq
         const testResult = await testGroqConnection(formValues.apiKey, formValues.model);
@@ -1825,11 +1855,12 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           }
         }));
 
-        // Limpiar configuración guardada
-        localStorage.removeItem('groq_api_key');
-        localStorage.removeItem('groq_model');
-        localStorage.removeItem('groq_temperature');
-        localStorage.removeItem('groq_max_tokens');
+        // Limpiar configuración guardada usando el servicio centralizado
+        try {
+          await configurationService.setConfig('integrations', 'groq', {}, 'global', null, 'Configuración de Groq AI - Error')
+        } catch (cleanupError) {
+          console.error('Error cleaning up Groq configuration:', cleanupError)
+        }
 
         // Mostrar error
         await Swal.fire({
@@ -2206,12 +2237,12 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
       setIntegrations(prev => ({ ...prev, telegram: { ...prev.telegram, status: 'connecting' } }));
 
       try {
-        // Guardar configuración en localStorage
-        localStorage.setItem('telegram_bot_token', formValues.botToken);
-        localStorage.setItem('telegram_bot_username', formValues.botUsername);
-        if (formValues.chatId) {
-          localStorage.setItem('telegram_chat_id', formValues.chatId);
-        }
+        // Guardar configuración usando configurationService
+        await configurationService.setConfig('integrations', 'telegram', {
+          botToken: formValues.botToken,
+          botUsername: formValues.botUsername,
+          chatId: formValues.chatId || null
+        }, 'global', null, 'Configuración de Telegram Bot')
 
         // Probar conexión con Telegram
         const testResult = await testTelegramConnection(formValues.botToken, formValues.botUsername);
@@ -2282,10 +2313,12 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           }
         }));
 
-        // Limpiar configuración guardada
-        localStorage.removeItem('telegram_bot_token');
-        localStorage.removeItem('telegram_bot_username');
-        localStorage.removeItem('telegram_chat_id');
+        // Limpiar configuración guardada usando configurationService
+        try {
+          await configurationService.setConfig('integrations', 'telegram', {}, 'global', null, 'Configuración de Telegram Bot - Error')
+        } catch (cleanupError) {
+          console.error('Error cleaning up Telegram configuration:', cleanupError)
+        }
 
         // Mostrar error
         await Swal.fire({
@@ -2804,55 +2837,40 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     });
 
     if (result.isConfirmed) {
-      // Si es Brevo, limpiar la configuración guardada
-      if (integration === 'brevo') {
-        brevoService.clearConfiguration();
-      }
-
-      // Si es Groq, limpiar la configuración guardada
-      if (integration === 'groq') {
-        localStorage.removeItem('groq_api_key');
-        localStorage.removeItem('groq_model');
-        localStorage.removeItem('groq_temperature');
-        localStorage.removeItem('groq_max_tokens');
-      }
-
-      // Si es WhatsApp, limpiar la configuración guardada
-      if (integration === 'whatsapp') {
-        localStorage.removeItem('whatsapp_access_token');
-        localStorage.removeItem('whatsapp_phone_number_id');
-        localStorage.removeItem('whatsapp_webhook_verify_token');
-        localStorage.removeItem('whatsapp_test_mode');
-      }
-
-      // Si es WhatsApp Official, limpiar la configuración guardada
-      if (integration === 'whatsappOfficial') {
-        whatsappOfficialService.clearConfiguration();
-      }
-
-      // Si es WhatsApp WAHA, limpiar la configuración guardada
-      if (integration === 'whatsappWaha') {
-        whatsappWahaService.clearConfiguration();
-      }
-
-      // Si es Telegram, limpiar la configuración guardada
-      if (integration === 'telegram') {
-        localStorage.removeItem('telegram_bot_token');
-        localStorage.removeItem('telegram_bot_username');
-        localStorage.removeItem('telegram_chat_id');
-      }
-
-      setIntegrations(prev => ({
-        ...prev,
-        [integration]: {
-          connected: false,
-          status: 'disconnected',
-          lastSync: null,
-          testMode: false
+      try {
+        // Limpiar configuración usando configurationService para servicios migrados
+        if (['groq', 'whatsapp', 'telegram'].includes(integration)) {
+          await configurationService.setConfig('integrations', integration, {}, 'global', null, `Desconexión de ${integrationNames[integration]}`)
         }
-      }));
 
-      toast.success(`${integrationNames[integration]} desconectado`);
+        // Mantener limpieza específica para servicios que aún usan sus propios métodos
+        if (integration === 'brevo') {
+          brevoService.clearConfiguration();
+        }
+
+        if (integration === 'whatsappOfficial') {
+          whatsappOfficialService.clearConfiguration();
+        }
+
+        if (integration === 'whatsappWaha') {
+          whatsappWahaService.clearConfiguration();
+        }
+
+        setIntegrations(prev => ({
+          ...prev,
+          [integration]: {
+            connected: false,
+            status: 'disconnected',
+            lastSync: null,
+            testMode: false
+          }
+        }));
+
+        toast.success(`${integrationNames[integration]} desconectado`);
+      } catch (error) {
+        console.error('Error disconnecting integration:', error);
+        toast.error(`Error al desconectar ${integrationNames[integration]}`);
+      }
     }
   };
 
@@ -3934,9 +3952,14 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                 </div>
 
                 <button
-                  onClick={() => {
-                    localStorage.setItem('backupSettings', JSON.stringify(backupSettings))
-                    toast.success('Configuración de backup guardada')
+                  onClick={async () => {
+                    try {
+                      await configurationService.setConfig('system', 'backup_settings', backupSettings, 'global', null, 'Configuración de backup del sistema')
+                      toast.success('Configuración de backup guardada')
+                    } catch (error) {
+                      console.error('Error saving backup settings:', error)
+                      toast.error('Error al guardar la configuración de backup')
+                    }
                   }}
                   className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
