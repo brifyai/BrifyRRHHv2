@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext.js'
 import { db, supabase } from '../../lib/supabase'
 import { toast } from 'react-hot-toast'
 import googleDriveService from '../../lib/googleDrive'
