@@ -16,6 +16,19 @@ class GoogleDriveService {
         window.gapi.load('auth2', resolve)
       })
       
+      // Intentar restaurar token guardado en localStorage
+      const savedTokens = localStorage.getItem('google_drive_tokens')
+      if (savedTokens) {
+        try {
+          const tokens = JSON.parse(savedTokens)
+          await this.setTokens(tokens)
+          console.log('✅ Token de Google Drive restaurado desde localStorage')
+        } catch (error) {
+          console.warn('⚠️ No se pudo restaurar token de Google Drive:', error.message)
+          localStorage.removeItem('google_drive_tokens')
+        }
+      }
+      
       this.initialized = true
       return true
     } catch (error) {
@@ -150,6 +163,9 @@ class GoogleDriveService {
       
       if (tokens.access_token) {
         this.accessToken = tokens.access_token
+        // Guardar tokens en localStorage para restaurarlos después
+        localStorage.setItem('google_drive_tokens', JSON.stringify(tokens))
+        console.log('✅ Tokens de Google Drive guardados en localStorage')
       }
       
       return tokens
@@ -382,6 +398,11 @@ class GoogleDriveService {
       console.error('Error getting file info:', error)
       throw error
     }
+  }
+
+  // Verificar si está autenticado
+  isAuthenticated() {
+    return !!this.accessToken
   }
 }
 
