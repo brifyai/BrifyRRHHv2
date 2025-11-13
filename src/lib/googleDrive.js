@@ -1,234 +1,56 @@
-// Google Drive API service for browser environment
+/**
+ * Google Drive API Service - Refactorizado
+ * Usa GoogleDriveAuthService para gestión centralizada de tokens
+ */
+
+import googleDriveAuthService from './googleDriveAuthService.js'
+import logger from './logger.js'
+
 class GoogleDriveService {
   constructor() {
-    this.accessToken = null
+    this.authService = googleDriveAuthService
     this.initialized = false
   }
 
+  /**
+   * Inicializa el servicio
+   */
   async initialize() {
     try {
-      // Load Google API script if not already loaded
-      if (!window.gapi) {
-        await this.loadGoogleAPI()
-      }
+      logger.info('GoogleDriveService', '🔄 Inicializando servicio...')
       
-      await new Promise((resolve) => {
-        window.gapi.load('auth2', resolve)
-      })
-      
-      // Intentar restaurar token guardado en localStorage
-      const savedTokens = localStorage.getItem('google_drive_tokens')
-      if (savedTokens) {
-        try {
-          const tokens = JSON.parse(savedTokens)
-          await this.setTokens(tokens)
-          console.log('✅ Token de Google Drive restaurado desde localStorage')
-        } catch (error) {
-          console.warn('⚠️ No se pudo restaurar token de Google Drive:', error.message)
-          localStorage.removeItem('google_drive_tokens')
-        }
-      }
+      // Inicializar servicio de autenticación
+      await this.authService.initialize()
       
       this.initialized = true
+      logger.info('GoogleDriveService', '✅ Servicio inicializado')
       return true
     } catch (error) {
-      console.error('Error initializing Google Drive:', error)
+      logger.error('GoogleDriveService', `❌ Error inicializando: ${error.message}`)
       return false
     }
   }
 
-  loadGoogleAPI() {
-    return new Promise((resolve, reject) => {
-      if (window.gapi) {
-        resolve()
-        return
-      }
-      
-      const script = document.createElement('script')
-      script.src = 'https://apis.google.com/js/api.js'
-      script.onload = resolve
-      script.onerror = reject
-      document.head.appendChild(script)
-    })
-  }
-
-  generateAuthUrl() {
-    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
-    
-    // Detectar automáticamente el redirect URI según el ambiente
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI ||
-                       (isDevelopment ?
-                        'http://localhost:3000/auth/google/callback' :
-                        `${window.location.origin}/auth/google/callback`)
-    
-    // Verificar credenciales válidas - manejar apropiadamente sin credenciales
-    if (!clientId ||
-        clientId.includes('tu_google_client_id') ||
-        clientId.includes('YOUR_GOOGLE_CLIENT_ID_HERE') ||
-        clientId === 'your-google-client-id') {
-      
-      // Si no hay credenciales, retornar mensaje informativo en lugar de error
-      console.log('ℹ️  Google Drive: Mostrando información de configuración')
-      return 'show-credentials-info'
-    }
-    
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send',
-      response_type: 'code',
-      access_type: 'offline',
-      prompt: 'consent'
-    })
-    
-    console.log(`🔄 OAuth Google Drive - Ambiente: ${isDevelopment ? 'Desarrollo' : 'Producción'}`)
-    console.log(`📍 Redirect URI: ${redirectUri}`)
-    console.log(`🔑 Client ID: ${clientId ? 'Configurado' : 'No configurado'}`)
-    
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
-  }
-
-  // Verificar si hay credenciales configuradas
-  hasValidCredentials() {
-    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
-    const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET
-    
-    return !!(clientId &&
-             clientSecret &&
-             !clientId.includes('tu_google_client_id') &&
-             !clientId.includes('YOUR_GOOGLE_CLIENT_ID_HERE') &&
-             !clientSecret.includes('tu_google_client_secret') &&
-             !clientSecret.includes('YOUR_GOOGLE_CLIENT_SECRET_HERE'))
-  }
-
-  // Obtener información de configuración
-  getConfigInfo() {
-    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
-    const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET
-    const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
-    
-    return {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      redirectUri: redirectUri,
-      isValid: this.hasValidCredentials(),
-      needsConfiguration: !this.hasValidCredentials()
+  /**
+   * Valida que esté autenticado
+   */
+  validateAuthentication() {
+    if (!this.authService.isAuthenticated()) {
+      const error = 'Google Drive no está autenticado. Por favor, conecta tu cuenta de Google Drive.'
+      logger.error('GoogleDriveService', error)
+      throw new Error(error)
     }
   }
 
-  async exchangeCodeForTokens(code) {
-    try {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          client_secret: process.env.REACT_APP_GOOGLE_CLIENT_SECRET,
-          code: code,
-          grant_type: 'authorization_code',
-          redirect_uri: process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
-        })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.text()
-        console.error('Google token exchange failed:', response.status, errorData)
-        
-        // Manejo específico de errores comunes
-        if (response.status === 403) {
-          throw new Error('Límite de solicitudes excedido. Por favor, intenta nuevamente en unos minutos.')
-        } else if (response.status === 400) {
-          throw new Error('Código de autorización inválido o expirado. Por favor, intenta conectar Google Drive nuevamente.')
-        } else if (response.status === 401) {
-          throw new Error('Credenciales de Google inválidas. Verifica la configuración del proyecto.')
-        } else {
-          throw new Error(`Error de conexión con Google (${response.status}). Intenta nuevamente.`)
-        }
-      }
-      
-      const tokens = await response.json()
-      
-      if (!tokens || typeof tokens !== 'object') {
-        console.error('Invalid tokens response:', tokens)
-        throw new Error('Invalid tokens response from Google')
-      }
-      
-      if (tokens.error) {
-        console.error('Google API error:', tokens.error, tokens.error_description)
-        throw new Error(`Google API error: ${tokens.error}`)
-      }
-      
-      if (tokens.access_token) {
-        this.accessToken = tokens.access_token
-        // Guardar tokens en localStorage para restaurarlos después
-        localStorage.setItem('google_drive_tokens', JSON.stringify(tokens))
-        console.log('✅ Tokens de Google Drive guardados en localStorage')
-      }
-      
-      return tokens
-    } catch (error) {
-      console.error('Error getting tokens:', error)
-      throw error
-    }
-  }
-
-  // Configurar tokens existentes
-  async setTokens(tokens) {
-    try {
-      // Si tenemos un access_token directamente, usarlo
-      if (tokens.access_token) {
-        this.accessToken = tokens.access_token
-        return true
-      }
-      
-      // Si tenemos un refresh_token, usarlo para obtener un access_token
-      if (tokens.refresh_token) {
-        const response = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-            client_secret: process.env.REACT_APP_GOOGLE_CLIENT_SECRET,
-            refresh_token: tokens.refresh_token,
-            grant_type: 'refresh_token'
-          })
-        })
-        
-        if (!response.ok) {
-          const errorData = await response.text()
-          console.error('Error refreshing Google token:', response.status, errorData)
-          throw new Error(`Error refreshing token: ${response.status}`)
-        }
-        
-        const refreshedTokens = await response.json()
-        
-        if (refreshedTokens.access_token) {
-          this.accessToken = refreshedTokens.access_token
-          return true
-        } else {
-          throw new Error('No access token received from refresh')
-        }
-      }
-      
-      throw new Error('No valid tokens provided')
-    } catch (error) {
-      console.error('Error setting tokens:', error)
-      return false
-    }
-  }
-
-  // Crear carpeta
+  /**
+   * Crea una carpeta en Google Drive
+   */
   async createFolder(name, parentId = null) {
-    if (!this.accessToken) {
-      throw new Error('Google Drive no está inicializado')
-    }
-
     try {
+      logger.info('GoogleDriveService', `📁 Creando carpeta: ${name}`)
+      
+      this.validateAuthentication()
+      
       const fileMetadata = {
         name: name,
         mimeType: 'application/vnd.google-apps.folder'
@@ -236,31 +58,42 @@ class GoogleDriveService {
 
       if (parentId) {
         fileMetadata.parents = [parentId]
+        logger.info('GoogleDriveService', `📍 Carpeta padre: ${parentId}`)
       }
 
       const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name,parents', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(fileMetadata)
       })
 
-      return await response.json()
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error('GoogleDriveService', `❌ Error creando carpeta: ${response.status} - ${errorData}`)
+        throw new Error(`Error creando carpeta: ${response.status}`)
+      }
+
+      const result = await response.json()
+      logger.info('GoogleDriveService', `✅ Carpeta creada: ${result.id}`)
+      return result
     } catch (error) {
-      console.error('Error creating folder:', error)
+      logger.error('GoogleDriveService', `❌ Error en createFolder: ${error.message}`)
       throw error
     }
   }
 
-  // Listar archivos y carpetas
+  /**
+   * Lista archivos y carpetas
+   */
   async listFiles(parentId = null, pageSize = 100) {
-    if (!this.accessToken) {
-      throw new Error('Google Drive no está inicializado')
-    }
-
     try {
+      logger.info('GoogleDriveService', `📂 Listando archivos${parentId ? ` en ${parentId}` : ''}`)
+      
+      this.validateAuthentication()
+
       let query = "trashed=false"
       if (parentId) {
         query += ` and '${parentId}' in parents`
@@ -274,25 +107,34 @@ class GoogleDriveService {
 
       const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`
         }
       })
 
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error('GoogleDriveService', `❌ Error listando archivos: ${response.status} - ${errorData}`)
+        throw new Error(`Error listando archivos: ${response.status}`)
+      }
+
       const data = await response.json()
-      return data.files
+      logger.info('GoogleDriveService', `✅ ${data.files?.length || 0} archivos encontrados`)
+      return data.files || []
     } catch (error) {
-      console.error('Error listing files:', error)
+      logger.error('GoogleDriveService', `❌ Error en listFiles: ${error.message}`)
       throw error
     }
   }
 
-  // Subir archivo
+  /**
+   * Sube un archivo a Google Drive
+   */
   async uploadFile(file, parentId = null) {
-    if (!this.accessToken) {
-      throw new Error('Google Drive no está inicializado')
-    }
-
     try {
+      logger.info('GoogleDriveService', `📤 Subiendo archivo: ${file.name}`)
+      
+      this.validateAuthentication()
+
       const fileMetadata = {
         name: file.name
       }
@@ -308,52 +150,125 @@ class GoogleDriveService {
       const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`
         },
         body: formData
       })
 
-      const result = await response.json()
-      
-      if (!response.ok || result.error) {
-        throw new Error(result.error?.message || `Error uploading file: ${response.status}`)
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error('GoogleDriveService', `❌ Error subiendo archivo: ${response.status} - ${errorData}`)
+        throw new Error(`Error subiendo archivo: ${response.status}`)
       }
-      
-      console.log('✅ Google Drive upload result:', result)
-      return result // Retornar el objeto completo que incluye id, name, size, mimeType
+
+      const result = await response.json()
+      logger.info('GoogleDriveService', `✅ Archivo subido: ${result.id}`)
+      return result
     } catch (error) {
-      console.error('Error uploading file:', error)
+      logger.error('GoogleDriveService', `❌ Error en uploadFile: ${error.message}`)
       throw error
     }
   }
 
-  // Eliminar archivo o carpeta
-  async deleteFile(fileId) {
-    if (!this.accessToken) {
-      throw new Error('Google Drive no está inicializado')
-    }
-
+  /**
+   * Descarga un archivo de Google Drive
+   */
+  async downloadFile(fileId) {
     try {
+      logger.info('GoogleDriveService', `⬇️ Descargando archivo: ${fileId}`)
+      
+      this.validateAuthentication()
+
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: {
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        logger.error('GoogleDriveService', `❌ Error descargando archivo: ${response.status}`)
+        throw new Error(`Error descargando archivo: ${response.status}`)
+      }
+
+      logger.info('GoogleDriveService', `✅ Archivo descargado: ${fileId}`)
+      return await response.blob()
+    } catch (error) {
+      logger.error('GoogleDriveService', `❌ Error en downloadFile: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * Elimina un archivo o carpeta
+   */
+  async deleteFile(fileId) {
+    try {
+      logger.info('GoogleDriveService', `🗑️ Eliminando archivo: ${fileId}`)
+      
+      this.validateAuthentication()
+
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`
         }
       })
-      return response.ok
+
+      if (!response.ok) {
+        logger.error('GoogleDriveService', `❌ Error eliminando archivo: ${response.status}`)
+        throw new Error(`Error eliminando archivo: ${response.status}`)
+      }
+
+      logger.info('GoogleDriveService', `✅ Archivo eliminado: ${fileId}`)
+      return true
     } catch (error) {
-      console.error('Error deleting file:', error)
+      logger.error('GoogleDriveService', `❌ Error en deleteFile: ${error.message}`)
       throw error
     }
   }
 
-  // Compartir carpeta con email
-  async shareFolder(folderId, email, role = 'reader') {
-    if (!this.accessToken) {
-      throw new Error('Google Drive no está inicializado')
-    }
-
+  /**
+   * Obtiene información de un archivo
+   */
+  async getFileInfo(fileId) {
     try {
+      logger.info('GoogleDriveService', `ℹ️ Obteniendo información: ${fileId}`)
+      
+      this.validateAuthentication()
+
+      const params = new URLSearchParams({
+        fields: 'id, name, mimeType, size, createdTime, modifiedTime, parents'
+      })
+
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        logger.error('GoogleDriveService', `❌ Error obteniendo información: ${response.status}`)
+        throw new Error(`Error obteniendo información: ${response.status}`)
+      }
+
+      const result = await response.json()
+      logger.info('GoogleDriveService', `✅ Información obtenida: ${result.name}`)
+      return result
+    } catch (error) {
+      logger.error('GoogleDriveService', `❌ Error en getFileInfo: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * Comparte una carpeta con un usuario
+   */
+  async shareFolder(folderId, email, role = 'reader') {
+    try {
+      logger.info('GoogleDriveService', `🔗 Compartiendo carpeta ${folderId} con ${email} (${role})`)
+      
+      this.validateAuthentication()
+
       const permission = {
         type: 'user',
         role: role,
@@ -363,46 +278,39 @@ class GoogleDriveService {
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions?sendNotificationEmail=true`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${this.authService.getAccessToken()}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(permission)
       })
 
-      return await response.json()
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error('GoogleDriveService', `❌ Error compartiendo carpeta: ${response.status} - ${errorData}`)
+        throw new Error(`Error compartiendo carpeta: ${response.status}`)
+      }
+
+      const result = await response.json()
+      logger.info('GoogleDriveService', `✅ Carpeta compartida: ${result.id}`)
+      return result
     } catch (error) {
-      console.error('Error sharing folder:', error)
+      logger.error('GoogleDriveService', `❌ Error en shareFolder: ${error.message}`)
       throw error
     }
   }
 
-  // Obtener información de archivo
-  async getFileInfo(fileId) {
-    if (!this.accessToken) {
-      throw new Error('Google Drive no está inicializado')
-    }
-
-    try {
-      const params = new URLSearchParams({
-        fields: 'id, name, mimeType, size, createdTime, modifiedTime, parents'
-      })
-
-      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`
-        }
-      })
-
-      return await response.json()
-    } catch (error) {
-      console.error('Error getting file info:', error)
-      throw error
-    }
-  }
-
-  // Verificar si está autenticado
+  /**
+   * Verifica si está autenticado
+   */
   isAuthenticated() {
-    return !!this.accessToken
+    return this.authService.isAuthenticated()
+  }
+
+  /**
+   * Obtiene el servicio de autenticación
+   */
+  getAuthService() {
+    return this.authService
   }
 }
 

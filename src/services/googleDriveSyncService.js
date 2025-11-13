@@ -1,5 +1,12 @@
+/**
+ * Google Drive Sync Service - Refactorizado
+ * Sincronización bidireccional Drive ↔ Supabase con logging detallado
+ */
+
 import { supabase } from '../lib/supabaseClient.js'
-import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js'
+import googleDriveService from '../lib/googleDrive.js'
+import googleDriveAuthService from '../lib/googleDriveAuthService.js'
+import logger from '../lib/logger.js'
 
 class GoogleDriveSyncService {
   constructor() {
@@ -8,77 +15,102 @@ class GoogleDriveSyncService {
     this.syncErrors = []
   }
 
+  /**
+   * Inicializa el servicio
+   */
   async initialize() {
     try {
-      console.log('🔄 Inicializando servicio de sincronización Google Drive...')
+      logger.info('GoogleDriveSyncService', '🔄 Inicializando servicio de sincronización...')
+      
+      // Inicializar servicio de Google Drive
+      await googleDriveService.initialize()
       
       // Verificar que Google Drive esté autenticado
-      if (!hybridGoogleDrive.isAuthenticated()) {
+      if (!googleDriveAuthService.isAuthenticated()) {
         const error = '❌ Google Drive no está autenticado. Por favor, conecta tu cuenta de Google Drive primero.'
-        console.error(error)
+        logger.error('GoogleDriveSyncService', error)
         this.recordError(error)
         throw new Error(error)
       }
       
       this.isInitialized = true
-      console.log('✅ Servicio de sincronización inicializado')
+      logger.info('GoogleDriveSyncService', '✅ Servicio de sincronización inicializado')
       return true
     } catch (error) {
-      console.error('❌ Error inicializando sincronización:', error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error inicializando: ${error.message}`)
       this.recordError(error.message)
       return false
     }
   }
 
+  /**
+   * Registra un error de sincronización
+   */
   recordError(error) {
-    this.syncErrors.push({
+    const errorRecord = {
       timestamp: new Date().toISOString(),
       error: error
-    })
+    }
+    this.syncErrors.push(errorRecord)
+    
     // Mantener solo los últimos 100 errores
     if (this.syncErrors.length > 100) {
       this.syncErrors = this.syncErrors.slice(-100)
     }
+    
+    logger.error('GoogleDriveSyncService', `📊 Error registrado: ${error}`)
   }
 
+  /**
+   * Obtiene los errores de sincronización
+   */
   getSyncErrors() {
     return this.syncErrors
   }
 
+  /**
+   * Limpia los errores de sincronización
+   */
   clearSyncErrors() {
     this.syncErrors = []
+    logger.info('GoogleDriveSyncService', '🧹 Errores limpiados')
   }
 
-  // Crear carpeta en Google Drive Y en Supabase simultáneamente
+  /**
+   * Crea una carpeta de empleado en Google Drive y Supabase
+   */
   async createEmployeeFolderInDrive(employeeEmail, employeeName, companyName, employeeData = {}) {
     try {
-      // Verificar autenticación de Google Drive
-      if (!hybridGoogleDrive.isAuthenticated()) {
+      logger.info('GoogleDriveSyncService', `📁 Creando carpeta para ${employeeEmail}...`)
+      
+      // Verificar autenticación
+      if (!googleDriveAuthService.isAuthenticated()) {
         const error = `❌ No se puede crear carpeta para ${employeeEmail}: Google Drive no está autenticado`
-        console.error(error)
+        logger.error('GoogleDriveSyncService', error)
         this.recordError(error)
         throw new Error(error)
       }
 
-      console.log(`📁 Creando carpeta en Google Drive y Supabase para ${employeeEmail}...`)
-
       // Crear carpeta principal de la empresa
       const parentFolderName = `Empleados - ${companyName}`
+      logger.info('GoogleDriveSyncService', `🔍 Buscando/creando carpeta padre: ${parentFolderName}`)
       let parentFolder = await this.findOrCreateParentFolder(parentFolderName)
 
       // Crear carpeta del empleado en Google Drive
       const folderName = `${employeeName} (${employeeEmail})`
-      const employeeFolder = await hybridGoogleDrive.createFolder(folderName, parentFolder.id)
+      logger.info('GoogleDriveSyncService', `📁 Creando carpeta del empleado: ${folderName}`)
+      const employeeFolder = await googleDriveService.createFolder(folderName, parentFolder.id)
 
       if (!employeeFolder || !employeeFolder.id) {
         throw new Error('No se pudo crear carpeta en Google Drive')
       }
 
-      console.log(`✅ Carpeta creada en Google Drive: ${employeeFolder.id}`)
+      logger.info('GoogleDriveSyncService', `✅ Carpeta creada en Google Drive: ${employeeFolder.id}`)
 
       // Compartir carpeta con el empleado
-      await hybridGoogleDrive.shareFolder(employeeFolder.id, employeeEmail, 'writer')
-      console.log(`📤 Carpeta compartida con ${employeeEmail}`)
+      logger.info('GoogleDriveSyncService', `🔗 Compartiendo carpeta con ${employeeEmail}...`)
+      await googleDriveService.shareFolder(employeeFolder.id, employeeEmail, 'writer')
+      logger.info('GoogleDriveSyncService', `✅ Carpeta compartida con ${employeeEmail}`)
 
       // Obtener información de la empresa
       let companyId = null
@@ -87,6 +119,7 @@ class GoogleDriveSyncService {
       }
 
       // Crear registro en Supabase
+      logger.info('GoogleDriveSyncService', `💾 Registrando carpeta en Supabase...`)
       const { data: supabaseFolder, error: supabaseError } = await supabase
         .from('employee_folders')
         .insert({
@@ -119,10 +152,10 @@ class GoogleDriveSyncService {
         .maybeSingle()
 
       if (supabaseError) {
-        console.error(`⚠️ Error creando carpeta en Supabase:`, supabaseError.message)
+        logger.warn('GoogleDriveSyncService', `⚠️ Error registrando en Supabase: ${supabaseError.message}`)
         // No lanzar error, la carpeta en Drive ya fue creada
       } else {
-        console.log(`✅ Carpeta registrada en Supabase: ${supabaseFolder.id}`)
+        logger.info('GoogleDriveSyncService', `✅ Carpeta registrada en Supabase: ${supabaseFolder.id}`)
       }
 
       return {
@@ -131,53 +164,64 @@ class GoogleDriveSyncService {
         syncStatus: 'created_in_both'
       }
     } catch (error) {
-      console.error(`❌ Error creando carpeta para ${employeeEmail}:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error creando carpeta para ${employeeEmail}: ${error.message}`)
       this.recordError(error.message)
       throw error
     }
   }
 
-  // Buscar o crear carpeta principal
+  /**
+   * Busca o crea la carpeta principal de la empresa
+   */
   async findOrCreateParentFolder(folderName) {
     try {
-      const folders = await hybridGoogleDrive.listFiles()
+      logger.info('GoogleDriveSyncService', `🔍 Buscando carpeta: ${folderName}`)
+      
+      const folders = await googleDriveService.listFiles()
       const parentFolder = folders.find(folder =>
         folder.name === folderName &&
         folder.mimeType === 'application/vnd.google-apps.folder'
       )
 
       if (parentFolder) {
+        logger.info('GoogleDriveSyncService', `✅ Carpeta encontrada: ${parentFolder.id}`)
         return parentFolder
       }
 
-      return await hybridGoogleDrive.createFolder(folderName)
+      logger.info('GoogleDriveSyncService', `📁 Creando nueva carpeta: ${folderName}`)
+      return await googleDriveService.createFolder(folderName)
     } catch (error) {
-      console.error(`❌ Error buscando/creando carpeta ${folderName}:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error buscando/creando carpeta ${folderName}: ${error.message}`)
       this.recordError(error.message)
       throw error
     }
   }
 
-  // Sincronizar archivos de Google Drive a Supabase
+  /**
+   * Sincroniza archivos de Google Drive a Supabase
+   */
   async syncFilesFromDrive(folderId, employeeEmail) {
     try {
+      logger.info('GoogleDriveSyncService', `🔄 Sincronizando archivos de Drive para ${employeeEmail}...`)
+      
       // Verificar autenticación
-      if (!hybridGoogleDrive.isAuthenticated()) {
+      if (!googleDriveAuthService.isAuthenticated()) {
         const error = `❌ No se puede sincronizar archivos para ${employeeEmail}: Google Drive no está autenticado`
-        console.error(error)
+        logger.error('GoogleDriveSyncService', error)
         this.recordError(error)
         throw new Error(error)
       }
 
-      console.log(`🔄 Sincronizando archivos de Drive para ${employeeEmail}...`)
-
       // Obtener archivos de la carpeta en Google Drive
-      const files = await hybridGoogleDrive.listFiles(folderId)
+      logger.info('GoogleDriveSyncService', `📂 Listando archivos de ${folderId}...`)
+      const files = await googleDriveService.listFiles(folderId)
 
       if (!files || files.length === 0) {
-        console.log(`ℹ️ No hay archivos para sincronizar en ${employeeEmail}`)
+        logger.info('GoogleDriveSyncService', `ℹ️ No hay archivos para sincronizar en ${employeeEmail}`)
         return { synced: 0, errors: 0 }
       }
+
+      logger.info('GoogleDriveSyncService', `📊 ${files.length} archivos encontrados`)
 
       let synced = 0
       let errors = 0
@@ -185,6 +229,8 @@ class GoogleDriveSyncService {
       // Sincronizar cada archivo
       for (const file of files) {
         try {
+          logger.info('GoogleDriveSyncService', `📄 Procesando archivo: ${file.name}`)
+          
           // Verificar si el archivo ya existe en Supabase
           const { data: existing } = await supabase
             .from('employee_documents')
@@ -215,104 +261,117 @@ class GoogleDriveSyncService {
                 })
 
               if (error) {
-                console.warn(`⚠️ Error sincronizando ${file.name}:`, error.message)
+                logger.warn('GoogleDriveSyncService', `⚠️ Error sincronizando ${file.name}: ${error.message}`)
                 errors++
               } else {
                 synced++
-                console.log(`✅ Archivo sincronizado: ${file.name}`)
+                logger.info('GoogleDriveSyncService', `✅ Archivo sincronizado: ${file.name}`)
               }
             }
+          } else {
+            logger.info('GoogleDriveSyncService', `ℹ️ Archivo ya existe: ${file.name}`)
           }
         } catch (error) {
-          console.error(`❌ Error procesando archivo ${file.name}:`, error.message)
+          logger.error('GoogleDriveSyncService', `❌ Error procesando archivo ${file.name}: ${error.message}`)
           this.recordError(error.message)
           errors++
         }
       }
 
-      console.log(`📊 Sincronización completada: ${synced} archivos sincronizados, ${errors} errores`)
+      logger.info('GoogleDriveSyncService', `📊 Sincronización completada: ${synced} sincronizados, ${errors} errores`)
       return { synced, errors }
     } catch (error) {
-      console.error(`❌ Error sincronizando archivos para ${employeeEmail}:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error sincronizando archivos para ${employeeEmail}: ${error.message}`)
       this.recordError(error.message)
       throw error
     }
   }
 
-  // Iniciar sincronización periódica
+  /**
+   * Inicia sincronización periódica
+   */
   startPeriodicSync(employeeEmail, folderId, intervalMinutes = 5) {
     try {
+      logger.info('GoogleDriveSyncService', `⏰ Iniciando sincronización periódica para ${employeeEmail} (cada ${intervalMinutes} minutos)`)
+      
       // Verificar autenticación
-      if (!hybridGoogleDrive.isAuthenticated()) {
+      if (!googleDriveAuthService.isAuthenticated()) {
         const error = `❌ No se puede iniciar sincronización periódica para ${employeeEmail}: Google Drive no está autenticado`
-        console.error(error)
+        logger.error('GoogleDriveSyncService', error)
         this.recordError(error)
         throw new Error(error)
       }
 
       // Evitar sincronizaciones duplicadas
       if (this.syncIntervals.has(employeeEmail)) {
-        console.log(`ℹ️ Sincronización ya activa para ${employeeEmail}`)
+        logger.info('GoogleDriveSyncService', `ℹ️ Sincronización ya activa para ${employeeEmail}`)
         return
       }
 
-      console.log(`🔄 Iniciando sincronización periódica para ${employeeEmail} (cada ${intervalMinutes} minutos)`)
-
       const interval = setInterval(async () => {
         try {
+          logger.info('GoogleDriveSyncService', `🔄 Ejecutando sincronización periódica para ${employeeEmail}`)
           await this.syncFilesFromDrive(folderId, employeeEmail)
         } catch (error) {
-          console.error(`❌ Error en sincronización periódica de ${employeeEmail}:`, error.message)
+          logger.error('GoogleDriveSyncService', `❌ Error en sincronización periódica de ${employeeEmail}: ${error.message}`)
           this.recordError(error.message)
         }
       }, intervalMinutes * 60 * 1000)
 
       this.syncIntervals.set(employeeEmail, interval)
-      console.log(`✅ Sincronización periódica iniciada para ${employeeEmail}`)
+      logger.info('GoogleDriveSyncService', `✅ Sincronización periódica iniciada para ${employeeEmail}`)
     } catch (error) {
-      console.error(`❌ Error iniciando sincronización periódica:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error iniciando sincronización periódica: ${error.message}`)
       this.recordError(error.message)
     }
   }
 
-  // Detener sincronización periódica
+  /**
+   * Detiene sincronización periódica
+   */
   stopPeriodicSync(employeeEmail) {
     try {
+      logger.info('GoogleDriveSyncService', `⏹️ Deteniendo sincronización periódica para ${employeeEmail}`)
+      
       const interval = this.syncIntervals.get(employeeEmail)
       if (interval) {
         clearInterval(interval)
         this.syncIntervals.delete(employeeEmail)
-        console.log(`⏹️ Sincronización periódica detenida para ${employeeEmail}`)
+        logger.info('GoogleDriveSyncService', `✅ Sincronización periódica detenida para ${employeeEmail}`)
       }
     } catch (error) {
-      console.error(`❌ Error deteniendo sincronización:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error deteniendo sincronización: ${error.message}`)
       this.recordError(error.message)
     }
   }
 
-  // Sincronizar archivo subido por usuario
+  /**
+   * Sincroniza un archivo subido por el usuario
+   */
   async syncUploadedFile(file, employeeEmail, folderId) {
     try {
+      logger.info('GoogleDriveSyncService', `📤 Sincronizando archivo subido: ${file.name}`)
+      
       // Verificar autenticación
-      if (!hybridGoogleDrive.isAuthenticated()) {
+      if (!googleDriveAuthService.isAuthenticated()) {
         const error = `❌ No se puede sincronizar archivo para ${employeeEmail}: Google Drive no está autenticado`
-        console.error(error)
+        logger.error('GoogleDriveSyncService', error)
         this.recordError(error)
         throw new Error(error)
       }
 
-      console.log(`📤 Sincronizando archivo subido: ${file.name}`)
-
       // Subir archivo a Google Drive
-      const uploadedFile = await hybridGoogleDrive.uploadFile(file, folderId)
+      logger.info('GoogleDriveSyncService', `📤 Subiendo archivo a Google Drive...`)
+      const uploadedFile = await googleDriveService.uploadFile(file, folderId)
 
       if (!uploadedFile || !uploadedFile.id) {
         throw new Error('No se pudo subir archivo a Google Drive')
       }
 
-      console.log(`✅ Archivo subido a Google Drive: ${uploadedFile.id}`)
+      logger.info('GoogleDriveSyncService', `✅ Archivo subido a Google Drive: ${uploadedFile.id}`)
 
       // Registrar en Supabase
+      logger.info('GoogleDriveSyncService', `💾 Registrando archivo en Supabase...`)
       const { data: folder } = await supabase
         .from('employee_folders')
         .select('id')
@@ -333,44 +392,51 @@ class GoogleDriveSyncService {
           })
 
         if (error) {
-          console.error(`❌ Error registrando archivo en Supabase:`, error.message)
+          logger.error('GoogleDriveSyncService', `❌ Error registrando archivo en Supabase: ${error.message}`)
           this.recordError(error.message)
           throw error
         }
 
-        console.log(`✅ Archivo registrado en Supabase`)
+        logger.info('GoogleDriveSyncService', `✅ Archivo registrado en Supabase`)
       }
 
       return uploadedFile
     } catch (error) {
-      console.error(`❌ Error sincronizando archivo subido:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error sincronizando archivo subido: ${error.message}`)
       this.recordError(error.message)
       throw error
     }
   }
 
-  // Obtener estado de sincronización
+  /**
+   * Obtiene el estado de sincronización
+   */
   getSyncStatus() {
     return {
       initialized: this.isInitialized,
-      authenticated: hybridGoogleDrive.isAuthenticated(),
+      authenticated: googleDriveAuthService.isAuthenticated(),
       activeSyncs: this.syncIntervals.size,
       employees: Array.from(this.syncIntervals.keys()),
-      recentErrors: this.syncErrors.slice(-10)
+      recentErrors: this.syncErrors.slice(-10),
+      authInfo: googleDriveAuthService.getConfigInfo()
     }
   }
 
-  // Detener todas las sincronizaciones
+  /**
+   * Detiene todas las sincronizaciones
+   */
   stopAllSync() {
     try {
+      logger.info('GoogleDriveSyncService', '⏹️ Deteniendo todas las sincronizaciones...')
+      
       for (const [employeeEmail, interval] of this.syncIntervals.entries()) {
         clearInterval(interval)
-        console.log(`⏹️ Sincronización detenida para ${employeeEmail}`)
+        logger.info('GoogleDriveSyncService', `⏹️ Sincronización detenida para ${employeeEmail}`)
       }
       this.syncIntervals.clear()
-      console.log(`✅ Todas las sincronizaciones detenidas`)
+      logger.info('GoogleDriveSyncService', `✅ Todas las sincronizaciones detenidas`)
     } catch (error) {
-      console.error(`❌ Error deteniendo sincronizaciones:`, error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error deteniendo sincronizaciones: ${error.message}`)
       this.recordError(error.message)
     }
   }
