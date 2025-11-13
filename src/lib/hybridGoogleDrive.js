@@ -5,7 +5,7 @@
  */
 
 import googleDriveService from './googleDrive.js';
-import { logger } from './logger.js';
+import logger from './logger.js';
 
 class HybridGoogleDrive {
   constructor() {
