@@ -29,7 +29,7 @@ class EmployeeFolderService {
   }
 
   // Crear una carpeta para un empleado
-  createEmployeeFolder(employeeEmail, employeeData) {
+  async createEmployeeFolder(employeeEmail, employeeData) {
     try {
       // Verificar si ya existe una carpeta para este empleado
       if (this.employeeFolders.has(employeeEmail)) {
