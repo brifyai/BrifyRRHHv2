@@ -16,17 +16,17 @@ import {
   ChevronDownIcon,
   ChevronUpIcon
 } from '@heroicons/react/24/outline';
-import EmployeeSelector from './EmployeeSelector';
-import SendMessages from './SendMessages';
-import EmployeeFolders from './EmployeeFolders';
-import TemplatesDashboard from './TemplatesDashboard';
-import ReportsDashboard from './ReportsDashboard';
-import EmployeeBulkUpload from './EmployeeBulkUpload'; // Importar el nuevo componente
-import templateService from '../../services/templateService';
-import databaseEmployeeService from '../../services/databaseEmployeeService';
-import communicationService from '../../services/communicationService';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
-import trendsAnalysisService from '../../services/trendsAnalysisService';
+import EmployeeSelector from './EmployeeSelector.js';
+import SendMessages from './SendMessages.js';
+import EmployeeFolders from './EmployeeFolders.js';
+import TemplatesDashboard from './TemplatesDashboard.js';
+import ReportsDashboard from './ReportsDashboard.js';
+import EmployeeBulkUpload from './EmployeeBulkUpload.js'; // Importar el nuevo componente
+import templateService from '../../services/templateService.js';
+import databaseEmployeeService from '../../services/databaseEmployeeService.js';
+import communicationService from '../../services/communicationService.js';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
+import trendsAnalysisService from '../../services/trendsAnalysisService.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 

@@ -9,9 +9,9 @@ import {
   PaperAirplaneIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import calendarService from '../../services/calendarService';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
-import enhancedCommunicationService from '../../services/enhancedCommunicationService';
+import calendarService from '../../services/calendarService.js';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
+import enhancedCommunicationService from '../../services/enhancedCommunicationService.js';
 
 const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
   const { userProfile } = useAuth();

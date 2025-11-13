@@ -17,9 +17,9 @@ import {
   CpuChipIcon
 } from '@heroicons/react/24/outline'
 import LoadingSpinner from '../common/LoadingSpinner.js'
-import TemplateDownload from '../templates/TemplateDownload'
-import DashboardResumen from './DashboardResumen'
-import CommunicationStats from './CommunicationStats'
+import TemplateDownload from '../templates/TemplateDownload.js'
+import DashboardResumen from './DashboardResumen.js'
+import CommunicationStats from './CommunicationStats.js'
 import toast from 'react-hot-toast'
 
 const InnovativeDashboard = () => {

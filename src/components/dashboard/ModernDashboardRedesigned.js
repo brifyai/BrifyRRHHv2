@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext.js'
 import { toast } from 'react-hot-toast'
-import DatabaseCompanySummary from './DatabaseCompanySummary'
-import AnalyticsDashboard from '../analytics/AnalyticsDashboard'
-import organizedDatabaseService from '../../services/organizedDatabaseService'
-import companySyncService from '../../services/companySyncService'
+import DatabaseCompanySummary from './DatabaseCompanySummary.js'
+import AnalyticsDashboard from '../analytics/AnalyticsDashboard.js'
+import organizedDatabaseService from '../../services/organizedDatabaseService.js'
+import companySyncService from '../../services/companySyncService.js'
 import {
   FolderIcon,
   DocumentIcon,

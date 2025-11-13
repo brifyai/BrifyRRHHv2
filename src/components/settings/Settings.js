@@ -4,13 +4,13 @@ import { useAuth } from '../../contexts/AuthContext.js'
 import googleDriveService from '../../lib/googleDrive.js'
 import googleDrivePersistenceService from '../../services/googleDrivePersistenceService.js'
 import googleDriveCallbackHandler from '../../lib/googleDriveCallbackHandler.js'
-import brevoService from '../../services/brevoService'
-import companySyncService from '../../services/companySyncService'
-import organizedDatabaseService from '../../services/organizedDatabaseService'
-import communicationService from '../../services/communicationService'
-import whatsappOfficialService from '../../services/whatsappOfficialService'
-import whatsappWahaService from '../../services/whatsappWahaService'
-import configurationService from '../../services/configurationService'
+import brevoService from '../../services/brevoService.js'
+import companySyncService from '../../services/companySyncService.js'
+import organizedDatabaseService from '../../services/organizedDatabaseService.js'
+import communicationService from '../../services/communicationService.js'
+import whatsappOfficialService from '../../services/whatsappOfficialService.js'
+import whatsappWahaService from '../../services/whatsappWahaService.js'
+import configurationService from '../../services/configurationService.js'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -31,9 +31,9 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
-import CompanyForm from './CompanyForm'
-import UserManagement from './UserManagement'
-import DatabaseSettings from './DatabaseSettings'
+import CompanyForm from './CompanyForm.js'
+import UserManagement from './UserManagement.js'
+import DatabaseSettings from './DatabaseSettings.js'
 
 const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   const { user, userProfile } = useAuth()

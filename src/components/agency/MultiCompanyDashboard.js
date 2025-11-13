@@ -23,8 +23,8 @@ import {
   EnvelopeIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
-import multiCompanyManagementService from '../../services/multiCompanyManagementService';
-import { formatCurrency, formatNumber, formatDate } from '../../utils/formatters';
+import multiCompanyManagementService from '../../services/multiCompanyManagementService.js';
+import { formatCurrency, formatNumber, formatDate } from '../../utils/formatters.js';
 
 /**
  * Dashboard Multi-Empresa para Agencias

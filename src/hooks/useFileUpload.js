@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import employeeFolderService from '../services/employeeFolderService';
-import fileContentExtractor from '../services/fileContentExtractor';
-import embeddingService from '../services/embeddingService';
-import googleDriveService from '../lib/googleDrive';
-import { db, supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext.js';
+import employeeFolderService from '../services/employeeFolderService.js';
+import fileContentExtractor from '../services/fileContentExtractor.js';
+import embeddingService from '../services/embeddingService.js';
+import googleDriveService from '../lib/googleDrive.js';
+import { db, supabase } from '../lib/supabase.js';
 import toast from 'react-hot-toast';
 
 /**

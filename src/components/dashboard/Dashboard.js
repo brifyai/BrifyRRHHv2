@@ -13,8 +13,8 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline'
 import LoadingSpinner from '../common/LoadingSpinner.js'
-import TokenUsage from '../embeddings/TokenUsage'
-import TemplateDownload from '../templates/TemplateDownload'
+import TokenUsage from '../embeddings/TokenUsage.js'
+import TemplateDownload from '../templates/TemplateDownload.js'
 import toast from 'react-hot-toast'
 
 const Dashboard = () => {

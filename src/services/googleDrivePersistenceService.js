@@ -4,7 +4,7 @@
  * Sincroniza tokens, maneja expiración y actualización automática
  */
 
-import supabaseDatabase from '../lib/supabaseDatabase';
+import supabaseDatabase from '../lib/supabaseDatabase.js';
 
 class GoogleDrivePersistenceService {
   constructor() {

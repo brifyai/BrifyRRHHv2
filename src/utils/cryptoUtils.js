@@ -7,8 +7,8 @@
  * ✅ Puede ser desactivado sin afectar el sistema
  */
 
-import encryptionService from '../lib/encryptionService'
-import keyManagement from '../lib/keyManagement'
+import encryptionService from '../lib/encryptionService.js'
+import keyManagement from '../lib/keyManagement.js'
 
 /**
  * Encriptar datos sensibles

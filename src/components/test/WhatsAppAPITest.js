@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import communicationService from '../../services/communicationService'
-import whatsappOfficialService from '../../services/whatsappOfficialService'
-import whatsappWahaService from '../../services/whatsappWahaService'
+import communicationService from '../../services/communicationService.js'
+import whatsappOfficialService from '../../services/whatsappOfficialService.js'
+import whatsappWahaService from '../../services/whatsappWahaService.js'
 import toast from 'react-hot-toast'
 
 const WhatsAppAPITest = () => {

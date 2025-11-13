@@ -1,6 +1,6 @@
 // Hybrid Google Drive Service - Usa Google Drive real o local según disponibilidad
-import googleDriveService from './googleDrive'
-import localGoogleDriveService from './localGoogleDrive'
+import googleDriveService from './googleDrive.js'
+import localGoogleDriveService from './localGoogleDrive.js'
 
 class HybridGoogleDriveService {
   constructor() {

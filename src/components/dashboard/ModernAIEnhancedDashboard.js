@@ -9,10 +9,10 @@ import {
   SparklesIcon,
   ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
-import DashboardChart from '../charts/DashboardChart';
-import AIRecommendations from './AIRecommendations';
-import aiRecommendationsService from '../../services/aiRecommendationsService';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
+import DashboardChart from '../charts/DashboardChart.js';
+import AIRecommendations from './AIRecommendations.js';
+import aiRecommendationsService from '../../services/aiRecommendationsService.js';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 
 const ModernAIEnhancedDashboard = ({ dashboardStats, loading = false }) => {
   const [trendData, setTrendData] = useState(null);

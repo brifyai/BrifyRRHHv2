@@ -4,8 +4,8 @@ import {
   ChatBubbleLeftRightIcon,
   ScaleIcon
 } from '@heroicons/react/24/outline'
-import BusquedaLeyes from './BusquedaLeyes'
-import ChatLegal from './ChatLegal'
+import BusquedaLeyes from './BusquedaLeyes.js'
+import ChatLegal from './ChatLegal.js'
 
 const Abogado = () => {
   const [activeTab, setActiveTab] = useState('busqueda')

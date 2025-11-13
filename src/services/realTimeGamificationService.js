@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
-import gamificationService from './gamificationService';
+import { supabase } from '../lib/supabase.js';
+import gamificationService from './gamificationService.js';
 
 /**
  * Servicio de gamificación en tiempo real

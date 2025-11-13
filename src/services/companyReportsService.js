@@ -1,6 +1,6 @@
-import { supabase } from '../lib/supabase'
-import realTimeStatsService from './realTimeStatsService'
-import analyticsInsightsService from './analyticsInsightsService'
+import { supabase } from '../lib/supabase.js'
+import realTimeStatsService from './realTimeStatsService.js'
+import analyticsInsightsService from './analyticsInsightsService.js'
 
 class CompanyReportsService {
   constructor() {

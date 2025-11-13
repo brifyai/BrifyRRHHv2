@@ -1,7 +1,7 @@
-import { supabase } from '../lib/supabaseClient'
-import organizedDatabaseService from './organizedDatabaseService'
-import brevoService from './brevoService'
-import brevoCampaignService from './brevoCampaignService'
+import { supabase } from '../lib/supabaseClient.js'
+import organizedDatabaseService from './organizedDatabaseService.js'
+import brevoService from './brevoService.js'
+import brevoCampaignService from './brevoCampaignService.js'
 
 class MultiChannelCommunicationService {
   constructor() {

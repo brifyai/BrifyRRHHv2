@@ -1,4 +1,4 @@
-import userGoogleDriveService from './userGoogleDriveService'
+import userGoogleDriveService from './userGoogleDriveService.js'
 
 class UserSpecificGoogleDriveService {
   constructor() {

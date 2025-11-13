@@ -31,7 +31,7 @@ import {
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
-import gamificationService from '../../services/gamificationService';
+import gamificationService from '../../services/gamificationService.js';
 import { useAuth } from '../../contexts/AuthContext.js';
 
 // Register Chart.js components

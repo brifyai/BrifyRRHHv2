@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { BuildingOfficeIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { supabase } from '../../lib/supabase.js'
-import CompanyCard from './CompanyCard'
-import organizedDatabaseService from '../../services/organizedDatabaseService'
+import CompanyCard from './CompanyCard.js'
+import organizedDatabaseService from '../../services/organizedDatabaseService.js'
 
 const DatabaseCompanySummary = () => {
   const [companies, setCompanies] = useState([])

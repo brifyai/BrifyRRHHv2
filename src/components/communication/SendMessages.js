@@ -13,14 +13,14 @@ import { List } from 'react-window';
 import { EditorState, ContentState } from 'draft-js';
 import { Editor } from 'react-draft-wysiwyg';
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 import { useAuth } from '../../contexts/AuthContext.js';
-import templateService from '../../services/templateService';
-import inMemoryDraftService from '../../services/inMemoryDraftService';
+import templateService from '../../services/templateService.js';
+import inMemoryDraftService from '../../services/inMemoryDraftService.js';
 import { supabase } from '../../lib/supabase.js';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
-import communicationService from '../../services/communicationService';
+import communicationService from '../../services/communicationService.js';
 
 const SendMessages = () => {
   const navigate = useNavigate();

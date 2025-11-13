@@ -7,7 +7,7 @@
  * ✅ Puede ser desactivado sin afectar el sistema
  */
 
-import rbacService from '../lib/rbacService'
+import rbacService from '../lib/rbacService.js'
 
 /**
  * Verificar si usuario tiene permiso

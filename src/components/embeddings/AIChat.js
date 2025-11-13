@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext.js'
 import embeddingsService from '../../lib/embeddings.js'
-import groqService from '../../services/groqService'
-import organizedDatabaseService from '../../services/organizedDatabaseService'
+import groqService from '../../services/groqService.js'
+import organizedDatabaseService from '../../services/organizedDatabaseService.js'
 import LoadingSpinner from '../common/LoadingSpinner.js'
 import SubtleSpinner from '../common/SubtleSpinner.js'
 import {

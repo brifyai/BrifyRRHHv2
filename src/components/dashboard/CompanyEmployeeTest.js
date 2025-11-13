@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import communicationService from '../../services/communicationService';
+import communicationService from '../../services/communicationService.js';
 
 const CompanyEmployeeTest = () => {
   const [companies, setCompanies] = useState([]);

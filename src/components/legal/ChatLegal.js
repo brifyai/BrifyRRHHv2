@@ -8,8 +8,8 @@ import {
   CpuChipIcon
 } from '@heroicons/react/24/outline'
 import { supabase } from '../../lib/supabase.js'
-import fileExtractor from '../../services/fileContentExtractor'
-import groqService from '../../services/groqService'
+import fileExtractor from '../../services/fileContentExtractor.js'
+import groqService from '../../services/groqService.js'
 import { useAuth } from '../../contexts/AuthContext.js'
 
 const ChatLegal = () => {

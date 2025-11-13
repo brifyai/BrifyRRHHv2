@@ -8,7 +8,7 @@ import {
   CheckCircleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import aiRecommendationsService from '../../services/aiRecommendationsService';
+import aiRecommendationsService from '../../services/aiRecommendationsService.js';
 
 const AIRecommendations = ({ dashboardStats, onRecommendationClick }) => {
   const [recommendations, setRecommendations] = useState([]);

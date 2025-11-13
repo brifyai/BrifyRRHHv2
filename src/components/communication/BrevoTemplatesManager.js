@@ -20,8 +20,8 @@ import {
   DocumentDuplicateIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline'
-import brevoCampaignService from '../../services/brevoCampaignService'
-import brevoService from '../../services/brevoService'
+import brevoCampaignService from '../../services/brevoCampaignService.js'
+import brevoService from '../../services/brevoService.js'
 
 const BrevoTemplatesManager = () => {
   const [templates, setTemplates] = useState([])

@@ -8,7 +8,7 @@
  * ✅ Puede ser desactivado sin afectar el sistema
  */
 
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase.js'
 
 class AdvancedTemplateService {
   constructor() {

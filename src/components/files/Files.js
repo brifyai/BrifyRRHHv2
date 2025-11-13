@@ -3,9 +3,9 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext.js'
 import { db, supabase } from '../../lib/supabase.js'
 import googleDriveService from '../../lib/googleDrive.js'
-import fileContentExtractor from '../../services/fileContentExtractor'
-import embeddingService from '../../services/embeddingService'
-import { useUserExtensions } from '../../hooks/useUserExtensions'
+import fileContentExtractor from '../../services/fileContentExtractor.js'
+import embeddingService from '../../services/embeddingService.js'
+import { useUserExtensions } from '../../hooks/useUserExtensions.js'
 import {
   DocumentIcon,
   PhotoIcon,
@@ -20,7 +20,7 @@ import {
   DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import LoadingSpinner from '../common/LoadingSpinner.js'
-import RoutineUpload from '../routines/RoutineUpload'
+import RoutineUpload from '../routines/RoutineUpload.js'
 import DragDropUpload from '../common/DragDropUpload.js'
 import toast from 'react-hot-toast'
 import '../../styles/responsive-tables.css'

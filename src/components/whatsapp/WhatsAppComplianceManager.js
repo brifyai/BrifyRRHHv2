@@ -10,7 +10,7 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase.js';
-import whatsappComplianceService from '../../services/whatsappComplianceService';
+import whatsappComplianceService from '../../services/whatsappComplianceService.js';
 
 /**
  * Componente para gestionar el cumplimiento de políticas de WhatsApp Business

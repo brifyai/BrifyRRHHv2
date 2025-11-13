@@ -31,8 +31,8 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import enhancedCommunicationService from '../../services/enhancedCommunicationService';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
+import enhancedCommunicationService from '../../services/enhancedCommunicationService.js';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 
 // Register Chart.js components
 ChartJS.register(

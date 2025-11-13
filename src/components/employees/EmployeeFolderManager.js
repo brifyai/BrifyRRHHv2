@@ -13,7 +13,7 @@ import {
   ArrowDownTrayIcon,
   CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
-import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService';
+import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService.js';
 import toast from 'react-hot-toast';
 
 const EmployeeFolderManager = () => {

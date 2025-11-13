@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CircleStackIcon, CloudIcon, ServerIcon, ArrowPathIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 import { supabase } from '../../lib/supabase.js';
 
 const DatabaseSettings = () => {

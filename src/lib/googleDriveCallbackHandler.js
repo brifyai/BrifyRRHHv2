@@ -4,7 +4,7 @@
  * Maneja el flujo completo: código → tokens → Supabase
  */
 
-import googleDrivePersistenceService from '../services/googleDrivePersistenceService';
+import googleDrivePersistenceService from '../services/googleDrivePersistenceService.js';
 
 class GoogleDriveCallbackHandler {
   /**

@@ -9,7 +9,7 @@ import {
   CheckCircleIcon,
   GiftIcon
 } from '@heroicons/react/24/outline';
-import gamificationService from '../../services/gamificationService';
+import gamificationService from '../../services/gamificationService.js';
 
 const AchievementNotification = ({ user, employeeId, onDismiss }) => {
   const [events, setEvents] = useState([]);

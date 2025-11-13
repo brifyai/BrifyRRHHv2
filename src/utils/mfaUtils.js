@@ -7,7 +7,7 @@
  * ✅ Puede ser desactivado sin afectar el sistema
  */
 
-import mfaService from '../lib/mfaService'
+import mfaService from '../lib/mfaService.js'
 
 /**
  * Generar secreto TOTP para usuario

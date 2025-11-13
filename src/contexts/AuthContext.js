@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { auth, db } from '../lib/supabase'
+import { auth, db } from '../lib/supabase.js'
 import toast from 'react-hot-toast'
-import enhancedEmployeeFolderService from '../services/enhancedEmployeeFolderService'
+import enhancedEmployeeFolderService from '../services/enhancedEmployeeFolderService.js'
 
 const AuthContext = createContext({})
 

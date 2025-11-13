@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import templateService from '../../services/templateService';
+import templateService from '../../services/templateService.js';
 
 const MySwal = withReactContent(Swal);
 

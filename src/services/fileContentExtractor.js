@@ -1,4 +1,4 @@
-import * as pdfjsLib from 'pdfjs-dist/webpack'
+import * as pdfjsLib from 'pdfjs-dist/webpack.mjs'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
 

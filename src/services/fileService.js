@@ -1,7 +1,7 @@
-import { db, supabase } from '../lib/supabase';
-import googleDriveService from '../lib/googleDrive';
-import fileContentExtractor from './fileContentExtractor';
-import embeddingService from './embeddingService';
+import { db, supabase } from '../lib/supabase.js';
+import googleDriveService from '../lib/googleDrive.js';
+import fileContentExtractor from './fileContentExtractor.js';
+import embeddingService from './embeddingService.js';
 
 /**
  * Servicio centralizado para manejar operaciones de archivos

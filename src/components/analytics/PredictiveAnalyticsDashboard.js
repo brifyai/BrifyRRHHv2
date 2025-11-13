@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase.js';
-import enhancedCommunicationService from '../../services/enhancedCommunicationService';
-import companySyncService from '../../services/companySyncService';
+import enhancedCommunicationService from '../../services/enhancedCommunicationService.js';
+import companySyncService from '../../services/companySyncService.js';
 import './PredictiveAnalyticsDashboard.css';
 
 const PredictiveAnalyticsDashboard = ({ companyId }) => {

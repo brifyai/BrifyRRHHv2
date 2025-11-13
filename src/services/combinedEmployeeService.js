@@ -1,7 +1,7 @@
 // Servicio combinado para contar usuarios reales + empleados virtuales
 // Cuenta users + companies (employee_type = 'virtual')
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 export const getEmployeeCount = async () => {
   try {

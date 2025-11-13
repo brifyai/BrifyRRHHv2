@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import hybridGoogleDriveService from '../../lib/hybridGoogleDrive';
+import hybridGoogleDriveService from '../../lib/hybridGoogleDrive.js';
 
 const GoogleDriveLocalTest = () => {
   const [status, setStatus] = useState('No inicializado');

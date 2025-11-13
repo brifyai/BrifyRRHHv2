@@ -5,7 +5,7 @@
  * de WhatsApp Business API (2024-2025)
  */
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 class WhatsAppComplianceService {
   constructor() {

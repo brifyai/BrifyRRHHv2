@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast'
 import googleDriveService from '../../lib/googleDrive.js'
 import DriveWatchService from '../../lib/driveWatchService.js'
 import emailService from '../../lib/emailService.js'
-import { useUserExtensions } from '../../hooks/useUserExtensions'
+import { useUserExtensions } from '../../hooks/useUserExtensions.js'
 import { executeQuery } from '../../lib/queryQueue.js'
 import {
   CheckIcon,
@@ -17,7 +17,7 @@ import {
   ArrowUpIcon
 } from '@heroicons/react/24/outline'
 import LoadingSpinner from '../common/LoadingSpinner.js'
-import UpgradePlan from './UpgradePlan'
+import UpgradePlan from './UpgradePlan.js'
 
 const Plans = () => {
   const { user, userProfile, hasActivePlan, updateUserProfile } = useAuth()

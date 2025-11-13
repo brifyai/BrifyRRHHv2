@@ -7,7 +7,7 @@
  * ✅ Puede ser desactivado sin afectar el sistema
  */
 
-import encryptionService from './encryptionService'
+import encryptionService from './encryptionService.js'
 
 class KeyManagement {
   constructor() {

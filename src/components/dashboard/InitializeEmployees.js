@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { ArrowPathIcon, CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
-import employeeDataService from '../../services/employeeDataService'
+import employeeDataService from '../../services/employeeDataService.js'
 
 const InitializeEmployees = () => {
   const [initializing, setInitializing] = useState(false)

@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react'
-import clientCache from '../lib/clientCache'
+import clientCache from '../lib/clientCache.js'
 
 /**
  * Hook para prefetch de datos

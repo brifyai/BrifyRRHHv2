@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
-import whatsappService from '../../services/whatsappService'
+import whatsappService from '../../services/whatsappService.js'
 
 const WhatsAppConfig = () => {
   const [config, setConfig] = useState({

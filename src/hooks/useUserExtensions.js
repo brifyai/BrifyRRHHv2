@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
-import { executeQuery } from '../lib/queryQueue'
+import { useAuth } from '../contexts/AuthContext.js'
+import { supabase } from '../lib/supabase.js'
+import { executeQuery } from '../lib/queryQueue.js'
 
 // Cache compartido para evitar múltiples consultas simultáneas
 const extensionsCache = new Map()

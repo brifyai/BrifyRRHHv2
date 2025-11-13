@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, EyeIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
-import communicationService from '../../services/communicationService'
+import communicationService from '../../services/communicationService.js'
 
 const CommunicationStats = () => {
   const [stats, setStats] = useState({

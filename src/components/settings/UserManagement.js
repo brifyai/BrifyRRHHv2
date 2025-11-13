@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext.js'
-import organizedDatabaseService from '../../services/organizedDatabaseService'
+import organizedDatabaseService from '../../services/organizedDatabaseService.js'
 import {
   UserGroupIcon,
   PlusIcon,
@@ -13,7 +13,7 @@ import {
   Cog6ToothIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import UserForm from './UserForm'
+import UserForm from './UserForm.js'
 
 const UserManagement = () => {
   const { user } = useAuth()

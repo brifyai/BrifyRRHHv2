@@ -13,8 +13,8 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase.js';
-import communicationService from '../../services/communicationService';
-import employeeDataService from '../../services/employeeDataService';
+import communicationService from '../../services/communicationService.js';
+import employeeDataService from '../../services/employeeDataService.js';
 
 const ContactSelector = ({ selectedEmployees, onEmployeeSelectionChange, onSendMessages }) => {
   const [employees, setEmployees] = useState([]);

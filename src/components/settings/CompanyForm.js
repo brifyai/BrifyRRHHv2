@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext.js'
 import { supabase } from '../../lib/supabaseClient.js'
-import organizedDatabaseService from '../../services/organizedDatabaseService'
-import companyKnowledgeService from '../../services/companyKnowledgeService'
+import organizedDatabaseService from '../../services/organizedDatabaseService.js'
+import companyKnowledgeService from '../../services/companyKnowledgeService.js'
 import {
   BuildingOfficeIcon,
   UserGroupIcon,

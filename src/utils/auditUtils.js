@@ -7,7 +7,7 @@
  * ✅ Puede ser desactivado sin afectar el sistema
  */
 
-import auditService from '../lib/auditService'
+import auditService from '../lib/auditService.js'
 
 /**
  * Registrar evento de auditoría simple

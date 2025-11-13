@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import companySyncService from '../../services/companySyncService';
+import companySyncService from '../../services/companySyncService.js';
 
 const CompanySyncTest = () => {
   const [companies, setCompanies] = useState([]);

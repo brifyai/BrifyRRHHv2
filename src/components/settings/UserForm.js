@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext.js'
-import inMemoryUserService from '../../services/inMemoryUserService'
+import inMemoryUserService from '../../services/inMemoryUserService.js'
 import {
   UserIcon,
   ShieldCheckIcon,

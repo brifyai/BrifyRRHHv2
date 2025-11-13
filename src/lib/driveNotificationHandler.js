@@ -1,7 +1,7 @@
 // Servicio para manejar las notificaciones del webhook de Google Drive
 // Este servicio procesa las notificaciones recibidas de n8n cuando hay cambios en las carpetas monitoreadas
 
-import { supabase } from './supabase'
+import { supabase } from './supabase.js'
 
 class DriveNotificationHandler {
   constructor() {

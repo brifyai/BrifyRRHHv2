@@ -1,4 +1,4 @@
-import groqService from './groqService'
+import groqService from './groqService.js'
 
 class EmbeddingService {
   constructor() {

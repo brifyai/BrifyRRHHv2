@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserIcon, FunnelIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import organizedDatabaseService from '../../services/organizedDatabaseService';
+import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 import {
   getSimulatedWhatsApp,
   getSimulatedTelegram,

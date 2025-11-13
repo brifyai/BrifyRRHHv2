@@ -25,9 +25,9 @@ import {
   RadialLinearScale
 } from 'chart.js'
 import { Line, Bar, Pie, Radar, Doughnut } from 'react-chartjs-2'
-import realTimeStatsService from '../../services/realTimeStatsService'
-import companyReportsService from '../../services/companyReportsService'
-import analyticsInsightsService from '../../services/analyticsInsightsService'
+import realTimeStatsService from '../../services/realTimeStatsService.js'
+import companyReportsService from '../../services/companyReportsService.js'
+import analyticsInsightsService from '../../services/analyticsInsightsService.js'
 
 // Registrar componentes de Chart.js
 ChartJS.register(

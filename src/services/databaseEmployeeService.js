@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 class DatabaseEmployeeService {
   // Obtener todos los empleados con filtros opcionales

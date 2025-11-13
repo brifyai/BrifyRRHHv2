@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import brevoService from './brevoService'
+import { supabase } from '../lib/supabase.js'
+import brevoService from './brevoService.js'
 
 class BrevoCampaignService {
   constructor() {
