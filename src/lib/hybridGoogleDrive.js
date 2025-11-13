@@ -23,14 +23,17 @@ class HybridGoogleDriveService {
         try {
           console.log('🔍 Intentando inicializar Google Drive real...')
           const googleDriveInitialized = await googleDriveService.initialize()
-          if (googleDriveInitialized) {
+          
+          // Verificar si realmente tiene un token válido
+          if (googleDriveInitialized && googleDriveService.isAuthenticated()) {
             this.currentService = googleDriveService
             this.isGoogleDriveAvailable = true
-            console.log('✅ Google Drive real inicializado correctamente')
+            console.log('✅ Google Drive real inicializado correctamente con autenticación')
             this.initialized = true
             return true
           } else {
-            throw new Error('No se pudo inicializar Google Drive real')
+            console.warn('⚠️ Google Drive inicializado pero sin autenticación válida')
+            throw new Error('No hay autenticación válida de Google Drive')
           }
         } catch (error) {
           console.warn('⚠️ Google Drive real no disponible, usando servicio local:', error.message)
