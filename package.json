@@ -2,6 +2,7 @@
   "name": "staffhub-app",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@google-cloud/storage": "^7.7.0",
     "@google/generative-ai": "^0.24.1",
@@ -44,8 +45,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "server": "node server.js",
-    "dev": "concurrently \"npm run server\" \"npm start\"",
+    "server": "node server-simple.mjs",
+    "dev": "concurrently \"npm run server\" \"PORT=3001 npm start\"",
     "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "test:sentiment": "node test_sentiment_analysis.mjs",
@@ -78,6 +79,7 @@
       "last 1 safari version"
     ]
   },
+  "proxy": "http://localhost:3000",
   "devDependencies": {
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
