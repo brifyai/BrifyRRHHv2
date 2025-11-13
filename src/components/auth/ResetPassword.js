@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { EyeIcon, EyeSlashIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
-import LoadingSpinner from '../common/LoadingSpinner'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import toast from 'react-hot-toast'
 
 const ResetPassword = () => {
