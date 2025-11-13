@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import hybridGoogleDriveService from '../../lib/hybridGoogleDrive.js';
+import { hybridGoogleDrive } from '../../lib/hybridGoogleDrive.js';
 
 const GoogleDriveProductionDiagnosis = () => {
   const [diagnosis, setDiagnosis] = useState({

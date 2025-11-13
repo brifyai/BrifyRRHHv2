@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import organizedDatabaseService from './organizedDatabaseService.js';
-import hybridGoogleDriveService from '../lib/hybridGoogleDrive.js';
+import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
  
  // Helper para validar UUID y evitar errores "invalid input syntax for type uuid"
  const isValidUUID = (value) => {
