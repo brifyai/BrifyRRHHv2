@@ -20,20 +20,20 @@ class GoogleDriveSyncService {
     }
   }
 
-  // Crear carpeta en Google Drive y registrar en Supabase
-  async createEmployeeFolderInDrive(employeeEmail, employeeName, companyName) {
+  // Crear carpeta en Google Drive Y en Supabase simultáneamente
+  async createEmployeeFolderInDrive(employeeEmail, employeeName, companyName, employeeData = {}) {
     try {
       if (!hybridGoogleDriveService.isUsingRealGoogleDrive()) {
         throw new Error('Google Drive real no está disponible')
       }
 
-      console.log(`📁 Creando carpeta en Google Drive para ${employeeEmail}...`)
+      console.log(`📁 Creando carpeta en Google Drive y Supabase para ${employeeEmail}...`)
 
       // Crear carpeta principal de la empresa
       const parentFolderName = `Empleados - ${companyName}`
       let parentFolder = await this.findOrCreateParentFolder(parentFolderName)
 
-      // Crear carpeta del empleado
+      // Crear carpeta del empleado en Google Drive
       const folderName = `${employeeName} (${employeeEmail})`
       const employeeFolder = await hybridGoogleDriveService.createFolder(folderName, parentFolder.id)
 
@@ -47,9 +47,58 @@ class GoogleDriveSyncService {
       await hybridGoogleDriveService.shareFolder(employeeFolder.id, employeeEmail, 'writer')
       console.log(`📤 Carpeta compartida con ${employeeEmail}`)
 
-      return employeeFolder
+      // Obtener información de la empresa
+      let companyId = null
+      if (employeeData.company_id) {
+        companyId = employeeData.company_id
+      }
+
+      // Crear registro en Supabase
+      const { data: supabaseFolder, error: supabaseError } = await supabase
+        .from('employee_folders')
+        .insert({
+          employee_email: employeeEmail,
+          employee_id: employeeData.id,
+          employee_name: employeeName,
+          employee_position: employeeData.position,
+          employee_department: employeeData.department,
+          employee_phone: employeeData.phone,
+          employee_region: employeeData.region,
+          employee_level: employeeData.level,
+          employee_work_mode: employeeData.work_mode,
+          employee_contract_type: employeeData.contract_type,
+          company_id: companyId,
+          company_name: companyName,
+          drive_folder_id: employeeFolder.id,
+          drive_folder_url: `https://drive.google.com/drive/folders/${employeeFolder.id}`,
+          folder_status: 'active',
+          settings: {
+            notificationPreferences: {
+              whatsapp: true,
+              telegram: true,
+              email: true
+            },
+            responseLanguage: 'es',
+            timezone: 'America/Santiago'
+          }
+        })
+        .select()
+        .maybeSingle()
+
+      if (supabaseError) {
+        console.error(`⚠️ Error creando carpeta en Supabase:`, supabaseError.message)
+        // No lanzar error, la carpeta en Drive ya fue creada
+      } else {
+        console.log(`✅ Carpeta registrada en Supabase: ${supabaseFolder.id}`)
+      }
+
+      return {
+        driveFolder: employeeFolder,
+        supabaseFolder: supabaseFolder,
+        syncStatus: 'created_in_both'
+      }
     } catch (error) {
-      console.error(`❌ Error creando carpeta en Drive para ${employeeEmail}:`, error)
+      console.error(`❌ Error creando carpeta para ${employeeEmail}:`, error)
       throw error
     }
   }

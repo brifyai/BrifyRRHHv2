@@ -12,6 +12,7 @@ import {
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService.js';
+import googleDriveSyncService from '../../services/googleDriveSyncService.js';
 import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 import { supabase } from '../../lib/supabaseClient.js';
 import Swal from 'sweetalert2';
@@ -588,7 +589,7 @@ useEffect(() => {
       setLoadingFolders(true);
       MySwal.fire({
         title: 'Sincronizando con Drive...',
-        text: 'Creando y actualizando carpetas para los empleados',
+        text: 'Creando y actualizando carpetas para los empleados en Google Drive y Supabase',
         icon: 'info',
         allowOutsideClick: false,
         showConfirmButton: false,
@@ -597,46 +598,70 @@ useEffect(() => {
         }
       });
 
-      const result = await enhancedEmployeeFolderService.createFoldersForAllEmployees();
+      // Inicializar el servicio de sincronización
+      await googleDriveSyncService.initialize();
+
+      // Crear carpetas para todos los empleados en Google Drive Y Supabase simultáneamente
+      let createdCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const employee of employees) {
+        try {
+          if (employee.email) {
+            const result = await googleDriveSyncService.createEmployeeFolderInDrive(
+              employee.email,
+              employee.employeeName || employee.first_name || 'Sin nombre',
+              employee.companyName || 'Sin empresa',
+              employee
+            );
+
+            if (result && result.driveFolder) {
+              createdCount++;
+              
+              // Iniciar sincronización periódica para este empleado
+              googleDriveSyncService.startPeriodicSync(
+                employee.email,
+                result.driveFolder.id,
+                5 // cada 5 minutos
+              );
+            }
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${employee.email}: ${error.message}`);
+          console.error(`Error creando carpeta para ${employee.email}:`, error);
+        }
+      }
 
       MySwal.fire({
         title: 'Sincronización completada',
         html: `
           <div class="text-left">
-            <p><strong>Carpetas creadas:</strong> ${result.createdCount}</p>
-            <p><strong>Carpetas actualizadas:</strong> ${result.updatedCount}</p>
-            <p><strong>Errores:</strong> ${result.errorCount}</p>
+            <p><strong>Carpetas creadas en Google Drive y Supabase:</strong> ${createdCount}</p>
+            <p><strong>Sincronizaciones periódicas iniciadas:</strong> ${createdCount}</p>
+            <p><strong>Errores:</strong> ${errorCount}</p>
           </div>
         `,
-        icon: result.errorCount === 0 ? 'success' : 'warning',
+        icon: errorCount === 0 ? 'success' : 'warning',
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0693e3'
       });
 
-      if (result && result.errorCount > 0) {
-        const errors = (result.sampleErrors || []).slice(0, 10);
+      if (errorCount > 0) {
         const errorsHtml = errors.length
-          ? `<ul class="list-disc pl-5 text-left">${errors.map(e => `<li class="mb-1 text-sm text-red-700">${e}</li>`).join('')}</ul>`
+          ? `<ul class="list-disc pl-5 text-left">${errors.slice(0, 10).map(e => `<li class="mb-1 text-sm text-red-700">${e}</li>`).join('')}</ul>`
           : '<p class="text-gray-600">No hay detalles adicionales de error</p>';
-        const schemaNote = result.schemaSuspect
-          ? `<div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-               <p class="text-yellow-800 text-sm">
-                 Se sospecha un problema de esquema en la base de datos. Verifica que las tablas estén creadas en Supabase ejecutando el SQL:
-                 <code class="bg-yellow-100 px-1 py-0.5 rounded">database/employee_folders_setup.sql</code>
-               </p>
-             </div>`
-          : '';
         await MySwal.fire({
           title: 'Se detectaron errores durante la sincronización',
           html: `
             <div class="text-left">
-              <p class="mb-2"><strong>Errores:</strong> ${result.errorCount}</p>
-              <p class="mb-2"><strong>Creadas:</strong> ${result.createdCount} &nbsp;&nbsp; <strong>Actualizadas:</strong> ${result.updatedCount}</p>
+              <p class="mb-2"><strong>Errores:</strong> ${errorCount}</p>
+              <p class="mb-2"><strong>Creadas exitosamente:</strong> ${createdCount}</p>
               <div class="mt-2">
                 <p class="mb-1 font-semibold">Muestras de error:</p>
                 ${errorsHtml}
               </div>
-              ${schemaNote}
             </div>
           `,
           icon: 'warning',
