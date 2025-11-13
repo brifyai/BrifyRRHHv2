@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import googleDriveCallbackHandler from '../../lib/googleDriveCallbackHandler'
-import { auth } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext.js'
+import googleDriveCallbackHandler from '../../lib/googleDriveCallbackHandler.js'
+import { auth } from '../../lib/supabase.js'
 import toast from 'react-hot-toast'
 
 const GoogleAuthCallback = () => {
