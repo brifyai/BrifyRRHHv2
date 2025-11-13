@@ -1,5 +1,5 @@
 import React from 'react';
-import { errorHandler } from '../../lib/errorHandler.js';
+import errorHandler from '../../lib/errorHandler.js';
 import logger from '../../lib/logger.js';
 
 /**
