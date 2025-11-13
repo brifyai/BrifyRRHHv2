@@ -4,12 +4,12 @@
  * NO hay fallback a local.
  */
 
-import { googleDrive } from './googleDrive.js';
+import googleDriveService from './googleDrive.js';
 import { logger } from './logger.js';
 
 class HybridGoogleDrive {
   constructor() {
-    this.service = googleDrive;
+    this.service = googleDriveService;
     this.syncErrors = [];
     this.lastSyncStatus = null;
   }
@@ -128,6 +128,23 @@ class HybridGoogleDrive {
     } catch (error) {
       const errorMsg = `Error obteniendo información del archivo: ${error.message}`;
       logger.error('HybridGoogleDrive.getFileInfo', errorMsg);
+      this.recordSyncError(errorMsg);
+      throw error;
+    }
+  }
+
+  /**
+   * Comparte una carpeta con un usuario
+   */
+  async shareFolder(folderId, email, role = 'writer') {
+    try {
+      const service = this.getService();
+      const result = await service.shareFolder(folderId, email, role);
+      this.lastSyncStatus = 'success';
+      return result;
+    } catch (error) {
+      const errorMsg = `Error compartiendo carpeta en Google Drive: ${error.message}`;
+      logger.error('HybridGoogleDrive.shareFolder', errorMsg);
       this.recordSyncError(errorMsg);
       throw error;
     }
