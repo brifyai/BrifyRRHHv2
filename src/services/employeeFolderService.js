@@ -15,12 +15,12 @@ class EmployeeFolderService {
       console.log('Inicializando carpetas de empleados...');
       const employees = await organizedDatabaseService.getEmployees();
       
-      employees.forEach(employee => {
+      for (const employee of employees) {
         if (employee.email) {
           // Crear una carpeta para cada empleado usando su email como identificador
-          this.createEmployeeFolder(employee.email, employee);
+          await this.createEmployeeFolder(employee.email, employee);
         }
-      });
+      }
       
       console.log(`Inicialización completada - ${this.employeeFolders.size} carpetas de empleados creadas`);
     } catch (error) {
@@ -102,7 +102,7 @@ class EmployeeFolderService {
         const employee = employees.find(emp => emp.email === employeeEmail);
         
         if (employee) {
-          folder = this.createEmployeeFolder(employeeEmail, employee);
+          folder = await this.createEmployeeFolder(employeeEmail, employee);
           return folder;
         }
         
