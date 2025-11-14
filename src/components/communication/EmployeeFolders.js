@@ -86,21 +86,6 @@ useEffect(() => {
   };
 }, []);
 
-// Recalcular carpetas cuando el índice esté listo (aplica cambios en UI)
-useEffect(() => {
-  if (!loading) {
-    try {
-      // Forzar recarga para que se refleje la empresa correcta por empleado
-      // Nota: loadFoldersForCurrentPage está definido más abajo; el efecto se ejecuta después del render.
-      // eslint-disable-next-line no-use-before-define
-      loadFoldersForCurrentPage();
-    } catch (e) {
-      // Silencioso: si la función aún no está definida en el primer render, el siguiente render la tendrá disponible
-    }
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [employeeCompanyIndex, loading]);
-
   // Inicializar token bridge cuando el usuario está autenticado
   useEffect(() => {
     if (user?.id) {
@@ -124,21 +109,21 @@ useEffect(() => {
     }
   }, [companyId]);
 
+  // ÚNICO efecto para cargar carpetas - consolidado para evitar duplicaciones
   useEffect(() => {
-    if (!loading) {
+    if (!loading && employees.length > 0) {
+      console.log('🔄 Cargando carpetas - trigger:', {
+        currentPage,
+        searchTerm: searchTerm || 'empty',
+        hasFilters: Object.values(filters).some(Boolean),
+        employeesCount: employees.length,
+        companiesCount: companies.length
+      });
       loadFoldersForCurrentPage();
     }
-  }, [currentPage, searchTerm, filters, loading, companies, employees]);
+  }, [currentPage, searchTerm, filters, loading, companies.length, employees.length]);
 
-  // Efecto de seguridad: cargar carpetas directamente si hay empleados pero no carpetas
-  useEffect(() => {
-    if (!loading && employees.length > 0 && folders.length === 0 && !loadingFolders) {
-      console.log('🔄 Efecto de seguridad: detectados empleados pero sin carpetas, recargando...');
-      loadFoldersForCurrentPage();
-    }
-  }, [employees, folders, loading, loadingFolders]);
-
-  // Actualizar totalItems cuando cambian los filtros o la búsqueda
+  // Actualizar totalItems cuando cambian los filtros o la búsqueda (sin limpiar carpetas)
   useEffect(() => {
     const filteredEmployees = employees.filter(employee => {
       if (!employee?.email) return false;
@@ -157,8 +142,10 @@ useEffect(() => {
     });
 
     setTotalItems(filteredEmployees.length);
-    setCurrentPage(1); // Resetear a primera página cuando cambian los filtros
-    setFolders([]); // Limpiar carpetas al cambiar filtros
+    // Solo resetear página si los filtros realmente cambiaron
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
   }, [searchTerm, filters, employees.length]);
 
   const loadEmployeesOnly = async () => {
@@ -217,6 +204,12 @@ useEffect(() => {
   };
 
   const loadFoldersForCurrentPage = async () => {
+    // Prevenir múltiples cargas simultáneas
+    if (loadingFolders) {
+      console.log('⏳ Ya se están cargando carpetas, ignorando solicitud duplicada...');
+      return;
+    }
+
     try {
       setLoadingFolders(true);
       console.log(`📁 Cargando carpetas reales desde la base de datos...`);
@@ -423,7 +416,21 @@ useEffect(() => {
 
   const getFilteredFolders = () => {
     // Las carpetas ya vienen filtradas por búsqueda y filtros activos
-    return folders;
+    // Agregar deduplicación por email como última capa de seguridad
+    const uniqueFolders = [];
+    const seenEmails = new Set();
+    
+    folders.forEach(folder => {
+      const email = folder.email || folder.employeeEmail;
+      if (email && !seenEmails.has(email)) {
+        seenEmails.add(email);
+        uniqueFolders.push(folder);
+      } else if (email && seenEmails.has(email)) {
+        console.warn('⚠️ Carpeta duplicada detectada y eliminada:', email);
+      }
+    });
+    
+    return uniqueFolders;
   };
 
   const getPaginatedFolders = () => {
@@ -438,8 +445,11 @@ useEffect(() => {
   };
 
   const handlePageChange = (page) => {
-    setCurrentPage(page);
-    setFolders([]); // Limpiar carpetas al cambiar de página
+    if (page !== currentPage) {
+      console.log(`📄 Cambiando a página ${page}`);
+      setCurrentPage(page);
+      // No limpiar carpetas, el useEffect se encargará de cargar los datos correctos
+    }
   };
 
   const handleSelectFolder = (employeeEmail) => {
