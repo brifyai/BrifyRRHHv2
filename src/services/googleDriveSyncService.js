@@ -569,6 +569,322 @@ class GoogleDriveSyncService {
       this.recordError(error.message)
     }
   }
+
+  /**
+   * Elimina una carpeta de empleado de todas las plataformas
+   * Implementa sincronización de eliminación
+   */
+  async deleteEmployeeFolder(employeeEmail, deleteFromDrive = true) {
+    try {
+      logger.info('GoogleDriveSyncService', `🗑️ Iniciando eliminación de carpeta para ${employeeEmail} (Drive: ${deleteFromDrive})`)
+      
+      // Verificar autenticación
+      if (!googleDriveAuthService.isAuthenticated()) {
+        const error = `❌ No se puede eliminar carpeta para ${employeeEmail}: Google Drive no está autenticado`
+        logger.error('GoogleDriveSyncService', error)
+        this.recordError(error)
+        throw new Error(error)
+      }
+
+      // Obtener información de la carpeta
+      const { data: folder, error: fetchError } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .eq('employee_email', employeeEmail)
+        .single()
+
+      if (fetchError || !folder) {
+        logger.warn('GoogleDriveSyncService', `⚠️ No se encontró carpeta para ${employeeEmail}`)
+        return { success: true, message: 'Carpeta no encontrada, ya eliminada' }
+      }
+
+      // 1. Eliminar de Google Drive (si se solicita)
+      if (deleteFromDrive && folder.drive_folder_id) {
+        try {
+          logger.info('GoogleDriveSyncService', `🗑️ Eliminando carpeta de Google Drive: ${folder.drive_folder_id}`)
+          await googleDriveService.deleteFile(folder.drive_folder_id)
+          logger.info('GoogleDriveSyncService', `✅ Carpeta eliminada de Google Drive`)
+        } catch (driveError) {
+          logger.warn('GoogleDriveSyncService', `⚠️ Error eliminando de Google Drive: ${driveError.message}`)
+          // Continuar con eliminación de Supabase aunque falle en Drive
+        }
+      }
+
+      // 2. Soft delete en Supabase (marcar como eliminada)
+      logger.info('GoogleDriveSyncService', `🗑️ Marcando carpeta como eliminada en Supabase`)
+      const { error: updateError } = await supabase
+        .from('employee_folders')
+        .update({
+          folder_status: 'deleted',
+          deleted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('employee_email', employeeEmail)
+
+      if (updateError) {
+        logger.error('GoogleDriveSyncService', `❌ Error actualizando estado en Supabase: ${updateError.message}`)
+        throw updateError
+      }
+
+      // 3. Detener sincronización periódica si existe
+      this.stopPeriodicSync(employeeEmail)
+
+      logger.info('GoogleDriveSyncService', `✅ Carpeta eliminada exitosamente para ${employeeEmail}`)
+      
+      return {
+        success: true,
+        message: 'Carpeta eliminada correctamente',
+        deletedFromDrive: deleteFromDrive && folder.drive_folder_id ? true : false
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error eliminando carpeta para ${employeeEmail}: ${error.message}`)
+      this.recordError(error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Audita la consistencia entre Supabase y Google Drive
+   * Detecta carpetas huérfanas e inconsistencias
+   */
+  async auditConsistency() {
+    try {
+      logger.info('GoogleDriveSyncService', `🔍 Iniciando auditoría de consistencia...`)
+      
+      // Verificar autenticación
+      if (!googleDriveAuthService.isAuthenticated()) {
+        const error = '❌ No se puede auditar consistencia: Google Drive no está autenticado'
+        logger.error('GoogleDriveSyncService', error)
+        this.recordError(error)
+        throw new Error(error)
+      }
+
+      const auditResults = {
+        totalSupabaseFolders: 0,
+        totalDriveFolders: 0,
+        inconsistencies: [],
+        orphanedInDrive: [],
+        orphanedInSupabase: [],
+        timestamp: new Date().toISOString()
+      }
+
+      // 1. Obtener todas las carpetas de Supabase
+      const { data: supabaseFolders, error: supabaseError } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .neq('folder_status', 'deleted')
+
+      if (supabaseError) {
+        logger.error('GoogleDriveSyncService', `❌ Error obteniendo carpetas de Supabase: ${supabaseError.message}`)
+        throw supabaseError
+      }
+
+      auditResults.totalSupabaseFolders = supabaseFolders.length
+      logger.info('GoogleDriveSyncService', `📊 Encontradas ${supabaseFolders.length} carpetas en Supabase`)
+
+      // 2. Verificar existencia en Google Drive
+      for (const folder of supabaseFolders) {
+        if (folder.drive_folder_id) {
+          try {
+            const driveFolder = await googleDriveService.getFileInfo(folder.drive_folder_id)
+            if (!driveFolder) {
+              auditResults.inconsistencies.push({
+                type: 'missing_in_drive',
+                employeeEmail: folder.employee_email,
+                supabaseId: folder.id,
+                driveFolderId: folder.drive_folder_id,
+                message: 'Carpeta existe en Supabase pero no en Google Drive'
+              })
+            }
+          } catch (error) {
+            auditResults.inconsistencies.push({
+              type: 'error_checking_drive',
+              employeeEmail: folder.employee_email,
+              supabaseId: folder.id,
+              driveFolderId: folder.drive_folder_id,
+              error: error.message,
+              message: 'Error verificando carpeta en Google Drive'
+            })
+          }
+        }
+      }
+
+      // 3. Buscar carpetas en Google Drive
+      try {
+        const driveFolders = await googleDriveService.listFiles()
+        auditResults.totalDriveFolders = driveFolders.filter(f =>
+          f.mimeType === 'application/vnd.google-apps.folder'
+        ).length
+
+        // Buscar carpetas de empleados (patrón: "Nombre (email@ejemplo.com)")
+        const employeeDriveFolders = driveFolders.filter(folder =>
+          folder.mimeType === 'application/vnd.google-apps.folder' &&
+          folder.name.includes('(') && folder.name.includes(')')
+        )
+
+        logger.info('GoogleDriveSyncService', `📊 Encontradas ${employeeDriveFolders.length} carpetas de empleados en Drive`)
+
+        // Encontrar carpetas huérfanas en Drive
+        for (const driveFolder of employeeDriveFolders) {
+          const existsInSupabase = supabaseFolders.some(sf =>
+            sf.drive_folder_id === driveFolder.id
+          )
+
+          if (!existsInSupabase) {
+            // Extraer email del nombre de la carpeta
+            const emailMatch = driveFolder.name.match(/\(([^@]+@[^)]+)\)/)
+            const email = emailMatch ? emailMatch[1] : null
+
+            auditResults.orphanedInDrive.push({
+              driveFolderId: driveFolder.id,
+              driveFolderName: driveFolder.name,
+              extractedEmail: email,
+              message: email ? 'Carpeta huérfana en Drive (se puede recuperar)' : 'Carpeta huérfana sin email identificable'
+            })
+          }
+        }
+      } catch (driveError) {
+        logger.error('GoogleDriveSyncService', `❌ Error listando carpetas de Drive: ${driveError.message}`)
+      }
+
+      // 4. Generar resumen
+      const summary = {
+        ...auditResults,
+        summary: {
+          totalInconsistencies: auditResults.inconsistencies.length,
+          totalOrphanedInDrive: auditResults.orphanedInDrive.length,
+          healthyFolders: auditResults.totalSupabaseFolders - auditResults.inconsistencies.length,
+          needsAttention: auditResults.inconsistencies.length > 0 || auditResults.orphanedInDrive.length > 0
+        }
+      }
+
+      logger.info('GoogleDriveSyncService', `📊 Auditoría completada: ${summary.summary.totalInconsistencies} inconsistencias, ${summary.summary.totalOrphanedInDrive} carpetas huérfanas`)
+      
+      return summary
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en auditoría de consistencia: ${error.message}`)
+      this.recordError(error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Recupera carpetas huérfanas de Google Drive
+   * Crea registros en Supabase para carpetas existentes en Drive
+   */
+  async recoverOrphanedFolders() {
+    try {
+      logger.info('GoogleDriveSyncService', `🔄 Iniciando recuperación de carpetas huérfanas...`)
+      
+      // Verificar autenticación
+      if (!googleDriveAuthService.isAuthenticated()) {
+        const error = '❌ No se puede recuperar carpetas: Google Drive no está autenticado'
+        logger.error('GoogleDriveSyncService', error)
+        this.recordError(error)
+        throw new Error(error)
+      }
+
+      // Realizar auditoría para encontrar carpetas huérfanas
+      const audit = await this.auditConsistency()
+      const orphaned = audit.orphanedInDrive.filter(folder => folder.extractedEmail)
+
+      if (orphaned.length === 0) {
+        logger.info('GoogleDriveSyncService', `ℹ️ No hay carpetas huérfanas para recuperar`)
+        return { recovered: 0, message: 'No hay carpetas huérfanas para recuperar' }
+      }
+
+      let recovered = 0
+      const errors = []
+
+      // Recuperar cada carpeta huérfana
+      for (const orphan of orphaned) {
+        try {
+          logger.info('GoogleDriveSyncService', `🔄 Recuperando carpeta: ${orphan.driveFolderName}`)
+          
+          // Extraer información del nombre
+          const nameMatch = orphan.driveFolderName.match(/^([^(]+)\(([^@]+@[^)]+)\)/)
+          const employeeName = nameMatch ? nameMatch[1].trim() : 'Sin nombre'
+          const employeeEmail = orphan.extractedEmail
+
+          // Buscar información del empleado
+          const { data: employee } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('email', employeeEmail)
+            .single()
+
+          // Crear registro en Supabase
+          await this.createSupabaseFolderRecord(
+            employeeEmail,
+            employeeName,
+            employee?.companies?.name || 'Empresa desconocida',
+            employee || {},
+            orphan.driveFolderId
+          )
+
+          recovered++
+          logger.info('GoogleDriveSyncService', `✅ Carpeta recuperada: ${employeeEmail}`)
+        } catch (error) {
+          errors.push({
+            folder: orphan.driveFolderName,
+            error: error.message
+          })
+          logger.error('GoogleDriveSyncService', `❌ Error recuperando ${orphan.driveFolderName}: ${error.message}`)
+        }
+      }
+
+      logger.info('GoogleDriveSyncService', `📊 Recuperación completada: ${recovered} recuperadas, ${errors.length} errores`)
+      
+      return {
+        recovered,
+        errors,
+        totalOrphaned: orphaned.length,
+        message: `Recuperadas ${recovered} de ${orphaned.length} carpetas huérfanas`
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en recuperación de carpetas: ${error.message}`)
+      this.recordError(error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Limpia carpetas marcadas como eliminadas (hard delete)
+   * Use con precaución - esta acción es irreversible
+   */
+  async cleanupDeletedFolders(olderThanDays = 30) {
+    try {
+      logger.info('GoogleDriveSyncService', `🧹 Iniciando limpieza de carpetas eliminadas (más antiguas que ${olderThanDays} días)...`)
+      
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays)
+
+      // Eliminar registros marcados como eliminados
+      const { data: deletedFolders, error } = await supabase
+        .from('employee_folders')
+        .delete()
+        .eq('folder_status', 'deleted')
+        .lt('deleted_at', cutoffDate.toISOString())
+        .select()
+
+      if (error) {
+        logger.error('GoogleDriveSyncService', `❌ Error en limpieza: ${error.message}`)
+        throw error
+      }
+
+      logger.info('GoogleDriveSyncService', `🧹 Limpieza completada: ${deletedFolders?.length || 0} registros eliminados permanentemente`)
+      
+      return {
+        deleted: deletedFolders?.length || 0,
+        cutoffDate: cutoffDate.toISOString(),
+        message: `Eliminados ${deletedFolders?.length || 0} registros permanentemente`
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en limpieza de carpetas eliminadas: ${error.message}`)
+      this.recordError(error.message)
+      throw error
+    }
+  }
 }
 
 const googleDriveSyncService = new GoogleDriveSyncService()
