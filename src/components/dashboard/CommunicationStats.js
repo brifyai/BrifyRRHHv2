@@ -17,25 +17,8 @@ const CommunicationStats = () => {
         setLoading(true)
         setError(null)
         
-        // Verificar si estamos en modo desarrollo local
-        const isLocal = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' ||
-                       window.location.hostname === '0.0.0.0'
-        
-        if (isLocal) {
-          // Usar datos mock para desarrollo local
-          console.log('CommunicationStats: Using mock data for local development')
-          setStats({
-            totalSent: Math.floor(Math.random() * 5000),
-            totalDelivered: Math.floor(Math.random() * 4500),
-            totalRead: Math.floor(Math.random() * 4000)
-          })
-          setLoading(false)
-          return
-        }
-        
-        // Cargar estadísticas reales
-        console.log('CommunicationStats: Loading real stats...')
+        // SIEMPRE usar datos reales de Supabase - eliminado modo mock
+        console.log('CommunicationStats: Loading real stats from Supabase...')
         const statsData = await communicationService.getCommunicationStats()
         console.log('CommunicationStats: Stats loaded:', statsData)
         

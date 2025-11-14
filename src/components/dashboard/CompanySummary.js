@@ -8,34 +8,6 @@ const CompanySummary = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Datos mock para desarrollo local
-  const mockCompanies = [
-    { id: '1', name: 'Ariztia' },
-    { id: '2', name: 'Inchcape' },
-    { id: '3', name: 'Achs' },
-    { id: '4', name: 'Arcoprime' },
-    { id: '5', name: 'Grupo Saesa' },
-    { id: '6', name: 'Colbun' },
-    { id: '7', name: 'AFP Habitat' },
-    { id: '8', name: 'Copec' },
-    { id: '9', name: 'Antofagasta Minerals' },
-    { id: '10', name: 'Vida Cámara' },
-    { id: '11', name: 'Enaex' }
-  ]
-
-  const mockEmployeesByCompany = [
-    { companyId: '1', companyName: 'Ariztia', employeeCount: 120 },
-    { companyId: '2', companyName: 'Inchcape', employeeCount: 85 },
-    { companyId: '3', companyName: 'Achs', employeeCount: 210 },
-    { companyId: '4', companyName: 'Arcoprime', employeeCount: 95 },
-    { companyId: '5', companyName: 'Grupo Saesa', employeeCount: 180 },
-    { companyId: '6', companyName: 'Colbun', employeeCount: 145 },
-    { companyId: '7', companyName: 'AFP Habitat', employeeCount: 90 },
-    { companyId: '8', companyName: 'Copec', employeeCount: 320 },
-    { companyId: '9', companyName: 'Antofagasta Minerals', employeeCount: 275 },
-    { companyId: '10', companyName: 'Vida Cámara', employeeCount: 65 },
-    { companyId: '11', companyName: 'Enaex', employeeCount: 130 }
-  ]
 
   useEffect(() => {
     const loadCompanyData = async () => {
@@ -43,22 +15,8 @@ const CompanySummary = () => {
         setLoading(true)
         setError(null)
         
-        // Verificar si estamos en modo desarrollo local
-        const isLocal = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' ||
-                       window.location.hostname === '0.0.0.0'
-        
-        if (isLocal) {
-          // Usar datos mock para desarrollo local
-          console.log('CompanySummary: Using mock data for local development')
-          setCompanies(mockCompanies)
-          setEmployeesByCompany(mockEmployeesByCompany)
-          setLoading(false)
-          return
-        }
-        
-        // Obtener todas las empresas
-        console.log('CompanySummary: Loading companies...')
+        // Siempre usar datos reales de Supabase - eliminar datos mock
+        console.log('CompanySummary: Loading companies from Supabase...')
         const { data: companiesData, error: companiesError } = await supabase
           .from('companies')
           .select('id, name')
