@@ -125,10 +125,18 @@ useEffect(() => {
   }, [companyId]);
 
   useEffect(() => {
-    if (!loading && employees.length > 0) {
+    if (!loading) {
       loadFoldersForCurrentPage();
     }
   }, [currentPage, searchTerm, filters, loading, companies, employees]);
+
+  // Efecto de seguridad: cargar carpetas directamente si hay empleados pero no carpetas
+  useEffect(() => {
+    if (!loading && employees.length > 0 && folders.length === 0 && !loadingFolders) {
+      console.log('🔄 Efecto de seguridad: detectados empleados pero sin carpetas, recargando...');
+      loadFoldersForCurrentPage();
+    }
+  }, [employees, folders, loading, loadingFolders]);
 
   // Actualizar totalItems cuando cambian los filtros o la búsqueda
   useEffect(() => {
@@ -211,43 +219,95 @@ useEffect(() => {
   const loadFoldersForCurrentPage = async () => {
     try {
       setLoadingFolders(true);
-      console.log(`📁 Generando carpetas desde datos de empleados (misma fuente que EmployeeSelector)...`);
+      console.log(`📁 Cargando carpetas reales desde la base de datos...`);
       
-      // Generar carpetas virtuales desde los datos de empleados (misma fuente que EmployeeSelector)
-      const virtualFolders = (employees || []).map(employee => ({
-        id: employee.id,
-        email: employee.email,
-        employeeEmail: employee.email,
-        employeeName: employee.employeeName,
-        companyName: employee.companyName,
-        companyIdResolved: employee.company_id,
-        employeeDepartment: employee.employeeDepartment,
-        employeePosition: employee.employeePosition,
-        employeePhone: employee.employeePhone,
-        employeeLevel: employee.employeeLevel,
-        employeeWorkMode: employee.employeeWorkMode,
-        employeeContractType: employee.employeeContractType,
-        lastUpdated: new Date().toISOString(),
-        // Datos simulados para compatibilidad con la UI existente
-        knowledgeBase: {
-          faqs: [],
-          documents: [],
-          policies: [],
-          procedures: []
-        }
-      }));
+      // Primero intentar cargar carpetas reales desde la base de datos
+      let realFolders = [];
+      try {
+        const { data: employeeFolders, error } = await supabase
+          .from('employee_folders')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      console.log(`✅ Generadas ${virtualFolders.length} carpetas virtuales desde empleados`);
+        if (!error && employeeFolders) {
+          console.log(`✅ Encontradas ${employeeFolders.length} carpetas reales en la base de datos`);
+          realFolders = employeeFolders;
+        } else if (error) {
+          console.warn('⚠️ No se pudieron cargar carpetas reales, usando datos de empleados:', error.message);
+        }
+      } catch (dbError) {
+        console.warn('⚠️ Error consultando carpetas reales:', dbError.message);
+      }
+
+      // Si no hay carpetas reales, generar carpetas virtuales desde los empleados
+      let foldersToShow = [];
+      if (realFolders.length > 0) {
+        // Usar carpetas reales y enriquecerlas con datos de empleados
+        foldersToShow = realFolders.map(folder => {
+          const employee = employees.find(emp => emp.email === folder.employee_email);
+          return {
+            id: folder.id,
+            email: folder.employee_email,
+            employeeEmail: folder.employee_email,
+            employeeName: folder.employee_name || employee?.employeeName || 'Sin nombre',
+            companyName: folder.company_name || employee?.companyName || 'Sin empresa',
+            companyIdResolved: folder.company_id || employee?.company_id,
+            employeeDepartment: folder.employee_department || employee?.employeeDepartment,
+            employeePosition: folder.employee_position || employee?.employeePosition,
+            employeePhone: folder.employee_phone || employee?.employeePhone,
+            employeeLevel: folder.employee_level || employee?.employeeLevel,
+            employeeWorkMode: folder.employee_work_mode || employee?.employeeWorkMode,
+            employeeContractType: folder.employee_contract_type || employee?.employeeContractType,
+            lastUpdated: folder.updated_at || new Date().toISOString(),
+            driveFolderId: folder.drive_folder_id,
+            driveFolderUrl: folder.drive_folder_url,
+            // Datos reales o simulados para compatibilidad
+            knowledgeBase: {
+              faqs: [],
+              documents: [],
+              policies: [],
+              procedures: []
+            }
+          };
+        });
+      } else {
+        // Generar carpetas virtuales desde los datos de empleados como fallback
+        console.log(`🔄 Generando carpetas virtuales desde ${employees.length} empleados como fallback`);
+        foldersToShow = (employees || []).map(employee => ({
+          id: `virtual_${employee.id}`,
+          email: employee.email,
+          employeeEmail: employee.email,
+          employeeName: employee.employeeName,
+          companyName: employee.companyName,
+          companyIdResolved: employee.company_id,
+          employeeDepartment: employee.employeeDepartment,
+          employeePosition: employee.employeePosition,
+          employeePhone: employee.employeePhone,
+          employeeLevel: employee.employeeLevel,
+          employeeWorkMode: employee.employeeWorkMode,
+          employeeContractType: employee.employeeContractType,
+          lastUpdated: new Date().toISOString(),
+          // Datos simulados para compatibilidad con la UI existente
+          knowledgeBase: {
+            faqs: [],
+            documents: [],
+            policies: [],
+            procedures: []
+          }
+        }));
+      }
+
+      console.log(`✅ Total de carpetas a mostrar: ${foldersToShow.length}`);
 
       // Si no hay filtros, mostrar todas las carpetas
       if (!searchTerm && !Object.values(filters).some(Boolean)) {
-        setFolders(virtualFolders);
-        setTotalItems(virtualFolders.length);
+        setFolders(foldersToShow);
+        setTotalItems(foldersToShow.length);
         return;
       }
 
-      // Aplicar filtros a las carpetas virtuales
-      let filteredFolders = virtualFolders || [];
+      // Aplicar filtros a las carpetas
+      let filteredFolders = foldersToShow || [];
 
       const term = (searchTerm || '').toLowerCase();
       if (term) {
@@ -1201,9 +1261,13 @@ useEffect(() => {
                   <p className="text-gray-500">
                     {searchTerm || Object.values(filters).some(Boolean)
                       ? 'No hay carpetas que coincidan con los filtros aplicados'
-                      : 'No hay carpetas de empleados disponibles'}
+                      : loading
+                        ? 'Cargando carpetas...'
+                        : employees.length === 0
+                          ? 'No hay empleados disponibles para generar carpetas'
+                          : 'No hay carpetas de empleados disponibles'}
                   </p>
-                  {!searchTerm && !Object.values(filters).some(Boolean) && (
+                  {!searchTerm && !Object.values(filters).some(Boolean) && !loading && employees.length > 0 && (
                     <div className="mt-6">
                       <button
                         onClick={createAllEmployeeFolders}
@@ -1219,6 +1283,29 @@ useEffect(() => {
                           <>
                             <FolderIcon className="h-5 w-5 mr-3" />
                             Crear Carpetas para Todos los Empleados
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  {!loading && employees.length === 0 && (
+                    <div className="mt-6">
+                      <button
+                        onClick={loadEmployeesOnly}
+                        disabled={loading}
+                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                            Cargando empleados...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Recargar Empleados
                           </>
                         )}
                       </button>
