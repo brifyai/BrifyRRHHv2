@@ -255,75 +255,44 @@ useEffect(() => {
         foldersToShow = realFolders.map(folder => {
           const employee = employees.find(emp => emp.email === folder.employee_email);
           
-          // Construir knowledgeBase desde las relaciones de la base de datos
-          let knowledgeBase = {
-            faqs: [],
-            documents: [],
-            policies: [],
-            procedures: []
-          };
-          
-          // Intentar usar datos reales, si no hay, usar datos simulados para demostración
-          if (folder.employee_faqs && folder.employee_faqs.length > 0) {
-            knowledgeBase.faqs = folder.employee_faqs.filter(faq => faq.status === 'active').map(faq => ({
-              id: faq.id,
-              question: faq.question,
-              answer: faq.answer,
-              category: faq.category,
-              type: 'faq'
-            }));
-          } else {
-            // Datos simulados para demostración
-            knowledgeBase.faqs = [
-              { id: 'demo1', question: '¿Cuáles son mis horarios?', answer: 'Lunes a viernes 9:00-18:00', type: 'faq' },
-              { id: 'demo2', question: '¿Cómo solicito vacaciones?', answer: 'A través del portal de RRHH', type: 'faq' },
-              { id: 'demo3', question: '¿Cuál es el dress code?', answer: 'Business casual', type: 'faq' }
-            ];
-          }
-          
-          if (folder.employee_documents && folder.employee_documents.length > 0) {
-            knowledgeBase.documents = folder.employee_documents.filter(doc => doc.status === 'active').map(doc => ({
-              id: doc.id,
-              name: doc.document_name,
-              description: doc.description,
-              type: doc.document_type,
-              fileType: doc.document_type,
-              category: doc.document_type
-            }));
-            
-            // Clasificar documentos como políticas y procedimientos
-            knowledgeBase.policies = folder.employee_documents
+          // Construir knowledgeBase 100% real desde las relaciones de la base de datos
+          const knowledgeBase = {
+            faqs: (folder.employee_faqs || [])
+              .filter(faq => faq.status === 'active')
+              .map(faq => ({
+                id: faq.id,
+                question: faq.question,
+                answer: faq.answer,
+                category: faq.category,
+                type: 'faq'
+              })),
+            documents: (folder.employee_documents || [])
+              .filter(doc => doc.status === 'active')
+              .map(doc => ({
+                id: doc.id,
+                name: doc.document_name,
+                description: doc.description,
+                type: doc.document_type,
+                fileType: doc.document_type,
+                category: doc.document_type
+              })),
+            policies: (folder.employee_documents || [])
               .filter(doc => doc.status === 'active' && doc.document_type === 'policy')
               .map(doc => ({
                 id: doc.id,
                 name: doc.document_name,
                 description: doc.description,
                 type: 'policy'
-              }));
-              
-            knowledgeBase.procedures = folder.employee_documents
+              })),
+            procedures: (folder.employee_documents || [])
               .filter(doc => doc.status === 'active' && doc.document_type === 'procedure')
               .map(doc => ({
                 id: doc.id,
                 name: doc.document_name,
                 description: doc.description,
                 type: 'procedure'
-              }));
-          } else {
-            // Datos simulados para demostración
-            knowledgeBase.documents = [
-              { id: 'doc1', name: 'Contrato de trabajo', description: 'Documento contractual', type: 'contract' },
-              { id: 'doc2', name: 'Manual del empleado', description: 'Guía interna', type: 'manual' }
-            ];
-            knowledgeBase.policies = [
-              { id: 'pol1', name: 'Política de vacaciones', description: 'Normativas de tiempo libre', type: 'policy' },
-              { id: 'pol2', name: 'Política de home office', description: 'Trabajo remoto', type: 'policy' }
-            ];
-            knowledgeBase.procedures = [
-              { id: 'proc1', name: 'Procedimiento de emergencia', description: 'Protocolos de seguridad', type: 'procedure' },
-              { id: 'proc2', name: 'Procedimiento de onboarding', description: 'Integración de nuevos empleados', type: 'procedure' }
-            ];
-          }
+              }))
+          };
           
           console.log(`📊 Carpeta ${folder.employee_email}:`, {
             faqs: knowledgeBase.faqs.length,
@@ -353,30 +322,9 @@ useEffect(() => {
           };
         });
       } else {
-        // Generar carpetas virtuales desde los datos de empleados como fallback
-        console.log(`🔄 Generando carpetas virtuales desde ${employees.length} empleados como fallback`);
-        foldersToShow = (employees || []).map(employee => ({
-          id: `virtual_${employee.id}`,
-          email: employee.email,
-          employeeEmail: employee.email,
-          employeeName: employee.employeeName,
-          companyName: employee.companyName,
-          companyIdResolved: employee.company_id,
-          employeeDepartment: employee.employeeDepartment,
-          employeePosition: employee.employeePosition,
-          employeePhone: employee.employeePhone,
-          employeeLevel: employee.employeeLevel,
-          employeeWorkMode: employee.employeeWorkMode,
-          employeeContractType: employee.employeeContractType,
-          lastUpdated: new Date().toISOString(),
-          // Datos simulados para compatibilidad con la UI existente
-          knowledgeBase: {
-            faqs: [],
-            documents: [],
-            policies: [],
-            procedures: []
-          }
-        }));
+        // Si no hay carpetas reales, no mostrar carpetas virtuales
+        console.log(`📂 No hay carpetas reales en la base de datos para mostrar`);
+        foldersToShow = [];
       }
 
       console.log(`✅ Total de carpetas a mostrar: ${foldersToShow.length}`);
