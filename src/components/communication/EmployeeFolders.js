@@ -13,8 +13,10 @@ import {
 } from '@heroicons/react/24/outline';
 import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService.js';
 import googleDriveSyncService from '../../services/googleDriveSyncService.js';
+import googleDriveTokenBridge from '../../lib/googleDriveTokenBridge.js';
 import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 import { supabase } from '../../lib/supabaseClient.js';
+import { useAuth } from '../../contexts/AuthContext.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import '../../styles/responsive-tables.css';
@@ -23,6 +25,7 @@ const MySwal = withReactContent(Swal);
 
 const EmployeeFolders = () => {
   const { companyId } = useParams();
+  const { user } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [folders, setFolders] = useState([]);
   
@@ -97,6 +100,18 @@ useEffect(() => {
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [employeeCompanyIndex, loading]);
+
+  // Inicializar token bridge cuando el usuario está autenticado
+  useEffect(() => {
+    if (user?.id) {
+      googleDriveTokenBridge.initializeForUser(user.id);
+    }
+    
+    return () => {
+      // Limpiar cuando el componente se desmonta
+      googleDriveTokenBridge.cleanup();
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     loadEmployeesOnly();
