@@ -320,6 +320,46 @@ class GoogleDriveService {
   }
 
   /**
+   * Verifica si hay credenciales válidas configuradas
+   */
+  hasValidCredentials() {
+    try {
+      // Verificar que las variables de entorno necesarias estén configuradas
+      const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID
+      const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET
+      
+      if (!clientId || !clientSecret) {
+        logger.warn('GoogleDriveService', '❌ Credenciales de OAuth no configuradas en variables de entorno')
+        return false
+      }
+      
+      // Verificar que no sean valores por defecto/ejemplo
+      if (clientId.includes('tu_google_client_id') || clientSecret.includes('tu_google_client_secret')) {
+        logger.warn('GoogleDriveService', '❌ Credenciales de OAuth son valores por defecto, no son válidas')
+        return false
+      }
+      
+      // Verificar formato mínimo del Client ID
+      if (clientId.length < 10 || !clientId.includes('.googleusercontent.com')) {
+        logger.warn('GoogleDriveService', '❌ Client ID no tiene formato válido')
+        return false
+      }
+      
+      // Verificar formato mínimo del Client Secret
+      if (clientSecret.length < 10) {
+        logger.warn('GoogleDriveService', '❌ Client Secret no tiene formato válido')
+        return false
+      }
+      
+      logger.info('GoogleDriveService', '✅ Credenciales de OAuth válidas encontradas')
+      return true
+    } catch (error) {
+      logger.error('GoogleDriveService', `❌ Error verificando credenciales: ${error.message}`)
+      return false
+    }
+  }
+
+  /**
    * Obtiene el servicio de autenticación
    */
   getAuthService() {
