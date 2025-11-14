@@ -122,10 +122,9 @@ class GoogleDriveSyncService {
 
       logger.info('GoogleDriveSyncService', `✅ Carpeta creada en Google Drive: ${employeeFolder.id}`)
 
-      // Compartir carpeta con el empleado
-      logger.info('GoogleDriveSyncService', `🔗 Compartiendo carpeta con ${employeeEmail}...`)
-      await googleDriveService.shareFolder(employeeFolder.id, employeeEmail, 'writer')
-      logger.info('GoogleDriveSyncService', `✅ Carpeta compartida con ${employeeEmail}`)
+      // NOTA: No compartimos la carpeta con el empleado
+      // Las carpetas son solo para organización interna del sistema
+      logger.info('GoogleDriveSyncService', `ℹ️ Carpeta NO compartida con ${employeeEmail} (uso interno del sistema)`)
 
       // Obtener información de la empresa
       let companyId = null
