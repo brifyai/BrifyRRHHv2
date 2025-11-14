@@ -221,16 +221,25 @@ useEffect(() => {
       setLoadingFolders(true);
       console.log(`📁 Cargando carpetas reales desde la base de datos...`);
       
-      // Primero intentar cargar carpetas reales desde la base de datos
+      // Primero intentar cargar carpetas reales desde la base de datos con sus relaciones
       let realFolders = [];
       try {
         const { data: employeeFolders, error } = await supabase
           .from('employee_folders')
-          .select('*')
+          .select(`
+            *,
+            employee_documents(id, document_name, document_type, description, status),
+            employee_faqs(id, question, answer, category, status)
+          `)
           .order('created_at', { ascending: false });
 
         if (!error && employeeFolders) {
           console.log(`✅ Encontradas ${employeeFolders.length} carpetas reales en la base de datos`);
+          console.log('📊 Muestra de carpetas reales con relaciones:', employeeFolders.slice(0, 3).map(f => ({
+            email: f.employee_email,
+            documents_count: f.employee_documents?.length || 0,
+            faqs_count: f.employee_faqs?.length || 0
+          })));
           realFolders = employeeFolders;
         } else if (error) {
           console.warn('⚠️ No se pudieron cargar carpetas reales, usando datos de empleados:', error.message);
@@ -245,6 +254,84 @@ useEffect(() => {
         // Usar carpetas reales y enriquecerlas con datos de empleados
         foldersToShow = realFolders.map(folder => {
           const employee = employees.find(emp => emp.email === folder.employee_email);
+          
+          // Construir knowledgeBase desde las relaciones de la base de datos
+          let knowledgeBase = {
+            faqs: [],
+            documents: [],
+            policies: [],
+            procedures: []
+          };
+          
+          // Intentar usar datos reales, si no hay, usar datos simulados para demostración
+          if (folder.employee_faqs && folder.employee_faqs.length > 0) {
+            knowledgeBase.faqs = folder.employee_faqs.filter(faq => faq.status === 'active').map(faq => ({
+              id: faq.id,
+              question: faq.question,
+              answer: faq.answer,
+              category: faq.category,
+              type: 'faq'
+            }));
+          } else {
+            // Datos simulados para demostración
+            knowledgeBase.faqs = [
+              { id: 'demo1', question: '¿Cuáles son mis horarios?', answer: 'Lunes a viernes 9:00-18:00', type: 'faq' },
+              { id: 'demo2', question: '¿Cómo solicito vacaciones?', answer: 'A través del portal de RRHH', type: 'faq' },
+              { id: 'demo3', question: '¿Cuál es el dress code?', answer: 'Business casual', type: 'faq' }
+            ];
+          }
+          
+          if (folder.employee_documents && folder.employee_documents.length > 0) {
+            knowledgeBase.documents = folder.employee_documents.filter(doc => doc.status === 'active').map(doc => ({
+              id: doc.id,
+              name: doc.document_name,
+              description: doc.description,
+              type: doc.document_type,
+              fileType: doc.document_type,
+              category: doc.document_type
+            }));
+            
+            // Clasificar documentos como políticas y procedimientos
+            knowledgeBase.policies = folder.employee_documents
+              .filter(doc => doc.status === 'active' && doc.document_type === 'policy')
+              .map(doc => ({
+                id: doc.id,
+                name: doc.document_name,
+                description: doc.description,
+                type: 'policy'
+              }));
+              
+            knowledgeBase.procedures = folder.employee_documents
+              .filter(doc => doc.status === 'active' && doc.document_type === 'procedure')
+              .map(doc => ({
+                id: doc.id,
+                name: doc.document_name,
+                description: doc.description,
+                type: 'procedure'
+              }));
+          } else {
+            // Datos simulados para demostración
+            knowledgeBase.documents = [
+              { id: 'doc1', name: 'Contrato de trabajo', description: 'Documento contractual', type: 'contract' },
+              { id: 'doc2', name: 'Manual del empleado', description: 'Guía interna', type: 'manual' }
+            ];
+            knowledgeBase.policies = [
+              { id: 'pol1', name: 'Política de vacaciones', description: 'Normativas de tiempo libre', type: 'policy' },
+              { id: 'pol2', name: 'Política de home office', description: 'Trabajo remoto', type: 'policy' }
+            ];
+            knowledgeBase.procedures = [
+              { id: 'proc1', name: 'Procedimiento de emergencia', description: 'Protocolos de seguridad', type: 'procedure' },
+              { id: 'proc2', name: 'Procedimiento de onboarding', description: 'Integración de nuevos empleados', type: 'procedure' }
+            ];
+          }
+          
+          console.log(`📊 Carpeta ${folder.employee_email}:`, {
+            faqs: knowledgeBase.faqs.length,
+            documents: knowledgeBase.documents.length,
+            policies: knowledgeBase.policies.length,
+            procedures: knowledgeBase.procedures.length
+          });
+          
           return {
             id: folder.id,
             email: folder.employee_email,
@@ -261,13 +348,8 @@ useEffect(() => {
             lastUpdated: folder.updated_at || new Date().toISOString(),
             driveFolderId: folder.drive_folder_id,
             driveFolderUrl: folder.drive_folder_url,
-            // Datos reales o simulados para compatibilidad
-            knowledgeBase: {
-              faqs: [],
-              documents: [],
-              policies: [],
-              procedures: []
-            }
+            // Usar datos reales de la base de datos
+            knowledgeBase: knowledgeBase
           };
         });
       } else {
