@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext.js'
 import googleDriveCallbackHandler from '../../lib/googleDriveCallbackHandler.js'
-import { auth } from '../../lib/supabase.js'
+import googleDriveAuthService from '../../lib/googleDriveAuthService.js'
+import { auth, supabase } from '../../lib/supabase.js'
 import toast from 'react-hot-toast'
 
 const GoogleAuthCallback = () => {
@@ -114,6 +115,10 @@ const GoogleAuthCallback = () => {
         }
         
         console.log('GoogleAuthCallback - Usuario activo seleccionado:', activeUser.id)
+
+        // Inicializar googleDriveAuthService con Supabase
+        googleDriveAuthService.initializeSupabase(supabase, activeUser.id)
+        console.log('GoogleAuthCallback - googleDriveAuthService inicializado con Supabase')
 
         setMessage('Procesando autorización de Google Drive...')
         

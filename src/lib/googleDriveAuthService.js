@@ -4,6 +4,7 @@
  */
 
 import logger from './logger.js'
+import { createClient } from '@supabase/supabase-js'
 
 class GoogleDriveAuthService {
   constructor() {
@@ -13,6 +14,17 @@ class GoogleDriveAuthService {
     this.initialized = false
     this.tokenRefreshTimeout = null
     this.authCallbacks = []
+    this.supabase = null
+    this.currentUserId = null
+  }
+
+  /**
+   * Inicializa la conexión a Supabase
+   */
+  initializeSupabase(supabaseClient, userId) {
+    this.supabase = supabaseClient
+    this.currentUserId = userId
+    logger.info('GoogleDriveAuthService', `🔗 Supabase inicializado para usuario ${userId}`)
   }
 
   /**
@@ -267,10 +279,54 @@ class GoogleDriveAuthService {
       
       this.setTokens(tokens)
       logger.info('GoogleDriveAuthService', '✅ Tokens obtenidos exitosamente')
+      
+      // Guardar en Supabase
+      await this.saveCredentialsToSupabase(tokens)
+      
       return tokens
     } catch (error) {
       logger.error('GoogleDriveAuthService', `❌ Error intercambiando código: ${error.message}`)
       throw error
+    }
+  }
+
+  /**
+   * Guarda las credenciales de Google Drive en Supabase
+   */
+  async saveCredentialsToSupabase(tokens) {
+    try {
+      if (!this.supabase || !this.currentUserId) {
+        logger.warn('GoogleDriveAuthService', '⚠️ Supabase no inicializado, saltando guardado en BD')
+        return false
+      }
+
+      logger.info('GoogleDriveAuthService', `💾 Guardando credenciales en Supabase para ${this.currentUserId}...`)
+
+      const credentialsData = {
+        user_id: this.currentUserId,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        token_expires_at: tokens.expires_at || new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString(),
+        is_connected: true,
+        is_active: true
+      }
+
+      const { data, error } = await this.supabase
+        .from('user_google_drive_credentials')
+        .upsert(credentialsData, {
+          onConflict: 'user_id'
+        })
+
+      if (error) {
+        logger.error('GoogleDriveAuthService', `❌ Error guardando en Supabase: ${error.message}`)
+        return false
+      }
+
+      logger.info('GoogleDriveAuthService', `✅ Credenciales guardadas en Supabase`)
+      return true
+    } catch (error) {
+      logger.error('GoogleDriveAuthService', `❌ Error en saveCredentialsToSupabase: ${error.message}`)
+      return false
     }
   }
 

@@ -47,18 +47,32 @@ class GoogleDriveTokenBridge {
       // Obtener credenciales de Google Drive del usuario desde Supabase
       const { data: credentials, error } = await supabase
         .from('user_google_drive_credentials')
-        .select('access_token, refresh_token, token_expires_at, is_connected')
+        .select('access_token, refresh_token, token_expires_at, is_connected, is_active')
         .eq('user_id', userId)
-        .eq('is_active', true)
         .maybeSingle()
       
       if (error) {
         logger.error('GoogleDriveTokenBridge', `❌ Error obteniendo credenciales: ${error.message}`)
+        console.error('Supabase error details:', error)
         return false
       }
       
       if (!credentials) {
         logger.warn('GoogleDriveTokenBridge', `⚠️ No hay credenciales para ${userId}`)
+        logger.info('GoogleDriveTokenBridge', `📊 Verificar que la tabla user_google_drive_credentials existe en Supabase`)
+        googleDriveAuthService.clearTokens()
+        return false
+      }
+      
+      logger.info('GoogleDriveTokenBridge', `📋 Credenciales encontradas:`)
+      logger.info('GoogleDriveTokenBridge', `  - is_active: ${credentials.is_active}`)
+      logger.info('GoogleDriveTokenBridge', `  - is_connected: ${credentials.is_connected}`)
+      logger.info('GoogleDriveTokenBridge', `  - has_access_token: ${!!credentials.access_token}`)
+      logger.info('GoogleDriveTokenBridge', `  - has_refresh_token: ${!!credentials.refresh_token}`)
+      logger.info('GoogleDriveTokenBridge', `  - expires_at: ${credentials.token_expires_at}`)
+      
+      if (!credentials.is_active) {
+        logger.warn('GoogleDriveTokenBridge', `⚠️ Credenciales no están activas`)
         googleDriveAuthService.clearTokens()
         return false
       }
@@ -85,9 +99,11 @@ class GoogleDriveTokenBridge {
       
       googleDriveAuthService.setTokens(tokens)
       logger.info('GoogleDriveTokenBridge', `✅ Tokens sincronizados para ${userId}`)
+      logger.info('GoogleDriveTokenBridge', `✅ googleDriveAuthService.isAuthenticated() = ${googleDriveAuthService.isAuthenticated()}`)
       return true
     } catch (error) {
       logger.error('GoogleDriveTokenBridge', `❌ Error sincronizando tokens: ${error.message}`)
+      console.error('Sync error details:', error)
       return false
     }
   }
