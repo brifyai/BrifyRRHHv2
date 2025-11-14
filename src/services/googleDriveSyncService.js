@@ -93,10 +93,11 @@ class GoogleDriveSyncService {
 
   /**
    * Crea una carpeta de empleado en Google Drive y Supabase
+   * Ahora con verificación para evitar duplicaciones
    */
   async createEmployeeFolderInDrive(employeeEmail, employeeName, companyName, employeeData = {}) {
     try {
-      logger.info('GoogleDriveSyncService', `📁 Creando carpeta para ${employeeEmail}...`)
+      logger.info('GoogleDriveSyncService', `📁 Procesando carpeta para ${employeeEmail}...`)
       
       // Verificar autenticación
       if (!googleDriveAuthService.isAuthenticated()) {
@@ -106,37 +107,153 @@ class GoogleDriveSyncService {
         throw new Error(error)
       }
 
+      // PRIMERO: Verificar si ya existe en Supabase
+      logger.info('GoogleDriveSyncService', `🔍 Verificando si la carpeta ya existe en Supabase...`)
+      const { data: existingFolder, error: supabaseCheckError } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .eq('employee_email', employeeEmail)
+        .maybeSingle()
+
+      if (supabaseCheckError) {
+        logger.warn('GoogleDriveSyncService', `⚠️ Error verificando carpeta en Supabase: ${supabaseCheckError.message}`)
+      }
+
+      if (existingFolder) {
+        logger.info('GoogleDriveSyncService', `✅ Carpeta ya existe en Supabase: ${existingFolder.id}`)
+        
+        // Verificar si la carpeta de Drive todavía existe
+        if (existingFolder.drive_folder_id) {
+          try {
+            const driveFolder = await googleDriveService.getFileInfo(existingFolder.drive_folder_id)
+            if (driveFolder) {
+              logger.info('GoogleDriveSyncService', `✅ Carpeta ya existe en Google Drive: ${existingFolder.drive_folder_id}`)
+              return {
+                driveFolder: driveFolder,
+                supabaseFolder: existingFolder,
+                syncStatus: 'already_exists'
+              }
+            } else {
+              logger.warn('GoogleDriveSyncService', `⚠️ Carpeta existe en Supabase pero no en Drive, recreando...`)
+            }
+          } catch (driveError) {
+            logger.warn('GoogleDriveSyncService', `⚠️ Error verificando carpeta en Drive: ${driveError.message}`)
+          }
+        }
+      }
+
       // Crear carpeta principal de la empresa
       const parentFolderName = `Empleados - ${companyName}`
       logger.info('GoogleDriveSyncService', `🔍 Buscando/creando carpeta padre: ${parentFolderName}`)
       let parentFolder = await this.findOrCreateParentFolder(parentFolderName)
 
-      // Crear carpeta del empleado en Google Drive
+      // SEGUNDO: Verificar si la carpeta ya existe en Google Drive (antes de crear)
       const folderName = `${employeeName} (${employeeEmail})`
-      logger.info('GoogleDriveSyncService', `📁 Creando carpeta del empleado: ${folderName}`)
+      logger.info('GoogleDriveSyncService', `🔍 Verificando si la carpeta ya existe en Google Drive...`)
+      
+      try {
+        const existingFiles = await googleDriveService.listFiles(parentFolder.id)
+        const existingDriveFolder = existingFiles.find(file =>
+          file.name === folderName &&
+          file.mimeType === 'application/vnd.google-apps.folder'
+        )
+
+        if (existingDriveFolder) {
+          logger.info('GoogleDriveSyncService', `✅ Carpeta ya existe en Google Drive: ${existingDriveFolder.id}`)
+          
+          // Si existe en Drive pero no en Supabase, crear el registro
+          if (!existingFolder) {
+            logger.info('GoogleDriveSyncService', `📝 Creando registro en Supabase para carpeta existente en Drive...`)
+            const newSupabaseFolder = await this.createSupabaseFolderRecord(
+              employeeEmail, employeeName, companyName, employeeData, existingDriveFolder.id
+            )
+            
+            return {
+              driveFolder: existingDriveFolder,
+              supabaseFolder: newSupabaseFolder,
+              syncStatus: 'existed_in_drive_created_in_supabase'
+            }
+          } else {
+            // Actualizar el registro de Supabase con el ID correcto de Drive si es diferente
+            if (existingFolder.drive_folder_id !== existingDriveFolder.id) {
+              logger.info('GoogleDriveSyncService', `🔄 Actualizando ID de Drive en Supabase...`)
+              const { data: updatedFolder } = await supabase
+                .from('employee_folders')
+                .update({
+                  drive_folder_id: existingDriveFolder.id,
+                  drive_folder_url: `https://drive.google.com/drive/folders/${existingDriveFolder.id}`,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingFolder.id)
+                .select()
+                .single()
+
+              return {
+                driveFolder: existingDriveFolder,
+                supabaseFolder: updatedFolder,
+                syncStatus: 'updated_drive_id'
+              }
+            }
+
+            return {
+              driveFolder: existingDriveFolder,
+              supabaseFolder: existingFolder,
+              syncStatus: 'already_exists'
+            }
+          }
+        }
+      } catch (driveCheckError) {
+        logger.warn('GoogleDriveSyncService', `⚠️ Error verificando carpeta existente en Drive: ${driveCheckError.message}`)
+      }
+
+      // TERCERO: Si no existe en ningún lugar, crear nueva carpeta
+      logger.info('GoogleDriveSyncService', `📁 Creando nueva carpeta del empleado: ${folderName}`)
       const employeeFolder = await googleDriveService.createFolder(folderName, parentFolder.id)
 
       if (!employeeFolder || !employeeFolder.id) {
         throw new Error('No se pudo crear carpeta en Google Drive')
       }
 
-      logger.info('GoogleDriveSyncService', `✅ Carpeta creada en Google Drive: ${employeeFolder.id}`)
+      logger.info('GoogleDriveSyncService', `✅ Nueva carpeta creada en Google Drive: ${employeeFolder.id}`)
 
       // NOTA: No compartimos la carpeta con el empleado
       // Las carpetas son solo para organización interna del sistema
       logger.info('GoogleDriveSyncService', `ℹ️ Carpeta NO compartida con ${employeeEmail} (uso interno del sistema)`)
 
+      // Crear registro en Supabase
+      const supabaseFolder = await this.createSupabaseFolderRecord(
+        employeeEmail, employeeName, companyName, employeeData, employeeFolder.id
+      )
+
+      return {
+        driveFolder: employeeFolder,
+        supabaseFolder: supabaseFolder,
+        syncStatus: 'created_in_both'
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error procesando carpeta para ${employeeEmail}: ${error.message}`)
+      this.recordError(error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Crea un registro de carpeta en Supabase
+   * Método auxiliar para evitar duplicación de código
+   */
+  async createSupabaseFolderRecord(employeeEmail, employeeName, companyName, employeeData, driveFolderId) {
+    try {
+      logger.info('GoogleDriveSyncService', `💾 Creando registro en Supabase...`)
+      
       // Obtener información de la empresa
       let companyId = null
       if (employeeData.company_id) {
         companyId = employeeData.company_id
       }
 
-      // Crear registro en Supabase
-      logger.info('GoogleDriveSyncService', `💾 Registrando carpeta en Supabase...`)
       const { data: supabaseFolder, error: supabaseError } = await supabase
         .from('employee_folders')
-        .insert({
+        .upsert({
           employee_email: employeeEmail,
           employee_id: employeeData.id,
           employee_name: employeeName,
@@ -149,8 +266,8 @@ class GoogleDriveSyncService {
           employee_contract_type: employeeData.contract_type,
           company_id: companyId,
           company_name: companyName,
-          drive_folder_id: employeeFolder.id,
-          drive_folder_url: `https://drive.google.com/drive/folders/${employeeFolder.id}`,
+          drive_folder_id: driveFolderId,
+          drive_folder_url: `https://drive.google.com/drive/folders/${driveFolderId}`,
           folder_status: 'active',
           settings: {
             notificationPreferences: {
@@ -160,26 +277,24 @@ class GoogleDriveSyncService {
             },
             responseLanguage: 'es',
             timezone: 'America/Santiago'
-          }
+          },
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'employee_email',
+          ignoreDuplicates: false
         })
         .select()
-        .maybeSingle()
+        .single()
 
       if (supabaseError) {
-        logger.warn('GoogleDriveSyncService', `⚠️ Error registrando en Supabase: ${supabaseError.message}`)
-        // No lanzar error, la carpeta en Drive ya fue creada
-      } else {
-        logger.info('GoogleDriveSyncService', `✅ Carpeta registrada en Supabase: ${supabaseFolder.id}`)
+        logger.warn('GoogleDriveSyncService', `⚠️ Error creando registro en Supabase: ${supabaseError.message}`)
+        throw supabaseError
       }
 
-      return {
-        driveFolder: employeeFolder,
-        supabaseFolder: supabaseFolder,
-        syncStatus: 'created_in_both'
-      }
+      logger.info('GoogleDriveSyncService', `✅ Registro creado/actualizado en Supabase: ${supabaseFolder.id}`)
+      return supabaseFolder
     } catch (error) {
-      logger.error('GoogleDriveSyncService', `❌ Error creando carpeta para ${employeeEmail}: ${error.message}`)
-      this.recordError(error.message)
+      logger.error('GoogleDriveSyncService', `❌ Error creando registro en Supabase: ${error.message}`)
       throw error
     }
   }
