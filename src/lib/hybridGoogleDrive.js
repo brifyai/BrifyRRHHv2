@@ -19,16 +19,28 @@ class HybridGoogleDrive {
    * Valida que haya credenciales válidas
    */
   getService() {
-    const token = localStorage.getItem('google_drive_token');
+    // Usar el mismo storage key que googleDriveAuthService
+    const tokenData = localStorage.getItem('google_drive_auth');
     
-    if (!token) {
+    if (!tokenData) {
       const error = 'Google Drive no está autenticado. Por favor, conecta tu cuenta de Google Drive.';
       logger.error('HybridGoogleDrive', error);
       this.recordSyncError(error);
       throw new Error(error);
     }
 
-    return this.service;
+    try {
+      const tokens = JSON.parse(tokenData);
+      if (!tokens.access_token) {
+        throw new Error('Token de acceso no encontrado');
+      }
+      return this.service;
+    } catch (error) {
+      const errorMsg = 'Token de Google Drive inválido o corrupto. Por favor, conecta tu cuenta nuevamente.';
+      logger.error('HybridGoogleDrive', errorMsg);
+      this.recordSyncError(errorMsg);
+      throw new Error(errorMsg);
+    }
   }
 
   /**
@@ -192,26 +204,45 @@ class HybridGoogleDrive {
    * Verifica si Google Drive está autenticado
    */
   isAuthenticated() {
-    const token = localStorage.getItem('google_drive_token');
-    return !!token;
+    // Usar el mismo storage key que googleDriveAuthService
+    const tokenData = localStorage.getItem('google_drive_auth');
+    
+    if (!tokenData) {
+      return false;
+    }
+
+    try {
+      const tokens = JSON.parse(tokenData);
+      return !!tokens.access_token;
+    } catch (error) {
+      return false;
+    }
   }
 
   /**
    * Obtiene el token de Google Drive
    */
   getToken() {
-    return localStorage.getItem('google_drive_token');
+    const tokenData = localStorage.getItem('google_drive_auth');
+    if (!tokenData) {
+      return null;
+    }
+
+    try {
+      const tokens = JSON.parse(tokenData);
+      return tokens.access_token;
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
    * Establece el token de Google Drive
    */
   setToken(token) {
-    if (token) {
-      localStorage.setItem('google_drive_token', token);
-    } else {
-      localStorage.removeItem('google_drive_token');
-    }
+    // Este método ya no se usa, pero lo mantenemos por compatibilidad
+    // Los tokens se manejan a través de googleDriveAuthService
+    logger.warn('HybridGoogleDrive', '⚠️ setToken() está obsoleto. Usa googleDriveAuthService en su lugar.');
   }
 }
 

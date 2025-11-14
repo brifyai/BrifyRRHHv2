@@ -307,6 +307,19 @@ class GoogleDriveService {
   }
 
   /**
+   * Genera URL de autenticación
+   */
+  generateAuthUrl() {
+    const authUrl = this.authService.generateAuthUrl()
+    if (!authUrl) {
+      const error = 'No se pudo generar la URL de autenticación. Verifica que REACT_APP_GOOGLE_CLIENT_ID esté configurado.'
+      logger.error('GoogleDriveService', error)
+      throw new Error(error)
+    }
+    return authUrl
+  }
+
+  /**
    * Obtiene el servicio de autenticación
    */
   getAuthService() {
