@@ -56,8 +56,9 @@ const DatabaseCompanySummary = () => {
     try {
       setSyncing(true)
       setError(null)
-      // Limpiar caché y recargar datos
-      organizedDatabaseService.clearCache()
+      // Forzar limpieza completa de caché y recargar datos
+      organizedDatabaseService.forceClearCache()
+      console.log('🔄 DatabaseCompanySummary: Caché limpiado, recargando datos reales...')
       await loadCompanyData()
     } catch (error) {
       console.error('Error syncing with dashboard:', error)

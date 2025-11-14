@@ -674,8 +674,25 @@ class OrganizedDatabaseService {
               }
             }
 
-            // Calcular sentimiento promedio (simulado por ahora)
-            const sentimentScore = Math.random() * 2 - 1; // Entre -1 y 1
+            // Calcular sentimiento basado en engagement real (no más datos mock)
+            let sentimentScore = 0; // Neutral por defecto
+            
+            if (sentMessages > 0) {
+              const engagementRate = (readMessages / sentMessages);
+              // Sentimiento basado en tasa de lectura:
+              // > 80% = positivo (0.1 a 1.0)
+              // 50-80% = neutral (-0.1 a 0.1)
+              // < 50% = negativo (-1.0 a -0.1)
+              if (engagementRate >= 0.8) {
+                sentimentScore = 0.1 + (engagementRate - 0.8) * 4.5; // 0.1 a 1.0
+              } else if (engagementRate >= 0.5) {
+                sentimentScore = (engagementRate - 0.5) * 0.67 - 0.1; // -0.1 a 0.1
+              } else {
+                sentimentScore = (engagementRate / 0.5) * 0.4 - 1.0; // -1.0 a -0.1
+              }
+            }
+            
+            console.log(`📊 Sentimiento calculado para ${company.name}: ${sentimentScore.toFixed(2)} (basado en ${readMessages}/${sentMessages} engagement)`);
 
             return {
               ...company,
@@ -733,6 +750,12 @@ class OrganizedDatabaseService {
       data,
       timestamp: Date.now()
     });
+  }
+
+  // Forzar limpieza de caché para actualizaciones inmediatas
+  forceClearCache() {
+    this.cache.clear();
+    console.log('🧹 OrganizedDatabaseService: Caché forzado a limpiar');
   }
 
   clearCache(key = null) {
