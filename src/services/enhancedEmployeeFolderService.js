@@ -321,8 +321,27 @@ import { hybridGoogleDrive } from '../lib/hybridGoogleDrive.js';
       // Buscar o crear carpeta principal de la empresa
       let parentFolder = await this.findOrCreateParentFolder(parentFolderName);
       
-      // Crear carpeta del empleado
+      // PRIMERO: Verificar si ya existe la carpeta en Drive
       const folderName = `${employeeName} (${employeeEmail})`;
+      console.log(`🔍 Verificando si la carpeta ya existe en Drive: ${folderName}`);
+      
+      try {
+        const existingFiles = await hybridGoogleDrive.listFiles(parentFolder.id);
+        const existingDriveFolder = existingFiles.find(file =>
+          file.name === folderName &&
+          file.mimeType === 'application/vnd.google-apps.folder'
+        );
+
+        if (existingDriveFolder) {
+          console.log(`✅ Carpeta ya existe en Drive: ${existingDriveFolder.id}`);
+          return existingDriveFolder;
+        }
+      } catch (checkError) {
+        console.warn(`⚠️ Error verificando carpeta existente en Drive: ${checkError.message}`);
+      }
+      
+      // SEGUNDO: Si no existe, crear nueva carpeta
+      console.log(`📁 Creando nueva carpeta en Drive: ${folderName}`);
       const employeeFolder = await hybridGoogleDrive.createFolder(folderName, parentFolder.id);
       
       return employeeFolder;

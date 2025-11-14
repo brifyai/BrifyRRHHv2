@@ -634,7 +634,52 @@ useEffect(() => {
         allowOutsideClick: false
       });
 
-      const result = await enhancedEmployeeFolderService.createFoldersForAllEmployees();
+      // UNIFICADO: Usar solo googleDriveSyncService para evitar duplicaciones
+      console.log('🔄 Usando googleDriveSyncService unificado para evitar duplicaciones...');
+      let createdCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const employee of employees) {
+        try {
+          if (!employee.email) {
+            console.warn(`⚠️ Empleado sin email: ${employee.name}`);
+            continue;
+          }
+
+          console.log(`📁 Procesando empleado: ${employee.email}`);
+          const result = await googleDriveSyncService.createEmployeeFolderInDrive(
+            employee.email,
+            employee.employeeName || employee.first_name || 'Sin nombre',
+            employee.companyName || 'Sin empresa',
+            employee
+          );
+
+          if (result) {
+            if (result.syncStatus === 'created_in_both') {
+              createdCount++;
+            } else if (result.syncStatus === 'already_exists' ||
+                      result.syncStatus === 'updated_drive_id' ||
+                      result.syncStatus === 'existed_in_drive_created_in_supabase') {
+              updatedCount++;
+            }
+            console.log(`✅ Procesado ${employee.email}: ${result.syncStatus}`);
+          }
+
+          // Log de progreso cada 10 empleados
+          if ((createdCount + updatedCount) % 10 === 0) {
+            console.log(`📊 Progreso: ${createdCount + updatedCount} carpetas procesadas...`);
+          }
+
+        } catch (error) {
+          errorCount++;
+          errors.push(`${employee.email}: ${error.message}`);
+          console.error(`❌ Error procesando ${employee.email}:`, error);
+        }
+      }
+
+      const result = { createdCount, updatedCount, errorCount, sampleErrors: errors.slice(0, 10) };
       
       MySwal.fire({
         title: '¡Proceso completado!',

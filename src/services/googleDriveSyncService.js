@@ -243,58 +243,92 @@ class GoogleDriveSyncService {
    */
   async createSupabaseFolderRecord(employeeEmail, employeeName, companyName, employeeData, driveFolderId) {
     try {
-      logger.info('GoogleDriveSyncService', `💾 Creando registro en Supabase...`)
+      logger.info('GoogleDriveSyncService', `💾 Creando/actualizando registro en Supabase para ${employeeEmail}...`)
       
+      // PRIMERO: Verificar si ya existe un registro
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .eq('employee_email', employeeEmail)
+        .maybeSingle()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        logger.warn('GoogleDriveSyncService', `⚠️ Error verificando registro existente: ${fetchError.message}`)
+      }
+
       // Obtener información de la empresa
       let companyId = null
       if (employeeData.company_id) {
         companyId = employeeData.company_id
       }
 
-      const { data: supabaseFolder, error: supabaseError } = await supabase
-        .from('employee_folders')
-        .upsert({
-          employee_email: employeeEmail,
-          employee_id: employeeData.id,
-          employee_name: employeeName,
-          employee_position: employeeData.position,
-          employee_department: employeeData.department,
-          employee_phone: employeeData.phone,
-          employee_region: employeeData.region,
-          employee_level: employeeData.level,
-          employee_work_mode: employeeData.work_mode,
-          employee_contract_type: employeeData.contract_type,
-          company_id: companyId,
-          company_name: companyName,
-          drive_folder_id: driveFolderId,
-          drive_folder_url: `https://drive.google.com/drive/folders/${driveFolderId}`,
-          folder_status: 'active',
-          settings: {
-            notificationPreferences: {
-              whatsapp: true,
-              telegram: true,
-              email: true
-            },
-            responseLanguage: 'es',
-            timezone: 'America/Santiago'
+      const folderData = {
+        employee_email: employeeEmail,
+        employee_id: employeeData.id,
+        employee_name: employeeName,
+        employee_position: employeeData.position,
+        employee_department: employeeData.department,
+        employee_phone: employeeData.phone,
+        employee_region: employeeData.region,
+        employee_level: employeeData.level,
+        employee_work_mode: employeeData.work_mode,
+        employee_contract_type: employeeData.contract_type,
+        company_id: companyId,
+        company_name: companyName,
+        drive_folder_id: driveFolderId,
+        drive_folder_url: `https://drive.google.com/drive/folders/${driveFolderId}`,
+        folder_status: 'active',
+        settings: {
+          notificationPreferences: {
+            whatsapp: true,
+            telegram: true,
+            email: true
           },
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'employee_email',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single()
+          responseLanguage: 'es',
+          timezone: 'America/Santiago'
+        },
+        updated_at: new Date().toISOString()
+      }
+
+      let supabaseFolder
+      let supabaseError
+
+      if (existingRecord) {
+        // ACTUALIZAR registro existente (no usar upsert para evitar duplicados)
+        logger.info('GoogleDriveSyncService', `🔄 Actualizando registro existente: ${existingRecord.id}`)
+        const { data, error } = await supabase
+          .from('employee_folders')
+          .update(folderData)
+          .eq('id', existingRecord.id)
+          .select()
+          .single()
+
+        supabaseFolder = data
+        supabaseError = error
+      } else {
+        // CREAR nuevo registro
+        logger.info('GoogleDriveSyncService', `🆕 Creando nuevo registro para ${employeeEmail}`)
+        folderData.created_at = new Date().toISOString()
+        
+        const { data, error } = await supabase
+          .from('employee_folders')
+          .insert(folderData)
+          .select()
+          .single()
+
+        supabaseFolder = data
+        supabaseError = error
+      }
 
       if (supabaseError) {
-        logger.warn('GoogleDriveSyncService', `⚠️ Error creando registro en Supabase: ${supabaseError.message}`)
+        logger.warn('GoogleDriveSyncService', `⚠️ Error en operación de Supabase: ${supabaseError.message}`)
         throw supabaseError
       }
 
-      logger.info('GoogleDriveSyncService', `✅ Registro creado/actualizado en Supabase: ${supabaseFolder.id}`)
+      logger.info('GoogleDriveSyncService', `✅ Registro ${existingRecord ? 'actualizado' : 'creado'} en Supabase: ${supabaseFolder.id}`)
       return supabaseFolder
     } catch (error) {
-      logger.error('GoogleDriveSyncService', `❌ Error creando registro en Supabase: ${error.message}`)
+      logger.error('GoogleDriveSyncService', `❌ Error creando/actualizando registro en Supabase: ${error.message}`)
       throw error
     }
   }
