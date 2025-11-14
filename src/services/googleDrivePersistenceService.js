@@ -181,10 +181,13 @@ class GoogleDrivePersistenceService {
 
       // Si está expirado pero hay refresh_token, intentar refrescar antes de declarar desconexión
       if (data.is_expired && data.refresh_token) {
+        console.log('🔄 [GoogleDrive] Token expirado, intentando refresh automático...');
         const refreshResult = await this.attemptTokenRefresh(userId);
+        
         if (!refreshResult.success) {
           return false;
         }
+        
         // Reconsultar credenciales ya refrescadas
         const { data: refreshed } = await this.getCredentials(userId);
         if (!refreshed) return false;
@@ -193,7 +196,7 @@ class GoogleDrivePersistenceService {
 
       return data.is_connected === true && data.is_expired !== true;
     } catch (error) {
-      console.error('Error en isConnected:', error);
+      console.error('❌ [GoogleDrive] Error en isConnected:', error);
       return false;
     }
   }
@@ -357,7 +360,9 @@ class GoogleDrivePersistenceService {
       const isExpired = expiresField ? new Date(expiresField) <= new Date() : false;
 
       if (isExpired && data.refresh_token) {
+        console.log('🔄 [GoogleDrive] Refrescando token para mantener conexión activa...');
         const refreshed = await this.attemptTokenRefresh(userId);
+        
         if (refreshed.success) {
           const res = await this.getCredentials(userId);
           data = res.data || data;
@@ -374,6 +379,7 @@ class GoogleDrivePersistenceService {
         lastSync: data.last_sync_at || data.last_synced_at || null
       };
     } catch (e) {
+      console.error('❌ [GoogleDrive] Error en getConnectionStatus:', e);
       return { connected: false, email: null, lastSync: null };
     }
   }

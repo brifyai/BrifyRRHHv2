@@ -455,7 +455,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
         }))
       }
     } catch (error) {
-      console.error('Error verificando conexión de Google Drive:', error)
+      console.error('❌ [Settings] Error verificando conexión de Google Drive:', error)
       setIsGoogleDriveConnected(false)
       setIntegrations(prev => ({
         ...prev,
@@ -667,20 +667,20 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
   }
 
-  // Función para reinstalar completamente la conexión de Google Drive (revocar + eliminar + reconectar)
+  // Función para desconectar Google Drive
   const handleDisconnectGoogleDrive = async () => {
     try {
       setConnectingGoogleDrive(true)
       
-      // Confirmar reinstalación
+      // Confirmar desconexión
       const result = await Swal.fire({
-        title: '¿Reinstalar conexión de Google Drive?',
-        text: 'Se revocarán los tokens en Google y se eliminarán las credenciales guardadas. Luego serás redirigido para reconectar.',
+        title: '¿Desconectar Google Drive?',
+        text: 'Se eliminarán las credenciales guardadas y perderás la sincronización.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Reinstalar ahora',
+        confirmButtonText: 'Desconectar',
         cancelButtonText: 'Cancelar'
       })
       
@@ -689,10 +689,10 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
         return
       }
       
-      // Reinicio completo: revocar en Google y eliminar en Supabase
-      const resetResult = await googleDrivePersistenceService.hardReset(user?.id)
+      // Desconectar
+      const disconnectResult = await googleDrivePersistenceService.disconnect(user?.id)
       
-      if (resetResult.success) {
+      if (disconnectResult.success) {
         // Actualizar estados locales
         setIsGoogleDriveConnected(false)
         setIntegrations(prev => ({
@@ -704,22 +704,14 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           }
         }))
         
-        toast.success('Conexión de Google Drive restablecida. Redirigiendo a Google...')
-        
-        // Redirigir inmediatamente a OAuth para reinstalar
-        const authUrl = googleDriveCallbackHandler.generateAuthorizationUrl()
-        if (authUrl) {
-          window.location.href = authUrl
-        } else {
-          toast.error('No se pudo generar la URL de autenticación')
-          setConnectingGoogleDrive(false)
-        }
+        toast.success('Google Drive desconectado exitosamente')
       } else {
-        throw new Error(resetResult.error?.message || 'Error al reinstalar conexión')
+        throw new Error(disconnectResult.error?.message || 'Error al desconectar')
       }
     } catch (error) {
-      console.error('Error reinstalling Google Drive:', error)
-      toast.error('Error al reinstalar la conexión de Google Drive')
+      console.error('Error disconnecting Google Drive:', error)
+      toast.error('Error al desconectar Google Drive')
+    } finally {
       setConnectingGoogleDrive(false)
     }
   }
@@ -4175,7 +4167,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
                   ) : (
                     <>
                       <XCircleIcon className="h-4 w-4 mr-2" />
-                      Desconectar
+                      Desconectar Google Drive
                     </>
                   )}
                 </button>
