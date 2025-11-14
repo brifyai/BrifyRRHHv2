@@ -44,6 +44,21 @@ class GoogleDriveSyncService {
   }
 
   /**
+   * Verifica si Google Drive está autenticado
+   * Basado en Google Drive API: https://developers.google.com/drive/api/guides/about-auth
+   */
+  isAuthenticated() {
+    try {
+      const isAuth = googleDriveAuthService.isAuthenticated()
+      logger.info('GoogleDriveSyncService', `🔐 Estado de autenticación: ${isAuth ? '✅ Autenticado' : '❌ No autenticado'}`)
+      return isAuth
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error verificando autenticación: ${error.message}`)
+      return false
+    }
+  }
+
+  /**
    * Registra un error de sincronización
    */
   recordError(error) {

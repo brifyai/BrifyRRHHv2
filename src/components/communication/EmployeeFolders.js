@@ -614,7 +614,7 @@ useEffect(() => {
       });
        
        // Verificar que Google Drive esté autenticado ANTES de intentar sincronizar
-       if (!googleDriveSyncService.isAuthenticated?.()) {
+       if (!googleDriveSyncService.isAuthenticated()) {
          MySwal.fire({
            title: '❌ Google Drive no autenticado',
            html: `
