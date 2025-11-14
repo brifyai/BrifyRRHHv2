@@ -3,8 +3,12 @@
  * Script para diagnosticar y limpiar duplicaciones en employee_folders
  */
 
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+import { createClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
+import fs from 'fs';
+
+// Cargar variables de entorno
+config();
 
 // Configuración de Supabase
 const supabase = createClient(
@@ -181,7 +185,6 @@ class DuplicateFolderAuditor {
     };
     
     // Guardar reporte en archivo
-    const fs = require('fs');
     const reportPath = `duplicate_folders_report_${Date.now()}.json`;
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
     
