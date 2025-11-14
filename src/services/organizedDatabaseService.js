@@ -675,7 +675,9 @@ class OrganizedDatabaseService {
             }
 
             // Calcular sentimiento basado en engagement real (no más datos mock)
-            let sentimentScore = 0; // Neutral por defecto
+            let sentimentScore = 0; // Neutral por defecto SIEMPRE cuando no hay mensajes
+           
+            console.log(`🔍 ${company.name}: sentMessages=${sentMessages}, readMessages=${readMessages}`);
             
             if (sentMessages > 0) {
               const engagementRate = (readMessages / sentMessages);
@@ -690,9 +692,11 @@ class OrganizedDatabaseService {
               } else {
                 sentimentScore = (engagementRate / 0.5) * 0.4 - 1.0; // -1.0 a -0.1
               }
+              
+              console.log(`📊 ${company.name}: engagementRate=${engagementRate.toFixed(2)}, sentimentScore=${sentimentScore.toFixed(2)}`);
+            } else {
+              console.log(`📊 ${company.name}: SIN MENSAJES - sentimiento neutral (0.00)`);
             }
-            
-            console.log(`📊 Sentimiento calculado para ${company.name}: ${sentimentScore.toFixed(2)} (basado en ${readMessages}/${sentMessages} engagement)`);
 
             return {
               ...company,
