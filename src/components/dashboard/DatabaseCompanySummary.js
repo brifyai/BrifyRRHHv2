@@ -23,11 +23,34 @@ const DatabaseCompanySummary = () => {
       setError(null)
       const startTime = performance.now()
 
+      // Forzar limpieza de caché para asegurar datos frescos
+      organizedDatabaseService.forceClearCache()
+      console.log('🧹 DatabaseCompanySummary: Caché limpiado forzosamente')
+
       // Usar el servicio organizado para obtener empresas con estadísticas
       const companiesWithStats = await organizedDatabaseService.getCompaniesWithStats()
       
       console.log(`📊 DatabaseCompanySummary: ${companiesWithStats.length} empresas cargadas con estadísticas`)
-      console.log('📊 Empresas encontradas:', companiesWithStats)
+      
+      // Logging detallado para identificar datos mock vs reales
+      companiesWithStats.forEach((company, index) => {
+        console.log(`🔍 Empresa ${index + 1}: ${company.name}`)
+        console.log(`   - ID: ${company.id}`)
+        console.log(`   - Empleados: ${company.employeeCount}`)
+        console.log(`   - Mensajes enviados: ${company.sentMessages}`)
+        console.log(`   - Mensajes leídos: ${company.readMessages}`)
+        console.log(`   - Sentimiento: ${company.sentimentScore}`)
+        console.log(`   - Engagement: ${company.engagementRate}%`)
+        
+        // Verificar si los datos parecen mock
+        if (company.sentimentScore && (company.sentimentScore > 1 || company.sentimentScore < -1)) {
+          console.warn(`⚠️ POSIBLE DATO MOCK - Sentimiento inválido (${company.sentimentScore}) para ${company.name}`)
+        }
+        
+        if (company.employeeCount && (company.employeeCount < 0 || company.employeeCount > 1000)) {
+          console.warn(`⚠️ POSIBLE DATO MOCK - Número de empleados inválido (${company.employeeCount}) para ${company.name}`)
+        }
+      })
 
       if (companiesWithStats.length === 0) {
         console.log('⚠️ No se encontraron empresas, mostrando mensaje de depuración')
@@ -43,6 +66,11 @@ const DatabaseCompanySummary = () => {
 
       const loadTime = performance.now() - startTime
       console.log(`✅ DatabaseCompanySummary: Carga completada en ${loadTime.toFixed(2)}ms`)
+      console.log('📋 RESUMEN FINAL DE DATOS CARGADOS:')
+      console.log(`   - Total empresas: ${sortedCompanies.length}`)
+      console.log(`   - Total empleados: ${sortedCompanies.reduce((sum, c) => sum + c.employeeCount, 0)}`)
+      console.log(`   - Total mensajes enviados: ${sortedCompanies.reduce((sum, c) => sum + c.sentMessages, 0)}`)
+      console.log(`   - Total mensajes leídos: ${sortedCompanies.reduce((sum, c) => sum + c.readMessages, 0)}`)
        
     } catch (error) {
       console.error('❌ Error loading company data:', error)

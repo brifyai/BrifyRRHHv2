@@ -3,6 +3,26 @@ import { BuildingOfficeIcon, UsersIcon, PaperAirplaneIcon, EyeIcon, FaceSmileIco
 
 const CompanyCard = ({ company, isFlipped, onToggleFlip }) => {
   
+  // Logging detallado para identificar datos mock vs reales en la tarjeta
+  console.log(`🎯 CompanyCard: Renderizando tarjeta para ${company.name}`)
+  console.log(`   - ID de empresa: ${company.id}`)
+  console.log(`   - Empleados: ${company.employeeCount}`)
+  console.log(`   - Mensajes enviados: ${company.sentMessages}`)
+  console.log(`   - Mensajes leídos: ${company.readMessages}`)
+  console.log(`   - Sentimiento: ${company.sentimentScore}`)
+  console.log(`   - Engagement: ${company.engagementRate}%`)
+  console.log(`   - Programados: ${company.scheduledMessages || 0}`)
+  console.log(`   - Borradores: ${company.draftMessages || 0}`)
+  
+  // Verificar si los datos parecen mock
+  if (company.sentimentScore && (company.sentimentScore > 1 || company.sentimentScore < -1)) {
+    console.warn(`⚠️ CompanyCard: DATO MOCK DETECTADO - Sentimiento inválido (${company.sentimentScore}) para ${company.name}`)
+  }
+  
+  if (company.employeeCount && (company.employeeCount < 0 || company.employeeCount > 1000)) {
+    console.warn(`⚠️ CompanyCard: DATO MOCK DETECTADO - Número de empleados inválido (${company.employeeCount}) para ${company.name}`)
+  }
+  
   // Usar los datos que ya vienen del componente padre
   const scheduledMessages = company.scheduledMessages || 0;
   const draftMessages = company.draftMessages || 0;
