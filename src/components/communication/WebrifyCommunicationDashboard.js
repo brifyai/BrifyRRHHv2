@@ -117,38 +117,39 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   const [companyMetrics, setCompanyMetrics] = useState(null);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
 
-  // Lista de compañías para análisis (ordenadas alfabéticamente) - useMemo para evitar recreación
-  // SOLO se usa para insights, NO para el selector
-  const companies = useMemo(() => [
-    'Aguas Andinas', 'Andes Iron', 'Banco de Chile', 'Banco Santander', 'BHP',
-    'Cencosud', 'Codelco', 'Colbún', 'Copec', 'Enel',
-    'Entel', 'Falabella', 'Latam Airlines', 'Lider', 'Movistar'
-  ], []);
+  // ⚠️ ELIMINADO: Lista estática de empresas - ahora se usan solo datos de la BD
+  // const companies = useMemo(() => [
+  //   'Aguas Andinas', 'Andes Iron', 'Banco de Chile', 'Banco Santander', 'BHP',
+  //   'Cencosud', 'Codelco', 'Colbún', 'Copec', 'Enel',
+  //   'Entel', 'Falabella', 'Latam Airlines', 'Lider', 'Movistar'
+  // ], []);
 
-  // Función para cargar insights de IA para todas las compañías usando datos reales
+  // Función para cargar insights de IA para todas las compañías usando SOLO datos reales de BD
   const loadCompanyInsights = useCallback(async () => {
     try {
       console.log('🔍 DEBUG: loadCompanyInsights() - INICIO');
       console.log('🔍 DEBUG: companiesFromDB.length:', companiesFromDB.length);
-      console.log('🔍 DEBUG: companies.length:', companies.length);
       
-      // Usar las empresas reales de la base de datos en lugar de la lista estática
-      const companiesForInsights = companiesFromDB.length > 0
-        ? companiesFromDB.map(c => c.name)
-        : companies; // fallback a lista estática solo si no hay datos en BD
+      // ✅ CORRECCIÓN: Usar ÚNICAMENTE empresas de la base de datos
+      if (companiesFromDB.length === 0) {
+        console.log('🔍 DEBUG: No hay empresas en BD, no se generan insights');
+        setCompanyInsights({});
+        return;
+      }
       
-      console.log('🔍 DEBUG: Empresas para insights:', {
+      const companiesForInsights = companiesFromDB.map(c => c.name);
+      
+      console.log('🔍 DEBUG: Empresas para insights (SOLO BD):', {
         cantidad: companiesForInsights.length,
         nombres: companiesForInsights,
-        fuente: companiesFromDB.length > 0 ? 'BD' : 'estática'
+        fuente: 'BD únicamente'
       });
       console.log('🔍 DEBUG: companiesFromDB actual:', {
         cantidad: companiesFromDB.length,
         datos: companiesFromDB.map(c => ({ id: c.id, name: c.name }))
       });
-      console.log('🔍 DEBUG: companies estática:', companies);
       
-      // Verificar duplicaciones en insights
+      // Verificar duplicaciones en insights (no debería haber, pero por seguridad)
       const uniqueInsights = [...new Set(companiesForInsights)];
       if (uniqueInsights.length !== companiesForInsights.length) {
         console.warn('⚠️ Se detectaron duplicados en companiesForInsights:', {
@@ -160,7 +161,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
         });
       }
       
-      console.log('🔍 DEBUG: Generando insights para', uniqueInsights.length, 'empresas únicas');
+      console.log('🔍 DEBUG: Generando insights para', uniqueInsights.length, 'empresas únicas de BD');
       
       const insightsPromises = uniqueInsights.map(async (companyName) => {
         try {
@@ -204,7 +205,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     } catch (error) {
       console.error('❌ Error en loadCompanyInsights:', error);
     }
-  }, [companiesFromDB, companies]); // Depender de los datos reales de la BD
+  }, [companiesFromDB]); // ✅ Depender SOLO de los datos reales de la BD
 
   // Función para cargar empresas y empleados desde la base de datos
   const loadCompaniesFromDB = useCallback(async () => {
@@ -264,17 +265,11 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
         console.log('✅ Empresas únicas cargadas desde BD:', uniqueCompanies.length);
         console.log('✅ Empleados cargados desde BD:', employeesData.length);
       } else {
-        // Si no hay datos en la BD, intentar con databaseEmployeeService
-        console.log('⚠️ No hay empresas en BD, intentando con databaseEmployeeService...');
-        const fallbackCompanies = await databaseEmployeeService.getCompanies();
-        console.log('🔍 DEBUG: databaseEmployeeService.getCompanies() retornó:', {
-          cantidad: fallbackCompanies?.length || 0,
-          datos: fallbackCompanies
-        });
-        
-        setCompaniesFromDB(fallbackCompanies);
+        // ✅ CORRECCIÓN: Si no hay datos en la BD, no usar fallback que causa duplicación
+        console.log('🔍 DEBUG: No hay empresas en BD, manteniendo lista vacía para evitar duplicaciones');
+        setCompaniesFromDB([]);
         setEmployees([]);
-        console.log('🔄 Empresas cargadas desde fallback:', fallbackCompanies.length);
+        console.log('✅ Lista de empresas vacía - sin duplicaciones');
       }
     } catch (error) {
       console.error('❌ Error cargando datos desde BD:', error);
@@ -366,34 +361,41 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     loadCompanyMetrics(selectedCompany);
   }, [selectedCompany, loadCompanyMetrics]);
 
-  // Efecto separado para manejar la compañía seleccionada
+  // ✅ CORRECCIÓN: Efecto para manejar compañía seleccionada SIN lista estática
   useEffect(() => {
     // Verificar si hay una compañía seleccionada desde el estado de navegación
-    console.log('Verificando estado de navegación...');
-    console.log('location:', location);
-    console.log('location.state:', location.state);
+    console.log('🔍 DEBUG: Verificando estado de navegación...');
+    console.log('🔍 DEBUG: location:', location);
+    console.log('🔍 DEBUG: location.state:', location.state);
 
     if (location.state && location.state.selectedCompany) {
-      const selectedCompany = location.state.selectedCompany;
-      console.log('Compañía seleccionada desde navegación:', selectedCompany);
+      const selectedCompanyFromNav = location.state.selectedCompany;
+      console.log('🔍 DEBUG: Compañía seleccionada desde navegación:', selectedCompanyFromNav);
       
-      // Lista de compañías para comparación
-      const companiesList = ['Aguas Andinas', 'Andes Iron', 'Banco de Chile', 'Banco Santander', 'BHP', 'Cencosud', 'Codelco', 'Colbún', 'Copec', 'Enel', 'Entel', 'Falabella', 'Latam Airlines', 'Lider', 'Movistar'];
-      console.log('Compañías disponibles:', companiesList);
+      // ✅ CORRECCIÓN: Usar empresas de la BD para comparación, no lista estática
+      const companiesList = companiesFromDB.map(c => c.name);
+      console.log('🔍 DEBUG: Compañías disponibles en BD:', companiesList);
 
-      // Buscar la compañía que coincida exactamente
-      const matchingCompany = companiesList.find(company => company === selectedCompany);
-      console.log('Compañía encontrada:', matchingCompany);
+      // Buscar la compañía que coincida exactamente en los datos de BD
+      const matchingCompany = companiesList.find(company => company === selectedCompanyFromNav);
+      console.log('🔍 DEBUG: Compañía encontrada en BD:', matchingCompany);
 
       if (matchingCompany) {
-        console.log('Compañía seleccionada:', matchingCompany);
+        // Encontrar el ID de la empresa coincidente
+        const companyObject = companiesFromDB.find(c => c.name === matchingCompany);
+        if (companyObject) {
+          console.log('🔍 DEBUG: Estableciendo empresa seleccionada por ID:', companyObject.id);
+          setSelectedCompany(companyObject.id);
+        }
       } else {
-        console.warn('No se encontró coincidencia para:', selectedCompany);
+        console.warn('⚠️ No se encontró coincidencia en BD para:', selectedCompanyFromNav);
+        // Si no hay coincidencia, mantener 'all'
+        setSelectedCompany('all');
       }
     } else {
-      console.log('No hay compañía seleccionada en el estado');
+      console.log('🔍 DEBUG: No hay compañía seleccionada en el estado');
     }
-  }, [location]); // Añadir location como dependencia completa
+  }, [location, companiesFromDB]); // ✅ Depender de companiesFromDB, no de lista estática
 
 
 

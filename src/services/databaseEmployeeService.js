@@ -63,36 +63,12 @@ class DatabaseEmployeeService {
     }
   }
 
-  // Obtener todas las empresas
+  // Obtener todas las empresas - SOLO desde base de datos
   async getCompanies() {
     try {
       console.log('🔍 DEBUG: databaseEmployeeService.getCompanies() - Iniciando...');
       
-      // Verificar si la tabla companies existe
-      const { data: tableCheck, error: tableError } = await supabase
-        .from('companies')
-        .select('id')
-        .limit(1);
-
-      if (tableError) {
-        console.log('🔍 DEBUG: Tabla companies no existe, usando lista de ejemplo:', tableError.message);
-        // Retornar lista de ejemplo si la tabla no existe
-        const exampleCompanies = [
-          { id: 'aguas-andinas', name: 'Aguas Andinas' },
-          { id: 'banco-de-chile', name: 'Banco de Chile' },
-          { id: 'cencosud', name: 'Cencosud' },
-          { id: 'codelco', name: 'Codelco' },
-          { id: 'enel', name: 'Enel' },
-          { id: 'entel', name: 'Entel' },
-          { id: 'falabella', name: 'Falabella' },
-          { id: 'latam-airlines', name: 'Latam Airlines' }
-        ];
-        console.log('🔍 DEBUG: Empresas de ejemplo cargadas:', exampleCompanies.length);
-        console.log('🔍 DEBUG: Lista de ejemplo completa:', exampleCompanies);
-        return exampleCompanies;
-      }
-
-      // Obtener empresas reales desde la base de datos
+      // ✅ CORRECCIÓN: Obtener empresas reales desde la base de datos SIN fallback
       const { data: companies, error } = await supabase
         .from('companies')
         .select('id, name')
@@ -100,7 +76,14 @@ class DatabaseEmployeeService {
         .order('name', { ascending: true });
 
       if (error) {
-        console.error('Error obteniendo empresas:', error);
+        console.error('❌ Error obteniendo empresas de BD:', error);
+        console.log('🔍 DEBUG: Retornando lista vacía - no hay fallback para evitar duplicaciones');
+        return [];
+      }
+
+      // Si no hay empresas, retornar lista vacía
+      if (!companies || companies.length === 0) {
+        console.log('🔍 DEBUG: No hay empresas en BD, retornando lista vacía');
         return [];
       }
 
@@ -115,7 +98,9 @@ class DatabaseEmployeeService {
           unique: uniqueCompanies.length,
           duplicados: companies.length - uniqueCompanies.length,
           datosOriginales: companies,
-          datosUnicos: uniqueCompanies
+          datosUnicos: uniqueCompanies,
+          idsOriginales: companies.map(c => c.id),
+          idsUnicos: uniqueCompanies.map(c => c.id)
         });
       }
 
@@ -124,6 +109,7 @@ class DatabaseEmployeeService {
       return uniqueCompanies;
     } catch (error) {
       console.error('❌ Error en databaseEmployeeService.getCompanies():', error);
+      console.log('🔍 DEBUG: Retornando lista vacía debido a error - sin fallback');
       return [];
     }
   }
