@@ -118,6 +118,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   const [loadingCompanies, setLoadingCompanies] = useState(true);
 
   // Lista de compañías para análisis (ordenadas alfabéticamente) - useMemo para evitar recreación
+  // SOLO se usa para insights, NO para el selector
   const companies = useMemo(() => [
     'Aguas Andinas', 'Andes Iron', 'Banco de Chile', 'Banco Santander', 'BHP',
     'Cencosud', 'Codelco', 'Colbún', 'Copec', 'Enel',
@@ -129,7 +130,14 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     try {
       console.log('🔍 Cargando insights reales para todas las compañías...');
       
-      const insightsPromises = companies.map(async (companyName) => {
+      // Usar las empresas reales de la base de datos en lugar de la lista estática
+      const companiesForInsights = companiesFromDB.length > 0
+        ? companiesFromDB.map(c => c.name)
+        : companies; // fallback a lista estática solo si no hay datos en BD
+      
+      console.log('🔍 DEBUG: Empresas para insights:', companiesForInsights);
+      
+      const insightsPromises = companiesForInsights.map(async (companyName) => {
         try {
           // Usar el nuevo servicio de análisis de tendencias con datos reales
           const insights = await trendsAnalysisService.generateCompanyInsights(companyName);
@@ -171,24 +179,36 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     } catch (error) {
       console.error('Error loading company insights:', error);
     }
-  }, [companies]); // companies es una dependencia válida ya que viene de useMemo
+  }, [companiesFromDB, companies]); // Depender de los datos reales de la BD
 
   // Función para cargar empresas y empleados desde la base de datos
   const loadCompaniesFromDB = useCallback(async () => {
     try {
       setLoadingCompanies(true);
-      const [companiesData, employeesData] = await Promise.all([
-        organizedDatabaseService.getCompanies(),
-        organizedDatabaseService.getEmployees()
-      ]);
-      setCompaniesFromDB(companiesData);
-      setEmployees(employeesData);
-      console.log('Empresas cargadas desde BD:', companiesData);
-      console.log('Empleados cargados desde BD:', employeesData);
+      console.log('🔍 DEBUG: Cargando empresas desde base de datos...');
+      
+      // Intentar cargar desde la base de datos primero
+      const companiesData = await organizedDatabaseService.getCompanies();
+      
+      if (companiesData && companiesData.length > 0) {
+        // Si hay datos en la BD, usarlos
+        const employeesData = await organizedDatabaseService.getEmployees();
+        setCompaniesFromDB(companiesData);
+        setEmployees(employeesData);
+        console.log('✅ Empresas cargadas desde BD:', companiesData.length);
+        console.log('✅ Empleados cargados desde BD:', employeesData.length);
+      } else {
+        // Si no hay datos en la BD, intentar con databaseEmployeeService
+        console.log('⚠️ No hay empresas en BD, intentando con databaseEmployeeService...');
+        const fallbackCompanies = await databaseEmployeeService.getCompanies();
+        setCompaniesFromDB(fallbackCompanies);
+        setEmployees([]);
+        console.log('🔄 Empresas cargadas desde fallback:', fallbackCompanies.length);
+      }
     } catch (error) {
-      console.error('Error cargando datos desde BD:', error);
-      // En caso de error, usar la lista estática como fallback
-      setCompaniesFromDB(companies.map(name => ({ id: name, name })));
+      console.error('❌ Error cargando datos desde BD:', error);
+      // En caso de error, usar lista vacía para evitar duplicaciones
+      setCompaniesFromDB([]);
       setEmployees([]);
     } finally {
       setLoadingCompanies(false);
