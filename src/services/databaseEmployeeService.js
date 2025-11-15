@@ -66,43 +66,48 @@ class DatabaseEmployeeService {
   // Obtener todas las empresas
   async getCompanies() {
     try {
-      // Las empresas están definidas en el backend, obtener desde allí
-      const companies = [
-        'Achs', 'AFP Habitat', 'Antofagasta Minerals', 'Arcoprime', 'Ariztia',
-        'CMPC', 'Colbun', 'Copec', 'Corporación Chilena - Alemana', 'Empresas SB',
-        'Enaex', 'Grupo Saesa', 'Hogar Alemán', 'Inchcape', 'SQM', 'Vida Cámara'
-      ];
+      console.log('🔍 DEBUG: Obteniendo empresas desde la base de datos...');
+      
+      // Verificar si la tabla companies existe
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('companies')
+        .select('id')
+        .limit(1);
 
-      // Formatear para el selector
-      const formattedCompanies = companies.map((companyName, index) => ({
-        id: companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        name: companyName
-      }));
+      if (tableError) {
+        console.log('🔍 DEBUG: Tabla companies no existe, usando lista de ejemplo:', tableError.message);
+        // Retornar lista de ejemplo si la tabla no existe
+        const exampleCompanies = [
+          { id: 'aguas-andinas', name: 'Aguas Andinas' },
+          { id: 'banco-de-chile', name: 'Banco de Chile' },
+          { id: 'cencosud', name: 'Cencosud' },
+          { id: 'codelco', name: 'Codelco' },
+          { id: 'enel', name: 'Enel' },
+          { id: 'entel', name: 'Entel' },
+          { id: 'falabella', name: 'Falabella' },
+          { id: 'latam-airlines', name: 'Latam Airlines' }
+        ];
+        console.log('🔍 DEBUG: Empresas de ejemplo cargadas:', exampleCompanies.length);
+        return exampleCompanies;
+      }
 
-      console.log('Empresas cargadas desde configuración:', formattedCompanies.length);
-      return formattedCompanies;
+      // Obtener empresas reales desde la base de datos
+      const { data: companies, error } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error obteniendo empresas:', error);
+        return [];
+      }
+
+      console.log('🔍 DEBUG: Empresas reales cargadas:', companies?.length || 0);
+      return companies || [];
     } catch (error) {
       console.error('Error obteniendo empresas:', error);
-      // Fallback a lista simulada si hay error
-      const fallbackCompanies = [
-        { id: 'staffhub', name: 'StaffHub' },
-        { id: 'microsoft', name: 'Microsoft' },
-        { id: 'google', name: 'Google' },
-        { id: 'amazon', name: 'Amazon' },
-        { id: 'apple', name: 'Apple' },
-        { id: 'meta', name: 'Meta' },
-        { id: 'tesla', name: 'Tesla' },
-        { id: 'netflix', name: 'Netflix' },
-        { id: 'spotify', name: 'Spotify' },
-        { id: 'adobe', name: 'Adobe' },
-        { id: 'salesforce', name: 'Salesforce' },
-        { id: 'oracle', name: 'Oracle' },
-        { id: 'ibm', name: 'IBM' },
-        { id: 'intel', name: 'Intel' },
-        { id: 'nvidia', name: 'NVIDIA' },
-        { id: 'startup-chile', name: 'Startup Chile' }
-      ];
-      return fallbackCompanies;
+      return [];
     }
   }
 
@@ -137,69 +142,86 @@ class DatabaseEmployeeService {
   // Obtener conteo de empleados por empresa
   async getEmployeeCountByCompany(companyId) {
     try {
-      // Simular conteo de empleados por empresa
-      const employeeCounts = {
-        'staffhub': 45,
-        'microsoft': 120,
-        'google': 150,
-        'amazon': 200,
-        'apple': 80,
-        'meta': 90,
-        'tesla': 65,
-        'netflix': 110,
-        'spotify': 85,
-        'adobe': 95,
-        'salesforce': 88,
-        'oracle': 70,
-        'ibm': 75,
-        'intel': 60,
-        'nvidia': 55,
-        'startup-chile': 35
-      };
+      console.log(`🔍 DEBUG: Obteniendo conteo de empleados para companyId: ${companyId}`);
+      
+      // Verificar si la tabla employees existe
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('employees')
+        .select('id')
+        .limit(1);
 
-      return employeeCounts[companyId] || Math.floor(Math.random() * 100) + 20;
+      if (tableError) {
+        console.log('🔍 DEBUG: Tabla employees no existe:', tableError.message);
+        return 0;
+      }
+
+      // Obtener conteo real de empleados
+      const { count, error } = await supabase
+        .from('employees')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId);
+
+      if (error) {
+        console.error('Error obteniendo conteo de empleados:', error);
+        return 0;
+      }
+
+      console.log(`🔍 DEBUG: Empleados reales encontrados para ${companyId}:`, count || 0);
+      return count || 0;
     } catch (error) {
       console.error('Error obteniendo conteo de empleados:', error);
-      throw error;
+      return 0;
     }
   }
 
   // Obtener estadísticas de mensajes por empresa
   async getMessageStatsByCompany(companyId) {
     try {
-      // Generar estadísticas simuladas consistentes basadas en el companyId
-      const companyStats = {
-        'staffhub': { scheduled: 8, draft: 3, sent: 45, read: 38 },
-        'microsoft': { scheduled: 12, draft: 5, sent: 120, read: 95 },
-        'google': { scheduled: 15, draft: 7, sent: 150, read: 130 },
-        'amazon': { scheduled: 10, draft: 4, sent: 200, read: 180 },
-        'apple': { scheduled: 6, draft: 2, sent: 80, read: 75 },
-        'meta': { scheduled: 9, draft: 3, sent: 90, read: 82 },
-        'tesla': { scheduled: 7, draft: 2, sent: 65, read: 60 },
-        'netflix': { scheduled: 11, draft: 4, sent: 110, read: 100 },
-        'spotify': { scheduled: 8, draft: 3, sent: 85, read: 78 },
-        'adobe': { scheduled: 10, draft: 4, sent: 95, read: 88 },
-        'salesforce': { scheduled: 9, draft: 3, sent: 88, read: 80 },
-        'oracle': { scheduled: 7, draft: 2, sent: 70, read: 65 },
-        'ibm': { scheduled: 8, draft: 3, sent: 75, read: 70 },
-        'intel': { scheduled: 6, draft: 2, sent: 60, read: 55 },
-        'nvidia': { scheduled: 5, draft: 1, sent: 55, read: 52 },
-        'startup-chile': { scheduled: 4, draft: 1, sent: 35, read: 32 }
-      };
-
-      const stats = companyStats[companyId] || {
-        scheduled: Math.floor(Math.random() * 10) + 5,
-        draft: Math.floor(Math.random() * 5) + 2,
-        sent: Math.floor(Math.random() * 50) + 20,
-        read: Math.floor(Math.random() * 40) + 15,
-      };
+      console.log(`🔍 DEBUG: Obteniendo estadísticas de mensajes para companyId: ${companyId}`);
       
-      stats.total = stats.scheduled + stats.draft + stats.sent + stats.read;
+      // Verificar si la tabla communication_logs existe
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('communication_logs')
+        .select('id')
+        .limit(1);
 
+      if (tableError) {
+        console.log('🔍 DEBUG: Tabla communication_logs no existe:', tableError.message);
+        return { scheduled: 0, draft: 0, sent: 0, read: 0, total: 0 };
+      }
+
+      // Obtener estadísticas reales
+      const { data: logs, error } = await supabase
+        .from('communication_logs')
+        .select('status')
+        .eq('company_id', companyId);
+
+      if (error) {
+        console.error('Error obteniendo estadísticas de mensajes:', error);
+        return { scheduled: 0, draft: 0, sent: 0, read: 0, total: 0 };
+      }
+
+      const stats = {
+        scheduled: 0,
+        draft: 0,
+        sent: 0,
+        read: 0,
+        total: 0
+      };
+
+      logs?.forEach(log => {
+        if (stats[log.status] !== undefined) {
+          stats[log.status]++;
+        }
+      });
+
+      stats.total = logs?.length || 0;
+
+      console.log(`🔍 DEBUG: Estadísticas reales para ${companyId}:`, stats);
       return stats;
     } catch (error) {
       console.error('Error obteniendo estadísticas de mensajes:', error);
-      throw error;
+      return { scheduled: 0, draft: 0, sent: 0, read: 0, total: 0 };
     }
   }
 
@@ -217,6 +239,30 @@ class DatabaseEmployeeService {
   // Obtener estadísticas generales para el dashboard
   async getDashboardStats() {
     try {
+      console.log('🔍 DEBUG: Verificando existencia de tablas...');
+      
+      // Verificar si las tablas existen primero
+      const { data: tablesCheck, error: tablesError } = await supabase
+        .from('companies')
+        .select('id')
+        .limit(1);
+
+      console.log('🔍 DEBUG: Tabla companies existe:', !tablesError ? 'SÍ' : 'NO');
+      if (tablesError) {
+        console.log('🔍 DEBUG: Error en tabla companies:', tablesError.message);
+      }
+
+      // Verificar tabla communication_logs
+      const { data: commCheck, error: commError } = await supabase
+        .from('communication_logs')
+        .select('id')
+        .limit(1);
+
+      console.log('🔍 DEBUG: Tabla communication_logs existe:', !commError ? 'SÍ' : 'NO');
+      if (commError) {
+        console.log('🔍 DEBUG: Error en tabla communication_logs:', commError.message);
+      }
+
       // Total empleados (empresas activas)
       const { count: totalEmployees, error: employeesError } = await supabase
         .from('companies')
@@ -228,19 +274,54 @@ class DatabaseEmployeeService {
         throw employeesError;
       }
 
-      // Generar estadísticas simuladas para mensajes
-      const sentMessages = Math.floor(Math.random() * 200) + 100;
-      const readMessages = Math.floor(sentMessages * 0.8);
-      const readRate = Math.round((readMessages / sentMessages) * 100);
+      // Obtener datos REALES de communication_logs en lugar de generarlos
+      let sentMessages = 0;
+      let readRate = 0;
 
-      return {
+      if (!commError) {
+        try {
+          const { data: commStats, error: statsError } = await supabase
+            .from('communication_logs')
+            .select('status')
+            .eq('status', 'sent');
+
+          if (!statsError && commStats) {
+            sentMessages = commStats.length;
+            console.log('🔍 DEBUG: Mensajes enviados reales encontrados:', sentMessages);
+          }
+
+          const { data: readStats, error: readError } = await supabase
+            .from('communication_logs')
+            .select('status')
+            .eq('status', 'read');
+
+          if (!readError && readStats) {
+            readRate = sentMessages > 0 ? Math.round((readStats.length / sentMessages) * 100) : 0;
+            console.log('🔍 DEBUG: Mensajes leídos reales encontrados:', readStats.length);
+          }
+        } catch (error) {
+          console.warn('🔍 DEBUG: Error obteniendo estadísticas reales de comunicación:', error.message);
+        }
+      } else {
+        console.log('🔍 DEBUG: Tabla communication_logs no existe, usando valores 0');
+      }
+
+      const result = {
         totalEmployees: totalEmployees || 0,
-        sentMessages: sentMessages || 0,
+        sentMessages: sentMessages,
         readRate: readRate
       };
+
+      console.log('🔍 DEBUG: Estadísticas finales del dashboard:', result);
+      return result;
     } catch (error) {
       console.error('Error obteniendo estadísticas del dashboard:', error);
-      throw error;
+      // En caso de error, retornar valores vacíos en lugar de simulados
+      return {
+        totalEmployees: 0,
+        sentMessages: 0,
+        readRate: 0
+      };
     }
   }
 }

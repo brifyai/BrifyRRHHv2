@@ -103,6 +103,20 @@ class TrendsAnalysisService {
   // Obtener métricas de comunicación reales
   async getCommunicationMetrics(companyId) {
     try {
+      console.log(`🔍 DEBUG: Obteniendo métricas de comunicación para companyId: ${companyId}`);
+      
+      // Verificar si la tabla communication_logs existe
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('communication_logs')
+        .select('id')
+        .limit(1);
+
+      console.log('🔍 DEBUG: Tabla communication_logs existe:', !tableError ? 'SÍ' : 'NO');
+      if (tableError) {
+        console.log('🔍 DEBUG: Error tabla communication_logs:', tableError.message);
+        return this.getEmptyMetrics();
+      }
+
       const { data: logs, error } = await supabase
         .from('communication_logs')
         .select('*')
@@ -110,7 +124,11 @@ class TrendsAnalysisService {
         .order('created_at', { ascending: false })
         .limit(1000);
 
-      if (error) throw error;
+      console.log('🔍 DEBUG: Logs encontrados para empresa:', logs?.length || 0);
+      if (error) {
+        console.log('🔍 DEBUG: Error obteniendo logs:', error.message);
+        throw error;
+      }
 
       const metrics = {
         totalMessages: logs?.length || 0,
@@ -126,6 +144,12 @@ class TrendsAnalysisService {
         dailyActivity: {},
         recentActivity: logs?.slice(0, 50) || []
       };
+
+      console.log('🔍 DEBUG: Métricas básicas calculadas:', {
+        totalMessages: metrics.totalMessages,
+        sentMessages: metrics.sentMessages,
+        readMessages: metrics.readMessages
+      });
 
       // Calcular tasas
       if (metrics.totalMessages > 0) {
@@ -150,9 +174,11 @@ class TrendsAnalysisService {
         }
       });
 
+      console.log('🔍 DEBUG: Métricas finales de comunicación:', metrics);
       return metrics;
     } catch (error) {
       console.error('Error obteniendo métricas de comunicación:', error);
+      console.log('🔍 DEBUG: Retornando métricas vacías debido a error');
       return this.getEmptyMetrics();
     }
   }
@@ -489,25 +515,25 @@ Genera insights específicos basados en estos datos. Identifica patrones, tenden
       frontInsights: [
         {
           type: 'info',
-          title: 'Análisis en Progreso',
-          description: `Los datos de comunicación para ${companyName} están siendo procesados. Los insights estarán disponibles pronto.`
+          title: 'Sin Datos de Comunicación',
+          description: `No hay mensajes enviados para ${companyName}. Los insights se generarán automáticamente cuando haya actividad de comunicación real.`
         },
         {
           type: 'info',
-          title: 'Sistema Activo',
-          description: 'El sistema está recopilando información para generar análisis personalizados.'
+          title: 'Sistema Listo',
+          description: 'El sistema está conectado a la base de datos y esperando datos reales para generar análisis.'
         }
       ],
       backInsights: [
         {
           type: 'info',
-          title: 'Datos Insuficientes',
-          description: 'Se necesitan más interacciones para generar análisis detallados.'
+          title: 'Estado Inicial',
+          description: 'Comienza a enviar mensajes para ver análisis detallados y recomendaciones personalizadas.'
         },
         {
           type: 'positive',
-          title: 'Monitoreo Continuo',
-          description: 'El sistema está analizando patrones de comunicación en tiempo real.'
+          title: 'Base de Datos Conectada',
+          description: 'La conexión con Supabase está activa. Los datos se mostrarán en tiempo real.'
         }
       ]
     };
