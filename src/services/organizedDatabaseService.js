@@ -656,9 +656,26 @@ class OrganizedDatabaseService {
         return [];
       }
 
-      // Para cada empresa, obtener sus estadísticas
+      // ✅ CORRECCIÓN: Filtrar duplicados ANTES de procesar estadísticas
+      const uniqueCompanies = companies.filter((company, index, self) =>
+        index === self.findIndex((c) => c.id === company.id)
+      );
+
+      if (uniqueCompanies.length !== companies.length) {
+        console.warn('⚠️ getCompaniesWithStats: Se detectaron duplicados en BD:', {
+          original: companies.length,
+          unique: uniqueCompanies.length,
+          duplicados: companies.length - uniqueCompanies.length,
+          idsOriginales: companies.map(c => c.id),
+          idsUnicos: uniqueCompanies.map(c => c.id)
+        });
+      }
+
+      console.log(`🔍 getCompaniesWithStats: Procesando ${uniqueCompanies.length} empresas únicas (de ${companies.length} totales)`);
+
+      // Para cada empresa ÚNICA, obtener sus estadísticas
       const companiesWithStats = await Promise.all(
-        companies.map(async (company) => {
+        uniqueCompanies.map(async (company) => {
           try {
             // Obtener conteo de empleados
             const { count: employeeCount } = await supabase
