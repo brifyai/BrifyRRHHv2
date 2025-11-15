@@ -585,22 +585,26 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                   </div>
                 </div>
 
-                {/* Métricas Principales */}
+                {/* Métricas Principales - 100% Datos Reales de Supabase */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  {console.log('🔍 TENDENCIAS - Verificando datos reales:')}
+                  {console.log('   companyMetrics:', companyMetrics)}
+                  {console.log('   selectedCompany:', selectedCompany)}
+                  {console.log('   employees.length:', employees.length)}
                   <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-purple-100 hover:shadow-md transition-all duration-300 hover:scale-102">
                     <div className="flex items-center justify-between mb-2">
                       <div className="bg-purple-100 p-2 rounded-lg">
                         <ChartBarIcon className="h-5 w-5 text-purple-600" />
                       </div>
                       <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                        {companyMetrics ? `+${Math.floor(Math.random() * 20) + 5}%` : '+12%'}
+                        {companyMetrics ? `${companyMetrics.messageStats.total > 0 ? '+' + companyMetrics.engagementRate + '%' : 'Sin datos'}` : 'Sin datos'}
                       </span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? `${companyMetrics.engagementRate}%` : '78%'}
+                      {companyMetrics ? `${companyMetrics.engagementRate}%` : '0%'}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {selectedCompany !== 'all' && companyMetrics ? 'Engagement Empresa' : 'Engagement Promedio'}
+                      {selectedCompany !== 'all' && companyMetrics ? 'Engagement Real' : 'Engagement Promedio Real'}
                     </p>
                   </div>
 
@@ -609,12 +613,14 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                       <div className="bg-blue-100 p-2 rounded-lg">
                         <BellIcon className="h-5 w-5 text-blue-600" />
                       </div>
-                      <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">Activo</span>
+                      <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                        {companyMetrics && companyMetrics.messageStats.total > 0 ? 'Activo' : 'Inactivo'}
+                      </span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? `${Math.floor(Math.random() * 15) + 85}%` : '92%'}
+                      {companyMetrics ? `${companyMetrics.messageStats.read > 0 ? Math.round((companyMetrics.messageStats.read / companyMetrics.messageStats.total) * 100) : 0}%` : '0%'}
                     </p>
-                    <p className="text-sm text-gray-600">Rendimiento AI</p>
+                    <p className="text-sm text-gray-600">Tasa de Lectura Real</p>
                   </div>
 
                   <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-cyan-100 hover:shadow-md transition-all duration-300 hover:scale-102">
@@ -622,12 +628,14 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                       <div className="bg-cyan-100 p-2 rounded-lg">
                         <LightBulbIcon className="h-5 w-5 text-cyan-600" />
                       </div>
-                      <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Optimizar</span>
+                      <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                        {companyMetrics && companyMetrics.messageStats.total > 0 ? 'Con datos' : 'Sin datos'}
+                      </span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? `${Math.floor(Math.random() * 20) + 75}%` : '85%'}
+                      {companyMetrics ? companyMetrics.messageStats.total : '0'}
                     </p>
-                    <p className="text-sm text-gray-600">Optimización</p>
+                    <p className="text-sm text-gray-600">Mensajes Enviados Reales</p>
                   </div>
 
                   <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-rose-100 hover:shadow-md transition-all duration-300 hover:scale-102">
@@ -635,13 +643,13 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                       <div className="bg-rose-100 p-2 rounded-lg">
                         <SparklesIcon className="h-5 w-5 text-rose-600" />
                       </div>
-                      <span className="text-xs font-medium text-rose-600 bg-rose-100 px-2 py-1 rounded-full">Alta</span>
+                      <span className="text-xs font-medium text-rose-600 bg-rose-100 px-2 py-1 rounded-full">Real</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? companyMetrics.employeeCount || '0' : '16'}
+                      {companyMetrics ? companyMetrics.employeeCount || '0' : employees.length}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {selectedCompany !== 'all' && companyMetrics ? 'Empleados' : 'Tendencias Detectadas'}
+                      {selectedCompany !== 'all' && companyMetrics ? 'Empleados Reales' : 'Total Empleados Reales'}
                     </p>
                   </div>
                 </div>
@@ -673,26 +681,19 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                         ) : (
                           // Mostrar insights generales cuando no hay empresa seleccionada
                           <>
-                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                               <div className="flex items-center mb-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                                <span className="text-sm font-medium text-green-800">Éxito</span>
+                                <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                                <span className="text-sm font-medium text-gray-800">Sin Datos</span>
                               </div>
-                              <p className="text-sm text-gray-700">El engagement ha aumentado 15% en la última semana</p>
+                              <p className="text-sm text-gray-700">No hay mensajes enviados aún. Los insights aparecerán cuando haya actividad de comunicación real.</p>
                             </div>
                             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                               <div className="flex items-center mb-1">
                                 <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                                <span className="text-sm font-medium text-blue-800">Oportunidad</span>
+                                <span className="text-sm font-medium text-blue-800">Estado Actual</span>
                               </div>
-                              <p className="text-sm text-gray-700">Mejorar respuesta en mensajes de fin de semana</p>
-                            </div>
-                            <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                              <div className="flex items-center mb-1">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
-                                <span className="text-sm font-medium text-orange-800">Tendencia</span>
-                              </div>
-                              <p className="text-sm text-gray-700">Mayor actividad en horas de la mañana (9-11 AM)</p>
+                              <p className="text-sm text-gray-700">Base de datos conectada. Esperando datos de comunicación reales para generar insights.</p>
                             </div>
                           </>
                         )}
@@ -725,26 +726,19 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                         ) : (
                           // Mostrar recomendaciones generales cuando no hay empresa seleccionada
                           <>
-                            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                               <div className="flex items-center mb-1">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                                <span className="text-sm font-medium text-purple-800">Alta Prioridad</span>
+                                <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                                <span className="text-sm font-medium text-gray-800">Sin Actividad</span>
                               </div>
-                              <p className="text-sm text-gray-700">Implementar respuestas automáticas para consultas frecuentes</p>
+                              <p className="text-sm text-gray-700">Las recomendaciones se generarán automáticamente cuando haya mensajes enviados.</p>
                             </div>
-                            <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                               <div className="flex items-center mb-1">
-                                <div className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></div>
-                                <span className="text-sm font-medium text-indigo-800">Media Prioridad</span>
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                <span className="text-sm font-medium text-blue-800">Sistema Listo</span>
                               </div>
-                              <p className="text-sm text-gray-700">Optimizar horarios de envío basados en engagement</p>
-                            </div>
-                            <div className="p-3 bg-cyan-50 rounded-lg border border-cyan-200">
-                              <div className="flex items-center mb-1">
-                                <div className="w-2 h-2 bg-cyan-500 rounded-full mr-2"></div>
-                                <span className="text-sm font-medium text-cyan-800">Baja Prioridad</span>
-                              </div>
-                              <p className="text-sm text-gray-700">Personalizar plantillas por tipo de empleado</p>
+                              <p className="text-sm text-gray-700">El análisis de IA está activo y esperando datos reales para generar recomendaciones.</p>
                             </div>
                           </>
                         )}
