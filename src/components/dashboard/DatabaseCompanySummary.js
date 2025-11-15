@@ -23,14 +23,41 @@ const DatabaseCompanySummary = () => {
       setError(null)
       const startTime = performance.now()
 
-      // Forzar limpieza de caché para asegurar datos frescos
+      // ✅ SOLUCIÓN AGRESIVA: Forzar limpieza de caché múltiple veces
       organizedDatabaseService.forceClearCache()
-      console.log('🧹 DatabaseCompanySummary: Caché limpiado forzosamente')
+      console.log('🧹 DatabaseCompanySummary: Caché limpiado forzosamente (1/3)')
+      
+      // Esperar un momento para asegurar que la caché se limpie
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      organizedDatabaseService.forceClearCache()
+      console.log('🧹 DatabaseCompanySummary: Caché limpiado forzosamente (2/3)')
+      
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      organizedDatabaseService.forceClearCache()
+      console.log('🧹 DatabaseCompanySummary: Caché limpiado forzosamente (3/3)')
 
       // Usar el servicio organizado para obtener empresas con estadísticas
       const companiesWithStats = await organizedDatabaseService.getCompaniesWithStats()
       
       console.log(`📊 DatabaseCompanySummary: ${companiesWithStats.length} empresas cargadas con estadísticas`)
+      
+      // ✅ DUPLICACIÓN DE SEGURIDAD: Filtrar duplicados a nivel de componente también
+      const uniqueCompanies = companiesWithStats.filter((company, index, self) =>
+        index === self.findIndex((c) => c.id === company.id)
+      );
+      
+      if (uniqueCompanies.length !== companiesWithStats.length) {
+        console.warn('⚠️ DatabaseCompanySummary: Duplicados detectados a nivel de componente:', {
+          original: companiesWithStats.length,
+          unique: uniqueCompanies.length,
+          duplicados: companiesWithStats.length - uniqueCompanies.length,
+          idsDuplicados: companiesWithStats.map(c => c.id).filter((id, index) =>
+            companiesWithStats.findIndex(c => c.id === id) !== index
+          )
+        });
+      }
       
       // Logging detallado para identificar datos mock vs reales
       companiesWithStats.forEach((company, index) => {
@@ -60,17 +87,21 @@ const DatabaseCompanySummary = () => {
         return
       }
 
-      // Ordenar alfabéticamente
-      const sortedCompanies = companiesWithStats.sort((a, b) => a.name.localeCompare(b.name))
+      // Ordenar alfabéticamente las empresas únicas
+      const sortedCompanies = uniqueCompanies.sort((a, b) => a.name.localeCompare(b.name))
       setCompanies(sortedCompanies)
 
       const loadTime = performance.now() - startTime
       console.log(`✅ DatabaseCompanySummary: Carga completada en ${loadTime.toFixed(2)}ms`)
       console.log('📋 RESUMEN FINAL DE DATOS CARGADOS:')
-      console.log(`   - Total empresas: ${sortedCompanies.length}`)
+      console.log(`   - Total empresas únicas: ${sortedCompanies.length}`)
       console.log(`   - Total empleados: ${sortedCompanies.reduce((sum, c) => sum + c.employeeCount, 0)}`)
       console.log(`   - Total mensajes enviados: ${sortedCompanies.reduce((sum, c) => sum + c.sentMessages, 0)}`)
       console.log(`   - Total mensajes leídos: ${sortedCompanies.reduce((sum, c) => sum + c.readMessages, 0)}`)
+      console.log('📋 LISTA FINAL DE EMPRESAS ÚNICAS:')
+      sortedCompanies.forEach((company, index) => {
+        console.log(`   ${index + 1}. ${company.name} (ID: ${company.id})`)
+      });
        
     } catch (error) {
       console.error('❌ Error loading company data:', error)

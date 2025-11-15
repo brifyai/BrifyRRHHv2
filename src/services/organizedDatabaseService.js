@@ -637,16 +637,19 @@ class OrganizedDatabaseService {
 
   async getCompaniesWithStats() {
     const cacheKey = 'companies_with_stats';
-    const cached = this.getFromCache(cacheKey);
-    if (cached) return cached;
+    
+    // ✅ SOLUCIÓN AGRESIVA: Forzar limpieza de caché siempre para evitar datos viejos
+    this.forceClearCache();
+    console.log('🧹 getCompaniesWithStats: Caché forzado a limpiar completamente');
 
     try {
       console.log('🔍 Obteniendo empresas con estadísticas detalladas...');
       
-      // Obtener empresas
+      // Obtener empresas con consulta directa y forzar frescura
       const { data: companies, error: companiesError } = await supabase
         .from('companies')
         .select('*')
+        .eq('status', 'active')
         .order('name', { ascending: true });
 
       if (companiesError) throw companiesError;
@@ -656,22 +659,42 @@ class OrganizedDatabaseService {
         return [];
       }
 
-      // ✅ CORRECCIÓN: Filtrar duplicados ANTES de procesar estadísticas
-      const uniqueCompanies = companies.filter((company, index, self) =>
+      console.log(`🔍 getCompaniesWithStats: ${companies.length} empresas obtenidas de BD`);
+
+      // ✅ CORRECCIÓN ROBUSTA: Filtrar duplicados por ID y por nombre
+      const uniqueById = companies.filter((company, index, self) =>
         index === self.findIndex((c) => c.id === company.id)
       );
 
-      if (uniqueCompanies.length !== companies.length) {
-        console.warn('⚠️ getCompaniesWithStats: Se detectaron duplicados en BD:', {
+      const uniqueCompanies = uniqueById.filter((company, index, self) =>
+        index === self.findIndex((c) => c.name === company.name)
+      );
+
+      // Logging detallado de duplicados
+      if (companies.length !== uniqueById.length) {
+        console.warn('⚠️ DUPLICADOS POR ID detectados:', {
           original: companies.length,
-          unique: uniqueCompanies.length,
-          duplicados: companies.length - uniqueCompanies.length,
-          idsOriginales: companies.map(c => c.id),
-          idsUnicos: uniqueCompanies.map(c => c.id)
+          uniqueById: uniqueById.length,
+          duplicadosId: companies.length - uniqueById.length,
+          idsDuplicados: companies.map(c => c.id).filter((id, index) =>
+            companies.findIndex(c => c.id === id) !== index
+          )
         });
       }
 
-      console.log(`🔍 getCompaniesWithStats: Procesando ${uniqueCompanies.length} empresas únicas (de ${companies.length} totales)`);
+      if (uniqueById.length !== uniqueCompanies.length) {
+        console.warn('⚠️ DUPLICADOS POR NOMBRE detectados:', {
+          uniqueById: uniqueById.length,
+          uniqueByName: uniqueCompanies.length,
+          duplicadosNombre: uniqueById.length - uniqueCompanies.length,
+          nombresDuplicados: uniqueById.map(c => c.name).filter((name, index) =>
+            uniqueById.findIndex(c => c.name === name) !== index
+          )
+        });
+      }
+
+      console.log(`🔍 getCompaniesWithStats: Procesando ${uniqueCompanies.length} empresas únicas finales`);
+      console.log('📋 Empresas únicas finales:', uniqueCompanies.map(c => ({ id: c.id, name: c.name })));
 
       // Para cada empresa ÚNICA, obtener sus estadísticas
       const companiesWithStats = await Promise.all(
