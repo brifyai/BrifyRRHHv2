@@ -27,6 +27,8 @@ import databaseEmployeeService from '../../services/databaseEmployeeService.js';
 import communicationService from '../../services/communicationService.js';
 import organizedDatabaseService from '../../services/organizedDatabaseService.js';
 import trendsAnalysisService from '../../services/trendsAnalysisService.js';
+import ProductionDatabaseDebugger from '../debug/ProductionDatabaseDebugger.js';
+import ProductionEnvChecker from '../debug/ProductionEnvChecker.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -960,6 +962,14 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
         <div className="w-full">
           {renderActiveTab()}
         </div>
+
+        {/* Production Database Debugger - Only show in production or when there's an issue */}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <ProductionDatabaseDebugger />
+            <ProductionEnvChecker />
+          </>
+        )}
       </div>
     </div>
   );

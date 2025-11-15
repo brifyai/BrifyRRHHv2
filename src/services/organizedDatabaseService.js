@@ -33,41 +33,65 @@ class OrganizedDatabaseService {
 
   async getCompanies() {
     const cacheKey = 'companies';
-    const cached = this.getFromCache(cacheKey);
+    
+    // 🛡️ PRODUCTION FIX: Bypass cache in production to avoid stale data
+    const useCache = process.env.NODE_ENV !== 'production';
+    const cached = useCache ? this.getFromCache(cacheKey) : null;
+    
     if (cached) {
       console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Usando caché:', cached.length, 'empresas');
       return cached;
     }
 
     try {
-      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Consultando BD...');
+      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Consultando BD (Production mode: ' + (process.env.NODE_ENV || 'development') + ')...');
+      
+      // ⚡ PERFORMANCE FIX: Optimize query for production
+      const selectFields = process.env.NODE_ENV === 'production'
+        ? 'id, name, status' // Only essential fields in production
+        : '*'; // All fields in development
+
       const { data, error } = await supabase
         .from('companies')
-        .select('*')
+        .select(selectFields)
+        .eq('status', 'active') // Only active companies
         .order('name', { ascending: true });
 
       if (error) throw error;
       
+      if (!data || data.length === 0) {
+        console.warn('⚠️ organizedDatabaseService.getCompanies(): No active companies found');
+        return [];
+      }
+      
       // Verificar duplicados antes de cachear y retornar
-      const uniqueCompanies = data ? data.filter((company, index, self) =>
+      const uniqueCompanies = data.filter((company, index, self) =>
         index === self.findIndex((c) => c.id === company.id)
-      ) : [];
+      );
 
-      if (uniqueCompanies.length !== (data?.length || 0)) {
+      if (uniqueCompanies.length !== data.length) {
         console.warn('⚠️ organizedDatabaseService: Se detectaron duplicados en BD:', {
-          original: data?.length || 0,
+          original: data.length,
           unique: uniqueCompanies.length,
-          duplicados: (data?.length || 0) - uniqueCompanies.length,
-          datosOriginales: data,
-          datosUnicos: uniqueCompanies
+          duplicados: data.length - uniqueCompanies.length,
+          datosOriginales: data.map(c => c.id),
+          datosUnicos: uniqueCompanies.map(c => c.id)
         });
       }
       
-      this.setCache(cacheKey, uniqueCompanies);
-      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Empresas únicas cargadas:', uniqueCompanies.length);
+      // 🛡️ PRODUCTION FIX: Only cache in development
+      if (useCache) {
+        this.setCache(cacheKey, uniqueCompanies);
+      }
+      
+      console.log('✅ organizedDatabaseService.getCompanies() - Empresas únicas cargadas:', uniqueCompanies.length);
+      console.log('📋 Empresas:', uniqueCompanies.map(c => c.name));
+      
       return uniqueCompanies;
     } catch (error) {
       console.error('❌ Error en organizedDatabaseService.getCompanies():', error);
+      
+      // 🛡️ PRODUCTION FIX: Return empty array instead of undefined
       return [];
     }
   }
