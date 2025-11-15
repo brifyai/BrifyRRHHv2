@@ -128,16 +128,41 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   // Función para cargar insights de IA para todas las compañías usando datos reales
   const loadCompanyInsights = useCallback(async () => {
     try {
-      console.log('🔍 Cargando insights reales para todas las compañías...');
+      console.log('🔍 DEBUG: loadCompanyInsights() - INICIO');
+      console.log('🔍 DEBUG: companiesFromDB.length:', companiesFromDB.length);
+      console.log('🔍 DEBUG: companies.length:', companies.length);
       
       // Usar las empresas reales de la base de datos en lugar de la lista estática
       const companiesForInsights = companiesFromDB.length > 0
         ? companiesFromDB.map(c => c.name)
         : companies; // fallback a lista estática solo si no hay datos en BD
       
-      console.log('🔍 DEBUG: Empresas para insights:', companiesForInsights);
+      console.log('🔍 DEBUG: Empresas para insights:', {
+        cantidad: companiesForInsights.length,
+        nombres: companiesForInsights,
+        fuente: companiesFromDB.length > 0 ? 'BD' : 'estática'
+      });
+      console.log('🔍 DEBUG: companiesFromDB actual:', {
+        cantidad: companiesFromDB.length,
+        datos: companiesFromDB.map(c => ({ id: c.id, name: c.name }))
+      });
+      console.log('🔍 DEBUG: companies estática:', companies);
       
-      const insightsPromises = companiesForInsights.map(async (companyName) => {
+      // Verificar duplicaciones en insights
+      const uniqueInsights = [...new Set(companiesForInsights)];
+      if (uniqueInsights.length !== companiesForInsights.length) {
+        console.warn('⚠️ Se detectaron duplicados en companiesForInsights:', {
+          original: companiesForInsights.length,
+          unique: uniqueInsights.length,
+          duplicados: companiesForInsights.length - uniqueInsights.length,
+          originalList: companiesForInsights,
+          uniqueList: uniqueInsights
+        });
+      }
+      
+      console.log('🔍 DEBUG: Generando insights para', uniqueInsights.length, 'empresas únicas');
+      
+      const insightsPromises = uniqueInsights.map(async (companyName) => {
         try {
           // Usar el nuevo servicio de análisis de tendencias con datos reales
           const insights = await trendsAnalysisService.generateCompanyInsights(companyName);
@@ -177,7 +202,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
       setCompanyInsights(insightsMap);
       console.log('✅ Todos los insights cargados:', Object.keys(insightsMap));
     } catch (error) {
-      console.error('Error loading company insights:', error);
+      console.error('❌ Error en loadCompanyInsights:', error);
     }
   }, [companiesFromDB, companies]); // Depender de los datos reales de la BD
 
@@ -185,22 +210,68 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   const loadCompaniesFromDB = useCallback(async () => {
     try {
       setLoadingCompanies(true);
-      console.log('🔍 DEBUG: Cargando empresas desde base de datos...');
+      console.log('🔍 DEBUG: loadCompaniesFromDB() - INICIO - Cargando empresas desde base de datos...');
+      console.log('🔍 DEBUG: Estado actual de companiesFromDB antes de cargar:', companiesFromDB.length, 'empresas');
+      
+      // Limpiar estado anterior para evitar acumulación
+      setCompaniesFromDB([]);
+      setEmployees([]);
+      
+      // Esperar un tick para asegurar que el estado se limpie
+      await new Promise(resolve => setTimeout(resolve, 0));
       
       // Intentar cargar desde la base de datos primero
+      console.log('🔍 DEBUG: Llamando a organizedDatabaseService.getCompanies()...');
       const companiesData = await organizedDatabaseService.getCompanies();
+      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() retornó:', {
+        cantidad: companiesData?.length || 0,
+        datos: companiesData,
+        tipos: companiesData?.map(c => ({ id: c.id, name: c.name, tipo: typeof c.id }))
+      });
       
       if (companiesData && companiesData.length > 0) {
         // Si hay datos en la BD, usarlos
+        console.log('🔍 DEBUG: Hay empresas en BD, cargando empleados...');
         const employeesData = await organizedDatabaseService.getEmployees();
-        setCompaniesFromDB(companiesData);
+        console.log('🔍 DEBUG: organizedDatabaseService.getEmployees() retornó:', employeesData?.length || 0, 'empleados');
+        
+        // Verificar si hay duplicados antes de establecer el estado
+        const uniqueCompanies = companiesData.filter((company, index, self) =>
+          index === self.findIndex((c) => c.id === company.id)
+        );
+        
+        if (uniqueCompanies.length !== companiesData.length) {
+          console.warn('⚠️ Se detectaron duplicados en companiesData:', {
+            original: companiesData.length,
+            unique: uniqueCompanies.length,
+            duplicados: companiesData.length - uniqueCompanies.length,
+            datosOriginales: companiesData,
+            datosUnicos: uniqueCompanies,
+            idsOriginales: companiesData.map(c => c.id),
+            idsUnicos: uniqueCompanies.map(c => c.id)
+          });
+        }
+        
+        console.log('🔍 DEBUG: Estableciendo companiesFromDB con', uniqueCompanies.length, 'empresas únicas');
+        setCompaniesFromDB(uniqueCompanies);
         setEmployees(employeesData);
-        console.log('✅ Empresas cargadas desde BD:', companiesData.length);
+        
+        // Verificar el estado después de establecerlo
+        setTimeout(() => {
+          console.log('🔍 DEBUG: Estado de companiesFromDB después de establecer:', companiesFromDB.length, 'empresas');
+        }, 100);
+        
+        console.log('✅ Empresas únicas cargadas desde BD:', uniqueCompanies.length);
         console.log('✅ Empleados cargados desde BD:', employeesData.length);
       } else {
         // Si no hay datos en la BD, intentar con databaseEmployeeService
         console.log('⚠️ No hay empresas en BD, intentando con databaseEmployeeService...');
         const fallbackCompanies = await databaseEmployeeService.getCompanies();
+        console.log('🔍 DEBUG: databaseEmployeeService.getCompanies() retornó:', {
+          cantidad: fallbackCompanies?.length || 0,
+          datos: fallbackCompanies
+        });
+        
         setCompaniesFromDB(fallbackCompanies);
         setEmployees([]);
         console.log('🔄 Empresas cargadas desde fallback:', fallbackCompanies.length);
@@ -213,7 +284,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     } finally {
       setLoadingCompanies(false);
     }
-  }, []);
+  }, [companiesFromDB.length]); // Añadir dependencia para tracking
 
   // Función para cargar métricas específicas de una empresa
   const loadCompanyMetrics = useCallback(async (companyId) => {
@@ -582,11 +653,14 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                           className="w-full px-3 py-2 text-sm border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
                         >
                           <option value="all">Todas las empresas</option>
-                          {companiesFromDB.map((company) => (
-                            <option key={company.id} value={company.id}>
-                              {company.name}
-                            </option>
-                          ))}
+                          {companiesFromDB.map((company) => {
+                            console.log('🔍 DEBUG: Renderizando empresa en selector:', company);
+                            return (
+                              <option key={company.id} value={company.id}>
+                                {company.name}
+                              </option>
+                            );
+                          })}
                         </select>
                       )}
                     </div>

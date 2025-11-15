@@ -66,7 +66,7 @@ class DatabaseEmployeeService {
   // Obtener todas las empresas
   async getCompanies() {
     try {
-      console.log('🔍 DEBUG: Obteniendo empresas desde la base de datos...');
+      console.log('🔍 DEBUG: databaseEmployeeService.getCompanies() - Iniciando...');
       
       // Verificar si la tabla companies existe
       const { data: tableCheck, error: tableError } = await supabase
@@ -88,6 +88,7 @@ class DatabaseEmployeeService {
           { id: 'latam-airlines', name: 'Latam Airlines' }
         ];
         console.log('🔍 DEBUG: Empresas de ejemplo cargadas:', exampleCompanies.length);
+        console.log('🔍 DEBUG: Lista de ejemplo completa:', exampleCompanies);
         return exampleCompanies;
       }
 
@@ -103,10 +104,26 @@ class DatabaseEmployeeService {
         return [];
       }
 
-      console.log('🔍 DEBUG: Empresas reales cargadas:', companies?.length || 0);
-      return companies || [];
+      // Verificar duplicados antes de retornar
+      const uniqueCompanies = companies.filter((company, index, self) =>
+        index === self.findIndex((c) => c.id === company.id)
+      );
+
+      if (uniqueCompanies.length !== companies.length) {
+        console.warn('⚠️ databaseEmployeeService: Se detectaron duplicados en BD:', {
+          original: companies.length,
+          unique: uniqueCompanies.length,
+          duplicados: companies.length - uniqueCompanies.length,
+          datosOriginales: companies,
+          datosUnicos: uniqueCompanies
+        });
+      }
+
+      console.log('🔍 DEBUG: Empresas reales cargadas desde databaseEmployeeService:', uniqueCompanies.length);
+      console.log('🔍 DEBUG: Datos completos:', uniqueCompanies);
+      return uniqueCompanies;
     } catch (error) {
-      console.error('Error obteniendo empresas:', error);
+      console.error('❌ Error en databaseEmployeeService.getCompanies():', error);
       return [];
     }
   }

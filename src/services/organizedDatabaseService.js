@@ -34,9 +34,13 @@ class OrganizedDatabaseService {
   async getCompanies() {
     const cacheKey = 'companies';
     const cached = this.getFromCache(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Usando caché:', cached.length, 'empresas');
+      return cached;
+    }
 
     try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Consultando BD...');
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -44,10 +48,26 @@ class OrganizedDatabaseService {
 
       if (error) throw error;
       
-      this.setCache(cacheKey, data);
-      return data || [];
+      // Verificar duplicados antes de cachear y retornar
+      const uniqueCompanies = data ? data.filter((company, index, self) =>
+        index === self.findIndex((c) => c.id === company.id)
+      ) : [];
+
+      if (uniqueCompanies.length !== (data?.length || 0)) {
+        console.warn('⚠️ organizedDatabaseService: Se detectaron duplicados en BD:', {
+          original: data?.length || 0,
+          unique: uniqueCompanies.length,
+          duplicados: (data?.length || 0) - uniqueCompanies.length,
+          datosOriginales: data,
+          datosUnicos: uniqueCompanies
+        });
+      }
+      
+      this.setCache(cacheKey, uniqueCompanies);
+      console.log('🔍 DEBUG: organizedDatabaseService.getCompanies() - Empresas únicas cargadas:', uniqueCompanies.length);
+      return uniqueCompanies;
     } catch (error) {
-      console.error('Error fetching companies:', error);
+      console.error('❌ Error en organizedDatabaseService.getCompanies():', error);
       return [];
     }
   }
