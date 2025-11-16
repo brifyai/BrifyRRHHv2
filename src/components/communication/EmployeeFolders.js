@@ -214,31 +214,56 @@ useEffect(() => {
       setLoadingFolders(true);
       console.log(`📁 Cargando carpetas reales desde la base de datos...`);
       
-      // Primero intentar cargar carpetas reales desde la base de datos con sus relaciones
+      // SOLUCIÓN: Cargar carpetas sin relaciones de foreign key (que fallan)
       let realFolders = [];
       try {
+        console.log('📁 Cargando carpetas desde la base de datos (sin relaciones)...');
+        
+        // Consulta simple sin relaciones de foreign key
         const { data: employeeFolders, error } = await supabase
           .from('employee_folders')
-          .select(`
-            *,
-            employee_documents(id, document_name, document_type, description, status),
-            employee_faqs(id, question, answer, category, status)
-          `)
+          .select('*')
           .order('created_at', { ascending: false });
 
         if (!error && employeeFolders) {
           console.log(`✅ Encontradas ${employeeFolders.length} carpetas reales en la base de datos`);
-          console.log('📊 Muestra de carpetas reales con relaciones:', employeeFolders.slice(0, 3).map(f => ({
+          console.log('📊 Muestra de carpetas:', employeeFolders.slice(0, 3).map(f => ({
             email: f.employee_email,
-            documents_count: f.employee_documents?.length || 0,
-            faqs_count: f.employee_faqs?.length || 0
+            name: f.employee_name,
+            company: f.company_name
           })));
-          realFolders = employeeFolders;
+          
+          // Cargar documentos y FAQs por separado
+          const [documentsResult, faqsResult] = await Promise.all([
+            supabase.from('employee_documents').select('*'),
+            supabase.from('employee_faqs').select('*')
+          ]);
+          
+          const documents = documentsResult.data || [];
+          const faqs = faqsResult.data || [];
+          
+          console.log(`📄 Documentos cargados: ${documents.length}`);
+          console.log(`❓ FAQs cargados: ${faqs.length}`);
+          
+          // Combinar datos en el frontend
+          realFolders = employeeFolders.map(folder => {
+            const folderDocuments = documents.filter(doc => doc.employee_folder_id === folder.id);
+            const folderFaqs = faqs.filter(faq => faq.employee_folder_id === folder.id);
+            
+            return {
+              ...folder,
+              employee_documents: folderDocuments,
+              employee_faqs: folderFaqs
+            };
+          });
+          
         } else if (error) {
-          console.warn('⚠️ No se pudieron cargar carpetas reales, usando datos de empleados:', error.message);
+          console.warn('⚠️ Error cargando carpetas:', error.message);
+          realFolders = [];
         }
       } catch (dbError) {
-        console.warn('⚠️ Error consultando carpetas reales:', dbError.message);
+        console.warn('⚠️ Error consultando carpetas:', dbError.message);
+        realFolders = [];
       }
 
       // Si no hay carpetas reales, generar carpetas virtuales desde los empleados
@@ -714,7 +739,7 @@ useEffect(() => {
           html: `
             <div class="text-left">
               <p class="mb-2"><strong>Errores:</strong> ${result.errorCount}</p>
-              <p class="mb-2"><strong>Creadas:</strong> ${result.createdCount} &nbsp;&nbsp; <strong>Actualizadas:</strong> ${result.updatedCount}</p>
+              <p class="mb-2"><strong>Creadas:</strong> ${result.createdCount}    <strong>Actualizadas:</strong> ${result.updatedCount}</p>
               <div class="mt-2">
                 <p class="mb-1 font-semibold">Muestras de error:</p>
                 ${errorsHtml}
@@ -757,7 +782,7 @@ useEffect(() => {
           MySwal.showLoading();
         }
       });
-       
+        
        // Verificar que Google Drive esté autenticado ANTES de intentar sincronizar
        if (!googleDriveSyncService.isAuthenticated()) {
          MySwal.fire({
@@ -970,7 +995,7 @@ useEffect(() => {
         <div className="mb-6 p-4 bg-gray-50 rounded-xl">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
-              Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, getFilteredFolders().length)} a {Math.min(currentPage * itemsPerPage, getFilteredFolders().length)} de {getFilteredFolders().length} carpetas {getFilteredFolders().length > itemsPerPage && `(página ${currentPage} de ${getTotalPages()})`}
+              Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, getFilteredFolders().length)} a {Math.min(currentPage * itemsPerPage, getFilteredFolders().length)} de {getFilteredFolders().length} carpetas {getFilteredFolders().length > itemsPerPage && `(página ${currentPage} de ${totalPages})`}
             </p>
             <div className="flex space-x-2">
               <button
@@ -1296,7 +1321,7 @@ useEffect(() => {
                          </div>
                        </div>
                      
-                       <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                           <div className="badge-container">
                             <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300">
                               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

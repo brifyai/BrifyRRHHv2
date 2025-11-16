@@ -283,7 +283,7 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
     }
   }, [companiesFromDB.length]); // Añadir dependencia para tracking
 
-  // Función para cargar métricas específicas de una empresa
+  // Función para cargar métricas específicas de una empresa usando datos reales de Supabase
   const loadCompanyMetrics = useCallback(async (companyId) => {
     try {
       if (!companyId || companyId === 'all') {
@@ -291,72 +291,92 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
         return;
       }
 
-      // Obtener estadísticas específicas de la empresa
-      const [employeeCount, messageStats] = await Promise.all([
-        databaseEmployeeService.getEmployeeCountByCompany(companyId),
-        databaseEmployeeService.getMessageStatsByCompany(companyId)
-      ]);
+      // Obtener el nombre de la empresa desde companiesFromDB
+      const company = companiesFromDB.find(c => c.id === companyId);
+      if (!company) {
+        console.warn(`No se encontró empresa con ID: ${companyId}`);
+        setCompanyMetrics(null);
+        return;
+      }
 
+      // Usar trendsAnalysisService para obtener datos reales de Supabase
+      // ✅ CORRECCIÓN: Pasar el ID y el flag isId=true para buscar por ID
+      const insights = await trendsAnalysisService.generateCompanyInsights(companyId, false, true);
+      
+      // Extraer métricas reales del servicio
+      const communicationMetrics = insights.communicationMetrics || {};
+      const employeeData = insights.employeeData || {};
+      
       setCompanyMetrics({
-        employeeCount,
-        messageStats,
-        engagementRate: messageStats.total > 0 ? Math.round((messageStats.read / messageStats.total) * 100) : 0
+        employeeCount: employeeData.totalEmployees || 0,
+        messageStats: {
+          total: communicationMetrics.totalMessages || 0,
+          read: communicationMetrics.readMessages || 0,
+          sent: communicationMetrics.sentMessages || 0,
+          scheduled: communicationMetrics.scheduledMessages || 0,
+          failed: communicationMetrics.failedMessages || 0
+        },
+        engagementRate: communicationMetrics.engagementRate || 0,
+        deliveryRate: communicationMetrics.deliveryRate || 0,
+        readRate: communicationMetrics.readRate || 0
+      });
+      
+      console.log(`✅ Métricas reales cargadas para ${company.name}:`, {
+        employeeCount: employeeData.totalEmployees,
+        totalMessages: communicationMetrics.totalMessages,
+        engagementRate: communicationMetrics.engagementRate
       });
     } catch (error) {
       console.error('Error cargando métricas de empresa:', error);
-      setCompanyMetrics(null);
+      // Fallback a métricas vacías en caso de error
+      setCompanyMetrics({
+        employeeCount: 0,
+        messageStats: { total: 0, read: 0, sent: 0, scheduled: 0, failed: 0 },
+        engagementRate: 0,
+        deliveryRate: 0,
+        readRate: 0
+      });
     }
-  }, []);
+  }, [companiesFromDB]);
 
-  // Cargar datos del dashboard al montar el componente y cuando cambia el estado de navegación
+  // Cargar datos del dashboard al montar el componente
   useEffect(() => {
-    const loadDashboardData = async () => {
+    const initializeDashboard = async () => {
       try {
-        console.log('Cargando dashboard de comunicación...');
-
-        // Cargar empresas desde la base de datos
+        console.log('🔄 Inicializando dashboard de comunicación...');
+        
+        // PASO 1: Cargar empresas primero
         await loadCompaniesFromDB();
-
-        // Cargar conteo de plantillas con manejo de error
-        try {
-          const templatesCount = await templateService.getTemplatesCount();
-          setTemplatesCount(templatesCount);
-        } catch (error) {
-          console.warn('Error loading templates count:', error);
-          setTemplatesCount(0);
+        
+        // PASO 2: Una vez cargadas las empresas, cargar insights
+        if (companiesFromDB.length > 0) {
+          await loadCompanyInsights();
         }
-
-        // Cargar estadísticas del dashboard desde el servicio de base de datos con manejo de error
+        
+        // PASO 3: Cargar datos auxiliares
         try {
-          const dashboardStats = await databaseEmployeeService.getDashboardStats();
-          // setTotalEmployees(dashboardStats.totalEmployees); // Comentado ya que no se usa
+          const [templatesCount, dashboardStats] = await Promise.all([
+            templateService.getTemplatesCount(),
+            databaseEmployeeService.getDashboardStats()
+          ]);
+          setTemplatesCount(templatesCount);
           setSentMessages(dashboardStats.sentMessages);
           setReadRate(dashboardStats.readRate);
         } catch (error) {
-          console.warn('Error loading dashboard stats:', error);
-          // setTotalEmployees(0); // Comentado ya que no se usa
+          console.warn('Error cargando datos auxiliares:', error);
+          setTemplatesCount(0);
           setSentMessages(0);
           setReadRate(0);
         }
-
-        // Cargar insights de IA para todas las compañías con manejo de error
-        try {
-          await loadCompanyInsights();
-        } catch (error) {
-          console.warn('Error loading company insights:', error);
-        }
-
+        
+        console.log('✅ Dashboard inicializado completamente');
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        setTemplatesCount(0);
-        // setTotalEmployees(0); // Comentado ya que no se usa
-        setSentMessages(0);
-        setReadRate(0);
+        console.error('❌ Error inicializando dashboard:', error);
       }
     };
-
-    loadDashboardData();
-  }, [loadCompanyInsights, loadCompaniesFromDB]);
+    
+    initializeDashboard();
+  }, []); // Solo al montar el componente
 
   // Efecto para cargar métricas cuando cambia la empresa seleccionada
   useEffect(() => {
@@ -685,24 +705,20 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
 
                 {/* Métricas Principales - 100% Datos Reales de Supabase */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  {console.log('🔍 TENDENCIAS - Verificando datos reales:')}
-                  {console.log('   companyMetrics:', companyMetrics)}
-                  {console.log('   selectedCompany:', selectedCompany)}
-                  {console.log('   employees.length:', employees.length)}
                   <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-purple-100 hover:shadow-md transition-all duration-300 hover:scale-102">
                     <div className="flex items-center justify-between mb-2">
                       <div className="bg-purple-100 p-2 rounded-lg">
                         <ChartBarIcon className="h-5 w-5 text-purple-600" />
                       </div>
                       <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                        {companyMetrics ? `${companyMetrics.messageStats.total > 0 ? '+' + companyMetrics.engagementRate + '%' : 'Sin datos'}` : 'Sin datos'}
+                        {companyMetrics?.engagementRate > 0 ? `+${companyMetrics.engagementRate}%` : 'Sin datos'}
                       </span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? `${companyMetrics.engagementRate}%` : '0%'}
+                      {companyMetrics?.engagementRate ?? 0}%
                     </p>
                     <p className="text-sm text-gray-600">
-                      {selectedCompany !== 'all' && companyMetrics ? 'Engagement Real' : 'Engagement Promedio Real'}
+                      {selectedCompany !== 'all' ? 'Engagement Real' : 'Engagement Promedio Real'}
                     </p>
                   </div>
 
@@ -712,11 +728,13 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                         <BellIcon className="h-5 w-5 text-blue-600" />
                       </div>
                       <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                        {companyMetrics && companyMetrics.messageStats.total > 0 ? 'Activo' : 'Inactivo'}
+                        {companyMetrics?.messageStats?.total > 0 ? 'Activo' : 'Inactivo'}
                       </span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? `${companyMetrics.messageStats.read > 0 ? Math.round((companyMetrics.messageStats.read / companyMetrics.messageStats.total) * 100) : 0}%` : '0%'}
+                      {companyMetrics?.messageStats?.total > 0
+                        ? Math.round((companyMetrics.messageStats.read / companyMetrics.messageStats.total) * 100)
+                        : 0}%
                     </p>
                     <p className="text-sm text-gray-600">Tasa de Lectura Real</p>
                   </div>
@@ -727,11 +745,11 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                         <LightBulbIcon className="h-5 w-5 text-cyan-600" />
                       </div>
                       <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                        {companyMetrics && companyMetrics.messageStats.total > 0 ? 'Con datos' : 'Sin datos'}
+                        {companyMetrics?.messageStats?.total > 0 ? 'Con datos' : 'Sin datos'}
                       </span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? companyMetrics.messageStats.total : '0'}
+                      {companyMetrics?.messageStats?.total ?? 0}
                     </p>
                     <p className="text-sm text-gray-600">Mensajes Enviados Reales</p>
                   </div>
@@ -744,10 +762,10 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                       <span className="text-xs font-medium text-rose-600 bg-rose-100 px-2 py-1 rounded-full">Real</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {companyMetrics ? companyMetrics.employeeCount || '0' : employees.length}
+                      {companyMetrics?.employeeCount ?? employees.length}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {selectedCompany !== 'all' && companyMetrics ? 'Empleados Reales' : 'Total Empleados Reales'}
+                      {selectedCompany !== 'all' ? 'Empleados Reales' : 'Total Empleados Reales'}
                     </p>
                   </div>
                 </div>

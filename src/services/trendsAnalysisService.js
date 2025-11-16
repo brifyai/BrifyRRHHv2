@@ -12,23 +12,49 @@ class TrendsAnalysisService {
   // ========================================
 
   // Generar insights para una empresa específica usando datos reales
-  async generateCompanyInsights(companyName, forceRegenerate = false) {
+  async generateCompanyInsights(companyIdentifier, forceRegenerate = false, isId = false) {
     try {
-      console.log(`🔍 Generando insights para ${companyName}...`);
+      console.log(`🔍 Generando insights para ${companyIdentifier}...`);
       
-      // Verificar si ya existen insights recientes
-      if (!forceRegenerate) {
-        const existingInsights = await this.getExistingInsights(companyName);
-        if (existingInsights && existingInsights.length > 0) {
-          console.log(`✅ Usando insights existentes para ${companyName}`);
-          return this.formatInsights(existingInsights);
-        }
+      // Obtener datos reales de la empresa - soportar tanto ID como nombre
+      let companyData;
+      if (isId) {
+        // Si es ID, buscar directamente por ID
+        const { data, error } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', companyIdentifier)
+          .maybeSingle();
+        
+        if (error) throw error;
+        companyData = data;
+      } else {
+        // Si es nombre, usar el método existente
+        companyData = await this.getCompanyRealData(companyIdentifier);
+      }
+      
+      if (!companyData) {
+        throw new Error(`Empresa ${companyIdentifier} no encontrada`);
       }
 
-      // Obtener datos reales de la empresa
-      const companyData = await this.getCompanyRealData(companyName);
-      if (!companyData) {
-        throw new Error(`Empresa ${companyName} no encontrada`);
+      // Verificar si ya existen insights recientes
+      if (!forceRegenerate) {
+        const existingInsights = await this.getExistingInsights(companyData.name);
+        if (existingInsights && existingInsights.length > 0) {
+          console.log(`✅ Usando insights existentes para ${companyData.name}`);
+          const formattedInsights = this.formatInsights(existingInsights);
+          
+          // ✅ CORRECCIÓN: También obtener y retornar datos completos con insights existentes
+          const communicationMetrics = await this.getCommunicationMetrics(companyData.id);
+          const employeeData = await this.getEmployeeData(companyData.id);
+          
+          return {
+            ...formattedInsights,
+            communicationMetrics,
+            employeeData,
+            companyData
+          };
+        }
       }
 
       // Obtener métricas de comunicación reales
@@ -39,20 +65,27 @@ class TrendsAnalysisService {
       
       // Generar insights usando Groq AI con datos reales
       const insights = await this.generateInsightsWithAI({
-        companyName,
+        companyName: companyData.name,
         companyData,
         communicationMetrics,
         employeeData
       });
 
       // Guardar insights en la base de datos
-      await this.saveInsights(companyName, insights);
+      await this.saveInsights(companyData.name, insights);
 
-      console.log(`✅ Insights generados y guardados para ${companyName}`);
-      return insights;
+      console.log(`✅ Insights generados y guardados para ${companyData.name}`);
+      
+      // ✅ CORRECCIÓN: Retornar TODOS los datos necesarios para el componente
+      return {
+        ...insights,
+        communicationMetrics,
+        employeeData,
+        companyData
+      };
     } catch (error) {
-      console.error(`❌ Error generando insights para ${companyName}:`, error);
-      return this.getFallbackInsights(companyName);
+      console.error(`❌ Error generando insights para ${companyIdentifier}:`, error);
+      return this.getFallbackInsights(companyIdentifier);
     }
   }
 
