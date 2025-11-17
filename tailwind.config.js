@@ -3,13 +3,6 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
-  safelist: [
-    'flipped',
-    'flip-card',
-    'flip-card-inner',
-    'flip-card-front',
-    'flip-card-back'
-  ],
   theme: {
     extend: {
       colors: {

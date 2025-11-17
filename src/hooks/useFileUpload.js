@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.js';
-import unifiedEmployeeFolderService from '../services/unifiedEmployeeFolderService.js';
+import employeeFolderService from '../services/employeeFolderService.js';
 import fileContentExtractor from '../services/fileContentExtractor.js';
 import embeddingService from '../services/embeddingService.js';
 import googleDriveService from '../lib/googleDrive.js';

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase.js'
 import { EnvelopeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+import LoadingSpinner from '../common/LoadingSpinner.js'
 import toast from 'react-hot-toast'
 
 const ForgotPassword = () => {
