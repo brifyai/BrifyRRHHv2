@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { auth, db } from '../lib/supabase.js'
 import toast from 'react-hot-toast'
-import enhancedEmployeeFolderService from '../services/enhancedEmployeeFolderService.js'
+import unifiedEmployeeFolderService from '../services/unifiedEmployeeFolderService.js'
 
 const AuthContext = createContext({})
 
@@ -287,7 +287,7 @@ export const AuthProvider = ({ children }) => {
               company_id: null // Se asignará cuando se asocie a una empresa
             }
 
-            const folderResult = await enhancedEmployeeFolderService.createEmployeeFolder(email, employeeData)
+            const folderResult = await unifiedEmployeeFolderService.createEmployeeFolder(email, employeeData)
             
             if (folderResult.created) {
               console.log('✅ Carpeta de empleado creada automáticamente para:', email)

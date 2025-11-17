@@ -13,7 +13,7 @@ import {
   ArrowDownTrayIcon,
   CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
-import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService.js';
+import unifiedEmployeeFolderService from '../../services/unifiedEmployeeFolderService.js';
 import toast from 'react-hot-toast';
 
 const EmployeeFolderManager = () => {
@@ -35,7 +35,7 @@ const EmployeeFolderManager = () => {
       setLoading(true);
       
       // Obtener todas las carpetas
-      const { data, error } = await enhancedEmployeeFolderService.supabase
+      const { data, error } = await unifiedEmployeeFolderService.supabase
         .from('employee_folders')
         .select('*')
         .order('employee_name', { ascending: true });

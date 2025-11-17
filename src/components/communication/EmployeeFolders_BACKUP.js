@@ -11,7 +11,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
-import enhancedEmployeeFolderService from '../../services/enhancedEmployeeFolderService.js';
+import unifiedEmployeeFolderService from '../../services/unifiedEmployeeFolderService.js';
 import googleDriveSyncService from '../../services/googleDriveSyncService.js';
 import googleDriveTokenBridge from '../../lib/googleDriveTokenBridge.js';
 import organizedDatabaseService from '../../services/organizedDatabaseService.js';
@@ -601,7 +601,7 @@ useEffect(() => {
         console.log(`📁 Creando carpeta para ${employeeEmail}...`);
         const employee = employees.find(emp => emp.email === employeeEmail);
         if (employee) {
-          const result = await enhancedEmployeeFolderService.createEmployeeFolder(employeeEmail, employee);
+          const result = await unifiedEmployeeFolderService.createEmployeeFolder(employeeEmail, employee);
           setSelectedFolder(result.folder);
         }
       } else {
