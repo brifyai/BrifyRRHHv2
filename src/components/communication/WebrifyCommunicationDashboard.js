@@ -751,9 +751,9 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                     
                     {expandedSections.insights && (
                       <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {selectedCompany !== 'all' && companyInsights[selectedCompany] ? (
+                        {selectedCompany !== 'all' && companyInsights[companiesFromDB.find(c => c.id === selectedCompany)?.name] ? (
                           // Mostrar insights específicos de la empresa seleccionada
-                          renderCompanyInsights(selectedCompany, companyInsights[selectedCompany])
+                          renderCompanyInsights(companiesFromDB.find(c => c.id === selectedCompany)?.name, companyInsights[companiesFromDB.find(c => c.id === selectedCompany)?.name])
                         ) : (
                           // Mostrar insights generales cuando no hay empresa seleccionada
                           <>
@@ -796,9 +796,9 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
                     
                     {expandedSections.recommendations && (
                       <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {selectedCompany !== 'all' && companyInsights[selectedCompany] ? (
+                        {selectedCompany !== 'all' && companyInsights[companiesFromDB.find(c => c.id === selectedCompany)?.name] ? (
                           // Mostrar recomendaciones específicas de la empresa seleccionada
-                          renderBackInsights(selectedCompany, companyInsights[selectedCompany])
+                          renderBackInsights(companiesFromDB.find(c => c.id === selectedCompany)?.name, companyInsights[companiesFromDB.find(c => c.id === selectedCompany)?.name])
                         ) : (
                           // Mostrar recomendaciones generales cuando no hay empresa seleccionada
                           <>
