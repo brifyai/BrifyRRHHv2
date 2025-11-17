@@ -153,19 +153,42 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
                 <div>
                   <div className="text-xs text-gray-500">Sentimiento</div>
                   <div className="text-lg font-bold text-purple-600">
-                    {company.sentimentScore ?
-                      (company.sentimentScore > 0 ? '+' : '') + company.sentimentScore.toFixed(2)
-                      : '0.00'
-                    }
+                    {(() => {
+                      // Si no hay mensajes enviados, el sentimiento debe ser 0
+                      if (!company.sentMessages || company.sentMessages === 0) {
+                        return '0.00';
+                      }
+                      
+                      // Si sentimentScore es inválido, mostrar 0.00
+                      if (!company.sentimentScore ||
+                          typeof company.sentimentScore !== 'number' ||
+                          isNaN(company.sentimentScore) ||
+                          company.sentimentScore < -1 ||
+                          company.sentimentScore > 1) {
+                        return '0.00';
+                      }
+                      
+                      // Mostrar sentimentScore válido
+                      return (company.sentimentScore > 0 ? '+' : '') + company.sentimentScore.toFixed(2);
+                    })()}
                   </div>
                 </div>
-                {company.sentimentScore > 0 ? (
-                  <FaceSmileIcon className="h-5 w-5 text-green-500" />
-                ) : company.sentimentScore < 0 ? (
-                  <FaceFrownIcon className="h-5 w-5 text-red-500" />
-                ) : (
-                  <ExclamationTriangleIcon className="h-5 w-5 text-gray-400" />
-                )}
+                {(() => {
+                  // Si no hay mensajes o sentimentScore inválido, mostrar icono neutral
+                  if (!company.sentMessages || company.sentMessages === 0 ||
+                      !company.sentimentScore ||
+                      typeof company.sentimentScore !== 'number' ||
+                      isNaN(company.sentimentScore) ||
+                      company.sentimentScore < -1 ||
+                      company.sentimentScore > 1) {
+                    return <ExclamationTriangleIcon className="h-5 w-5 text-gray-400" />;
+                  }
+                  
+                  // Mostrar icono según el sentimiento válido
+                  return company.sentimentScore > 0 ?
+                    <FaceSmileIcon className="h-5 w-5 text-green-500" /> :
+                    <FaceFrownIcon className="h-5 w-5 text-red-500" />;
+                })()}
               </div>
             </div>
 
