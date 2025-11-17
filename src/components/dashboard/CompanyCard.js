@@ -1,49 +1,6 @@
 import React from 'react';
 import { BuildingOfficeIcon, UsersIcon, PaperAirplaneIcon, EyeIcon, FaceSmileIcon, FaceFrownIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-
-// Estilos CSS para el efecto de flip - VERSIÓN COMPATIBLE
-const flipStyles = `
-  .flip-card {
-    perspective: 1000px;
-  }
-
-  .flip-card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
-    transform-style: preserve-3d;
-    will-change: transform;
-  }
-
-  .flip-card.flipped .flip-card-inner {
-    transform: rotateY(180deg);
-  }
-
-  .flip-card-front, .flip-card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    -moz-backface-visibility: hidden;
-    -ms-backface-visibility: hidden;
-    overflow: hidden;
-  }
-
-  .flip-card-back {
-    transform: rotateY(180deg);
-  }
-
-  /* Asegurar que el contenido no se desborde */
-  .flip-card-front, .flip-card-back {
-    display: flex;
-    flex-direction: column;
-  }
-`;
+import '../../styles/flip-cards.css';
 
 // Memoizar el componente para evitar re-renders innecesarios
 const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
@@ -81,15 +38,11 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   const nextSendDate = company.nextScheduledDate;
   
   return (
-    <div className="flip-card group relative">
-      {/* Inyectar estilos CSS para flip effect */}
-      <style dangerouslySetInnerHTML={{ __html: flipStyles }} />
-      
+    <div className={`flip-card group relative ${isFlipped ? 'flipped' : ''}`}>
       <div
         className="flip-card-inner relative cursor-pointer transition-all duration-700"
         style={{
-          height: '400px',
-          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          height: '400px'
         }}
         onClick={(e) => {
           // Verificar si el clic fue en el botón de tendencias
