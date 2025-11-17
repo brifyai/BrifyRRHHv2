@@ -216,9 +216,21 @@ class UnifiedEmployeeFolderService {
       // Buscar o crear carpeta principal
       let parentFolder = await this.findOrCreateParentFolder(parentFolderName)
       
-      // Crear carpeta del empleado
+      // CREAR CARPETA DEL EMPLEADO CON VERIFICACIÓN ANTI-DUPLICACIÓN
       const folderName = `${employeeName} (${employeeEmail})`
+      
+      // Verificar si la carpeta del empleado ya existe
+      const existingEmployeeFolder = await this.findEmployeeFolderInParent(folderName, parentFolder.id)
+      
+      if (existingEmployeeFolder) {
+        console.log(`🔍 Carpeta de empleado ya existe, reutilizando: ${folderName}`)
+        return existingEmployeeFolder
+      }
+      
+      // Crear nueva carpeta del empleado
+      console.log(`📁 Creando nueva carpeta de empleado: ${folderName}`)
       const employeeFolder = await hybridGoogleDrive.createFolder(folderName, parentFolder.id)
+      console.log(`✅ Carpeta de empleado creada: ${folderName} (${employeeFolder.id})`)
       
       return employeeFolder
     } catch (error) {
@@ -228,24 +240,100 @@ class UnifiedEmployeeFolderService {
   }
 
   /**
+   * BUSCAR CARPETA DE EMPLEADO EN CARPETA PADRE
+   */
+  async findEmployeeFolderInParent(folderName, parentFolderId) {
+    try {
+      // Obtener archivos de la carpeta padre
+      const files = await hybridGoogleDrive.listFiles(parentFolderId)
+      
+      // Buscar carpeta con el nombre exacto
+      const employeeFolder = files.find(file =>
+        file.name === folderName &&
+        file.mimeType === 'application/vnd.google-apps.folder'
+      )
+      
+      if (employeeFolder) {
+        console.log(`✅ Carpeta de empleado encontrada: ${folderName}`)
+        return employeeFolder
+      }
+      
+      console.log(`❌ Carpeta de empleado no encontrada: ${folderName}`)
+      return null
+    } catch (error) {
+      console.error(`❌ Error buscando carpeta de empleado ${folderName}:`, error)
+      return null
+    }
+  }
+
+  /**
    * BUSCAR O CREAR CARPETA PRINCIPAL
    */
   async findOrCreateParentFolder(folderName) {
     try {
-      const folders = await hybridGoogleDrive.listFiles()
-      const parentFolder = folders.find(folder =>
-        folder.name === folderName &&
-        folder.mimeType === 'application/vnd.google-apps.folder'
-      )
-
+      // MEJORAR búsqueda con paginación completa y múltiples métodos
+      const parentFolder = await this.findFolderByNameRobust(folderName)
+      
       if (parentFolder) {
         return parentFolder
       } else {
-        return await hybridGoogleDrive.createFolder(folderName)
+        // Verificación adicional antes de crear
+        console.log(`📁 Creando nueva carpeta principal: ${folderName}`)
+        const newFolder = await hybridGoogleDrive.createFolder(folderName)
+        console.log(`✅ Carpeta principal creada: ${newFolder.id}`)
+        return newFolder
       }
     } catch (error) {
       console.error(`❌ Error buscando/creando carpeta principal ${folderName}:`, error)
       throw error
+    }
+  }
+
+  /**
+   * BÚSQUEDA ROBUSTA DE CARPETAS POR NOMBRE
+   */
+  async findFolderByNameRobust(folderName) {
+    try {
+      // Método 1: Búsqueda con listFiles
+      const folders = await hybridGoogleDrive.listFiles()
+      let foundFolder = folders.find(folder =>
+        folder.name === folderName &&
+        folder.mimeType === 'application/vnd.google-apps.folder'
+      )
+      
+      if (foundFolder) {
+        console.log(`✅ Carpeta encontrada con listFiles: ${folderName}`)
+        return foundFolder
+      }
+
+      // Método 2: Búsqueda con query específica si está disponible
+      if (hybridGoogleDrive.searchFiles) {
+        const searchResults = await hybridGoogleDrive.searchFiles(`name='${folderName}' and mimeType='application/vnd.google-apps.folder'`)
+        if (searchResults && searchResults.length > 0) {
+          console.log(`✅ Carpeta encontrada con search: ${folderName}`)
+          return searchResults[0]
+        }
+      }
+
+      // Método 3: Búsqueda por páginas si hay paginación
+      if (hybridGoogleDrive.listFilesWithPagination) {
+        const allFolders = await hybridGoogleDrive.listFilesWithPagination()
+        foundFolder = allFolders.find(folder =>
+          folder.name === folderName &&
+          folder.mimeType === 'application/vnd.google-apps.folder'
+        )
+        
+        if (foundFolder) {
+          console.log(`✅ Carpeta encontrada con paginación: ${folderName}`)
+          return foundFolder
+        }
+      }
+
+      console.log(`❌ Carpeta no encontrada: ${folderName}`)
+      return null
+    } catch (error) {
+      console.error(`❌ Error en búsqueda robusta de ${folderName}:`, error)
+      return null
     }
   }
 
