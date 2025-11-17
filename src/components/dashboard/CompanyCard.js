@@ -1,6 +1,5 @@
 import React from 'react';
 import { BuildingOfficeIcon, UsersIcon, PaperAirplaneIcon, EyeIcon, FaceSmileIcon, FaceFrownIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-import '../../styles/flip-cards.css';
 
 // Memoizar el componente para evitar re-renders innecesarios
 const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
@@ -39,6 +38,69 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   
   return (
     <div className={`flip-card group relative ${isFlipped ? 'flipped' : ''}`}>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .flip-card {
+            perspective: 1000px;
+            width: 100%;
+            height: 100%;
+            position: relative;
+          }
+          
+          .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            will-change: transform;
+          }
+          
+          .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+          }
+          
+          .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            -moz-backface-visibility: hidden;
+            -ms-backface-visibility: hidden;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .flip-card-back {
+            transform: rotateY(180deg);
+          }
+          
+          @supports (transform: rotateY(180deg)) {
+            .flip-card-inner {
+              transform-style: preserve-3d;
+            }
+            
+            .flip-card-front, .flip-card-back {
+              backface-visibility: hidden;
+            }
+          }
+          
+          @supports not (transform: rotateY(180deg)) {
+            .flip-card.flipped .flip-card-front {
+              opacity: 0;
+            }
+            
+            .flip-card:not(.flipped) .flip-card-back {
+              opacity: 0;
+            }
+          }
+        `
+      }} />
       <div
         className="flip-card-inner relative cursor-pointer transition-all duration-700"
         style={{
