@@ -1,6 +1,43 @@
 import React from 'react';
 import { BuildingOfficeIcon, UsersIcon, PaperAirplaneIcon, EyeIcon, FaceSmileIcon, FaceFrownIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
+// Estilos CSS para el efecto de flip
+const flipStyles = `
+  .flip-card {
+    perspective: 1000px;
+  }
+
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.8s;
+    transform-style: preserve-3d;
+  }
+
+  .flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip-card-front, .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+  }
+
+  .backface-hidden {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+`;
+
 // Memoizar el componente para evitar re-renders innecesarios
 const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   
@@ -37,19 +74,14 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   const nextSendDate = company.nextScheduledDate;
   
   return (
-    <div
-      className="group relative"
-      style={{
-        animationDelay: `${Math.random() * 100}ms`,
-        perspective: '1000px'
-      }}
-    >
-      <div className="absolute inset-0 bg-gradient-to-r from-violet-400 via-purple-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+    <div className="flip-card group relative">
+      {/* Inyectar estilos CSS para flip effect */}
+      <style dangerouslySetInnerHTML={{ __html: flipStyles }} />
+      
       <div
-        className="relative cursor-pointer transition-all duration-700"
+        className="flip-card-inner relative cursor-pointer transition-all duration-700"
         style={{
           height: '400px',
-          transformStyle: 'preserve-3d',
           transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
         }}
         onClick={(e) => {
@@ -61,7 +93,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
         }}
       >
         {/* Lado frontal de la tarjeta */}
-        <div className="absolute inset-0 bg-white rounded-3xl shadow-xl p-6 border border-gray-100 backface-hidden">
+        <div className="flip-card-front absolute inset-0 bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
@@ -121,8 +153,8 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
                 <div>
                   <div className="text-xs text-gray-500">Sentimiento</div>
                   <div className="text-lg font-bold text-purple-600">
-                    {company.sentimentScore ? 
-                      (company.sentimentScore > 0 ? '+' : '') + company.sentimentScore.toFixed(2) 
+                    {company.sentimentScore ?
+                      (company.sentimentScore > 0 ? '+' : '') + company.sentimentScore.toFixed(2)
                       : '0.00'
                     }
                   </div>
@@ -169,17 +201,24 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
               <ArrowPathIcon className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Indicador de flip */}
+          <div className="absolute bottom-4 left-4">
+            <div className="text-xs text-gray-400 flex items-center">
+              <span>👆 Toca para ver detalles</span>
+            </div>
+          </div>
         </div>
 
         {/* Lado trasero de la tarjeta */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl shadow-xl p-6 border border-gray-100 backface-hidden transform rotateY-180">
+        <div className="flip-card-back absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl shadow-xl p-6 border border-gray-100">
           <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-bold text-gray-900">
-                {company.name}
+                📊 Vista Detallada
               </h4>
               <div className="text-sm text-gray-500">
-                Vista Detallada
+                {company.name}
               </div>
             </div>
 
@@ -188,7 +227,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-500">Mensajes Programados</div>
+                    <div className="text-sm text-gray-500">📅 Mensajes Programados</div>
                     <div className="text-xl font-bold text-indigo-600">
                       {scheduledMessages}
                     </div>
@@ -206,7 +245,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-500">Borradores</div>
+                    <div className="text-sm text-gray-500">📝 Borradores</div>
                     <div className="text-xl font-bold text-amber-600">
                       {draftMessages}
                     </div>
@@ -217,13 +256,13 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
 
               {/* Estadísticas adicionales */}
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="text-sm text-gray-500 mb-2">Estadísticas Adicionales</div>
+                <div className="text-sm text-gray-500 mb-2">📈 Estadísticas Adicionales</div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span>Tasa de lectura:</span>
                     <span className="font-medium">
-                      {company.sentMessages > 0 ? 
-                        Math.round((company.readMessages / company.sentMessages) * 100) 
+                      {company.sentMessages > 0 ?
+                        Math.round((company.readMessages / company.sentMessages) * 100)
                         : 0}%
                     </span>
                   </div>
@@ -231,7 +270,33 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
                     <span>Última actividad:</span>
                     <span className="font-medium">Hoy</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Estado:</span>
+                    <span className="font-medium text-green-600">🟢 Activa</span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Información adicional */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="text-sm text-gray-500 mb-2">🏢 Información de la Empresa</div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span>ID:</span>
+                    <span className="font-mono">{company.id.slice(0, 12)}...</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Empleados:</span>
+                    <span className="font-medium">{company.employeeCount}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Indicador de flip de vuelta */}
+            <div className="absolute bottom-4 left-4">
+              <div className="text-xs text-gray-400 flex items-center">
+                <span>👆 Toca para volver</span>
               </div>
             </div>
           </div>
