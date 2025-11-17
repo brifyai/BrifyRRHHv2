@@ -23,7 +23,7 @@ class EmbeddingsService {
   async generateEmbedding(text, userId) {
     try {
       // Usar el servicio de embeddings actualizado que usa Groq
-      const { default: embeddingService } = await import('../services/embeddingService');
+      const { default: embeddingService } = await import('../services/embeddingService.js');
       const embedding = await embeddingService.generateEmbedding(text);
 
       const tokensUsed = Math.ceil(text.length / 4); // Approximate token count
@@ -41,25 +41,7 @@ class EmbeddingsService {
     }
   }
 
-  // Procesar archivo para embeddings (DEPRECATED - ahora se maneja en Files.js)
-  // Esta función se mantiene por compatibilidad pero ya no se usa
-  async processFileForEmbeddings(fileId, content, userId) {
-    console.warn('⚠️ processFileForEmbeddings está deprecated. Los chunks ahora se crean directamente en documentos_entrenador desde Files.js');
-    
-    try {
-      // Dividir contenido en chunks si es muy largo
-      const chunks = this.splitTextIntoChunks(content, 8000);
-      
-      return {
-        chunks_processed: chunks.length,
-        total_tokens: 0 // Los tokens se manejan individualmente en Files.js
-      };
-    } catch (error) {
-      console.error('Error processing file for embeddings:', error);
-      throw error;
-    }
-  }
-
+      // Dividir texto en chunks
   // Dividir texto en chunks
   splitTextIntoChunks(text, maxLength = 8000) {
     const chunks = [];

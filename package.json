@@ -46,7 +46,8 @@
   "scripts": {
     "start": "react-scripts start",
     "server": "node server-simple.mjs",
-    "dev": "concurrently \"npm run server\" \"PORT=3001 npm start\"",
+    "dev": "concurrently \"npm run server\" \"cross-env PORT=3001 npm start\"",
+    "dev:win": "concurrently \"npm run server\" \"set PORT=3001 && npm start\"",
     "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "test:sentiment": "node test_sentiment_analysis.mjs",

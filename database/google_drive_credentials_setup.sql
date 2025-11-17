@@ -1,7 +1,7 @@
 -- Crear tabla para credenciales de Google Drive
 -- Esta tabla reemplaza a user_google_drive_credentials que fue eliminada en la migración
 
-CREATE TABLE IF NOT EXISTS google_drive_credentials (
+CREATE TABLE IF NOT EXISTS user_google_drive_credentials (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
@@ -39,13 +39,13 @@ CREATE TABLE IF NOT EXISTS google_drive_credentials (
 );
 
 -- Crear índices para mejor rendimiento
-CREATE INDEX IF NOT EXISTS idx_google_drive_credentials_user_id ON google_drive_credentials(user_id);
-CREATE INDEX IF NOT EXISTS idx_google_drive_credentials_google_user_id ON google_drive_credentials(google_user_id);
-CREATE INDEX IF NOT EXISTS idx_google_drive_credentials_is_connected ON google_drive_credentials(is_connected);
-CREATE INDEX IF NOT EXISTS idx_google_drive_credentials_sync_status ON google_drive_credentials(sync_status);
+CREATE INDEX IF NOT EXISTS idx_user_google_drive_user_id ON user_google_drive_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_google_drive_google_user_id ON user_google_drive_credentials(google_user_id);
+CREATE INDEX IF NOT EXISTS idx_user_google_drive_is_connected ON user_google_drive_credentials(is_connected);
+CREATE INDEX IF NOT EXISTS idx_user_google_drive_sync_status ON user_google_drive_credentials(sync_status);
 
 -- Función para actualizar updated_at automáticamente
-CREATE OR REPLACE FUNCTION update_google_drive_credentials_updated_at()
+CREATE OR REPLACE FUNCTION update_user_google_drive_credentials_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -54,59 +54,59 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Crear trigger para actualizar updated_at
-DROP TRIGGER IF EXISTS update_google_drive_credentials_updated_at_trigger ON google_drive_credentials;
-CREATE TRIGGER update_google_drive_credentials_updated_at_trigger
-    BEFORE UPDATE ON google_drive_credentials
+DROP TRIGGER IF EXISTS update_user_google_drive_credentials_updated_at_trigger ON user_google_drive_credentials;
+CREATE TRIGGER update_user_google_drive_credentials_updated_at_trigger
+    BEFORE UPDATE ON user_google_drive_credentials
     FOR EACH ROW
-    EXECUTE FUNCTION update_google_drive_credentials_updated_at();
+    EXECUTE FUNCTION update_user_google_drive_credentials_updated_at();
 
 -- Habilitar RLS (Row Level Security)
-ALTER TABLE google_drive_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_google_drive_credentials ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS para google_drive_credentials
-DROP POLICY IF EXISTS "Users can view their own Google Drive credentials" ON google_drive_credentials;
+-- Políticas RLS para user_google_drive_credentials
+DROP POLICY IF EXISTS "Users can view their own Google Drive credentials" ON user_google_drive_credentials;
 CREATE POLICY "Users can view their own Google Drive credentials"
-    ON google_drive_credentials
+    ON user_google_drive_credentials
     FOR SELECT
     USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can insert their own Google Drive credentials" ON google_drive_credentials;
+DROP POLICY IF EXISTS "Users can insert their own Google Drive credentials" ON user_google_drive_credentials;
 CREATE POLICY "Users can insert their own Google Drive credentials"
-    ON google_drive_credentials
+    ON user_google_drive_credentials
     FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can update their own Google Drive credentials" ON google_drive_credentials;
+DROP POLICY IF EXISTS "Users can update their own Google Drive credentials" ON user_google_drive_credentials;
 CREATE POLICY "Users can update their own Google Drive credentials"
-    ON google_drive_credentials
+    ON user_google_drive_credentials
     FOR UPDATE
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can delete their own Google Drive credentials" ON google_drive_credentials;
+DROP POLICY IF EXISTS "Users can delete their own Google Drive credentials" ON user_google_drive_credentials;
 CREATE POLICY "Users can delete their own Google Drive credentials"
-    ON google_drive_credentials
+    ON user_google_drive_credentials
     FOR DELETE
     USING (auth.uid() = user_id);
 
 -- Comentarios para documentación
-COMMENT ON TABLE google_drive_credentials IS 'Almacena las credenciales OAuth 2.0 de Google Drive para cada usuario';
-COMMENT ON COLUMN google_drive_credentials.user_id IS 'ID del usuario de Supabase Auth';
-COMMENT ON COLUMN google_drive_credentials.google_access_token IS 'Token de acceso OAuth 2.0 de Google';
-COMMENT ON COLUMN google_drive_credentials.google_refresh_token IS 'Token de refresco para renovar el access token';
-COMMENT ON COLUMN google_drive_credentials.google_token_expires_at IS 'Fecha de expiración del access token';
-COMMENT ON COLUMN google_drive_credentials.google_user_id IS 'ID único del usuario de Google';
-COMMENT ON COLUMN google_drive_credentials.google_email IS 'Email del usuario de Google';
-COMMENT ON COLUMN google_drive_credentials.google_name IS 'Nombre del usuario de Google';
-COMMENT ON COLUMN google_drive_credentials.google_avatar_url IS 'URL del avatar del usuario de Google';
-COMMENT ON COLUMN google_drive_credentials.google_scope IS 'Alcance de los permisos OAuth concedidos';
-COMMENT ON COLUMN google_drive_credentials.default_folder_id IS 'ID de la carpeta raíz en Google Drive para este usuario';
-COMMENT ON COLUMN google_drive_credentials.is_connected IS 'Indica si la conexión está activa';
-COMMENT ON COLUMN google_drive_credentials.sync_status IS 'Estado de sincronización: disconnected, connecting, connected, error';
-COMMENT ON COLUMN google_drive_credentials.last_sync_at IS 'Fecha de la última sincronización exitosa';
-COMMENT ON COLUMN google_drive_credentials.last_used_at IS 'Fecha de la última vez que se usó la conexión';
-COMMENT ON COLUMN google_drive_credentials.metadata IS 'Campo JSON para metadatos adicionales';
+COMMENT ON TABLE user_google_drive_credentials IS 'Almacena las credenciales OAuth 2.0 de Google Drive para cada usuario';
+COMMENT ON COLUMN user_google_drive_credentials.user_id IS 'ID del usuario de Supabase Auth';
+COMMENT ON COLUMN user_google_drive_credentials.google_access_token IS 'Token de acceso OAuth 2.0 de Google';
+COMMENT ON COLUMN user_google_drive_credentials.google_refresh_token IS 'Token de refresco para renovar el access token';
+COMMENT ON COLUMN user_google_drive_credentials.google_token_expires_at IS 'Fecha de expiración del access token';
+COMMENT ON COLUMN user_google_drive_credentials.google_user_id IS 'ID único del usuario de Google';
+COMMENT ON COLUMN user_google_drive_credentials.google_email IS 'Email del usuario de Google';
+COMMENT ON COLUMN user_google_drive_credentials.google_name IS 'Nombre del usuario de Google';
+COMMENT ON COLUMN user_google_drive_credentials.google_avatar_url IS 'URL del avatar del usuario de Google';
+COMMENT ON COLUMN user_google_drive_credentials.google_scope IS 'Alcance de los permisos OAuth concedidos';
+COMMENT ON COLUMN user_google_drive_credentials.default_folder_id IS 'ID de la carpeta raíz en Google Drive para este usuario';
+COMMENT ON COLUMN user_google_drive_credentials.is_connected IS 'Indica si la conexión está activa';
+COMMENT ON COLUMN user_google_drive_credentials.sync_status IS 'Estado de sincronización: disconnected, connecting, connected, error';
+COMMENT ON COLUMN user_google_drive_credentials.last_sync_at IS 'Fecha de la última sincronización exitosa';
+COMMENT ON COLUMN user_google_drive_credentials.last_used_at IS 'Fecha de la última vez que se usó la conexión';
+COMMENT ON COLUMN user_google_drive_credentials.metadata IS 'Campo JSON para metadatos adicionales';
 
 -- Otorgar permisos necesarios
-GRANT SELECT, INSERT, UPDATE, DELETE ON google_drive_credentials TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_google_drive_credentials TO authenticated;
 GRANT USAGE ON SCHEMA public TO authenticated;

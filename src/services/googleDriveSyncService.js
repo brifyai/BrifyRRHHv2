@@ -1,6 +1,7 @@
 /**
  * Google Drive Sync Service - Refactorizado
  * Sincronización bidireccional Drive ↔ Supabase con logging detallado
+ * NUEVA FUNCIONALIDAD: Gestión de permisos y detección de emails no-Gmail
  */
 
 import { supabase } from '../lib/supabaseClient.js'
@@ -92,13 +93,121 @@ class GoogleDriveSyncService {
   }
 
   /**
+   * NUEVA FUNCIONALIDAD: Verifica si un email es de Gmail
+   * Esto es crítico para determinar si se puede compartir la carpeta
+   */
+  isGmailEmail(email) {
+    if (!email || typeof email !== 'string') {
+      return false
+    }
+    
+    // Verificar formato básico de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return false
+    }
+    
+    // Extraer el dominio
+    const domain = email.split('@')[1]?.toLowerCase()
+    
+    // Gmail domains válidos
+    const gmailDomains = [
+      'gmail.com',
+      'googlemail.com', // Gmail para algunos países
+      'gmail.cl', // Gmail Chile
+      'gmail.es', // Gmail España
+      'gmail.mx'  // Gmail México
+    ]
+    
+    const isGmail = gmailDomains.includes(domain)
+    
+    logger.info('GoogleDriveSyncService', `📧 Email ${email}: ${isGmail ? '✅ Gmail' : '❌ No Gmail'} (dominio: ${domain})`)
+    return isGmail
+  }
+
+  /**
+   * NUEVA FUNCIONALIDAD: Registra empleado con email no-Gmail en Supabase
+   */
+  async registerNonGmailEmployee(employeeEmail, employeeName, companyName, employeeData = {}) {
+    try {
+      logger.info('GoogleDriveSyncService', `📝 Registrando empleado no-Gmail: ${employeeEmail}`)
+      
+      const nonGmailData = {
+        employee_email: employeeEmail,
+        employee_name: employeeName,
+        company_name: companyName,
+        email_type: 'non_gmail',
+        reason: 'Email no es de Gmail, no se puede compartir carpeta de Google Drive',
+        employee_data: employeeData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('non_gmail_employees')
+        .insert(nonGmailData)
+        .select()
+        .single()
+
+      if (error) {
+        logger.error('GoogleDriveSyncService', `❌ Error registrando empleado no-Gmail: ${error.message}`)
+        throw error
+      }
+
+      logger.info('GoogleDriveSyncService', `✅ Empleado no-Gmail registrado: ${employeeEmail}`)
+      return data
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en registerNonGmailEmployee: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * NUEVA FUNCIONALIDAD: Obtiene lista de empleados no-Gmail
+   */
+  async getNonGmailEmployees() {
+    try {
+      logger.info('GoogleDriveSyncService', `🔍 Obteniendo lista de empleados no-Gmail`)
+      
+      const { data, error } = await supabase
+        .from('non_gmail_employees')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        logger.error('GoogleDriveSyncService', `❌ Error obteniendo empleados no-Gmail: ${error.message}`)
+        throw error
+      }
+
+      logger.info('GoogleDriveSyncService', `📊 ${data?.length || 0} empleados no-Gmail encontrados`)
+      return data || []
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en getNonGmailEmployees: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
    * Crea una carpeta de empleado en Google Drive y Supabase
-   * Ahora con verificación para evitar duplicaciones
+   * AHORA CON DETECCIÓN DE EMAILS NO-GMAIL
    */
   async createEmployeeFolderInDrive(employeeEmail, employeeName, companyName, employeeData = {}) {
     try {
       logger.info('GoogleDriveSyncService', `📁 Procesando carpeta para ${employeeEmail}...`)
       
+      // NUEVA FUNCIONALIDAD: Verificar si es email Gmail
+      const isGmail = this.isGmailEmail(employeeEmail)
+      
+      if (!isGmail) {
+        logger.warn('GoogleDriveSyncService', `⚠️ Email ${employeeEmail} no es de Gmail, registrando en base de datos`)
+        
+        // Registrar empleado no-Gmail
+        await this.registerNonGmailEmployee(employeeEmail, employeeName, companyName, employeeData)
+        
+        // Crear carpeta solo para organización interna (sin compartir)
+        return await this.createNonGmailEmployeeFolder(employeeEmail, employeeName, companyName, employeeData)
+      }
+
       // Verificar autenticación
       if (!googleDriveAuthService.isAuthenticated()) {
         const error = `❌ No se puede crear carpeta para ${employeeEmail}: Google Drive no está autenticado`
@@ -128,10 +237,15 @@ class GoogleDriveSyncService {
             const driveFolder = await googleDriveService.getFileInfo(existingFolder.drive_folder_id)
             if (driveFolder) {
               logger.info('GoogleDriveSyncService', `✅ Carpeta ya existe en Google Drive: ${existingFolder.drive_folder_id}`)
+              
+              // NUEVA FUNCIONALIDAD: Verificar y compartir si es necesario
+              await this.ensureEmployeeHasAccess(employeeEmail, existingFolder.drive_folder_id)
+              
               return {
                 driveFolder: driveFolder,
                 supabaseFolder: existingFolder,
-                syncStatus: 'already_exists'
+                syncStatus: 'already_exists',
+                isGmail: true
               }
             } else {
               logger.warn('GoogleDriveSyncService', `⚠️ Carpeta existe en Supabase pero no en Drive, recreando...`)
@@ -168,10 +282,14 @@ class GoogleDriveSyncService {
               employeeEmail, employeeName, companyName, employeeData, existingDriveFolder.id
             )
             
+            // NUEVA FUNCIONALIDAD: Compartir automáticamente
+            await this.shareEmployeeFolderWithUser(employeeEmail, existingDriveFolder.id, 'writer')
+            
             return {
               driveFolder: existingDriveFolder,
               supabaseFolder: newSupabaseFolder,
-              syncStatus: 'existed_in_drive_created_in_supabase'
+              syncStatus: 'existed_in_drive_created_in_supabase',
+              isGmail: true
             }
           } else {
             // Actualizar el registro de Supabase con el ID correcto de Drive si es diferente
@@ -188,17 +306,25 @@ class GoogleDriveSyncService {
                 .select()
                 .single()
 
+              // NUEVA FUNCIONALIDAD: Compartir automáticamente
+              await this.shareEmployeeFolderWithUser(employeeEmail, existingDriveFolder.id, 'writer')
+              
               return {
                 driveFolder: existingDriveFolder,
                 supabaseFolder: updatedFolder,
-                syncStatus: 'updated_drive_id'
+                syncStatus: 'updated_drive_id',
+                isGmail: true
               }
             }
 
+            // NUEVA FUNCIONALIDAD: Verificar y compartir si es necesario
+            await this.ensureEmployeeHasAccess(employeeEmail, existingDriveFolder.id)
+            
             return {
               driveFolder: existingDriveFolder,
               supabaseFolder: existingFolder,
-              syncStatus: 'already_exists'
+              syncStatus: 'already_exists',
+              isGmail: true
             }
           }
         }
@@ -216,9 +342,9 @@ class GoogleDriveSyncService {
 
       logger.info('GoogleDriveSyncService', `✅ Nueva carpeta creada en Google Drive: ${employeeFolder.id}`)
 
-      // NOTA: No compartimos la carpeta con el empleado
-      // Las carpetas son solo para organización interna del sistema
-      logger.info('GoogleDriveSyncService', `ℹ️ Carpeta NO compartida con ${employeeEmail} (uso interno del sistema)`)
+      // NUEVA FUNCIONALIDAD: Compartir automáticamente con el empleado
+      logger.info('GoogleDriveSyncService', `🔗 Compartiendo carpeta automáticamente con ${employeeEmail}`)
+      await this.shareEmployeeFolderWithUser(employeeEmail, employeeFolder.id, 'writer')
 
       // Crear registro en Supabase
       const supabaseFolder = await this.createSupabaseFolderRecord(
@@ -228,12 +354,75 @@ class GoogleDriveSyncService {
       return {
         driveFolder: employeeFolder,
         supabaseFolder: supabaseFolder,
-        syncStatus: 'created_in_both'
+        syncStatus: 'created_in_both',
+        isGmail: true
       }
     } catch (error) {
       logger.error('GoogleDriveSyncService', `❌ Error procesando carpeta para ${employeeEmail}: ${error.message}`)
       this.recordError(error.message)
       throw error
+    }
+  }
+
+  /**
+   * NUEVA FUNCIONALIDAD: Crea carpeta para empleado no-Gmail (solo organización interna)
+   */
+  async createNonGmailEmployeeFolder(employeeEmail, employeeName, companyName, employeeData = {}) {
+    try {
+      logger.info('GoogleDriveSyncService', `📁 Creando carpeta para empleado no-Gmail: ${employeeEmail}`)
+      
+      // Crear carpeta principal de la empresa
+      const parentFolderName = `Empleados No-Gmail - ${companyName}`
+      let parentFolder = await this.findOrCreateParentFolder(parentFolderName)
+
+      // Crear carpeta del empleado
+      const folderName = `${employeeName} (${employeeEmail}) - NO GMAIL`
+      const employeeFolder = await googleDriveService.createFolder(folderName, parentFolder.id)
+
+      if (!employeeFolder || !employeeFolder.id) {
+        throw new Error('No se pudo crear carpeta en Google Drive')
+      }
+
+      logger.info('GoogleDriveSyncService', `✅ Carpeta creada para empleado no-Gmail: ${employeeFolder.id}`)
+      logger.info('GoogleDriveSyncService', `ℹ️ Nota: Esta carpeta NO se comparte con el empleado (email no-Gmail)`)
+
+      // Crear registro en Supabase
+      const supabaseFolder = await this.createSupabaseFolderRecord(
+        employeeEmail, employeeName, companyName, employeeData, employeeFolder.id
+      )
+
+      return {
+        driveFolder: employeeFolder,
+        supabaseFolder: supabaseFolder,
+        syncStatus: 'created_non_gmail',
+        isGmail: false,
+        message: 'Carpeta creada para organización interna (empleado no tiene Gmail)'
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error creando carpeta para empleado no-Gmail: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * NUEVA FUNCIONALIDAD: Verifica que el empleado tenga acceso a su carpeta
+   */
+  async ensureEmployeeHasAccess(employeeEmail, folderId) {
+    try {
+      logger.info('GoogleDriveSyncService', `🔍 Verificando acceso de ${employeeEmail} a carpeta ${folderId}`)
+      
+      const permissions = await this.getFolderPermissions(folderId)
+      const employeePermission = permissions.find(p => p.emailAddress === employeeEmail)
+      
+      if (!employeePermission) {
+        logger.info('GoogleDriveSyncService', `🔗 ${employeeEmail} no tiene acceso, compartiendo carpeta...`)
+        await this.shareEmployeeFolderWithUser(employeeEmail, folderId, 'writer')
+      } else {
+        logger.info('GoogleDriveSyncService', `✅ ${employeeEmail} ya tiene acceso (${employeePermission.role})`)
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error verificando acceso de ${employeeEmail}: ${error.message}`)
+      // No lanzar error, solo loggear
     }
   }
 
@@ -519,7 +708,7 @@ class GoogleDriveSyncService {
       if (!googleDriveAuthService.isAuthenticated()) {
         const error = `❌ No se puede sincronizar archivo para ${employeeEmail}: Google Drive no está autenticado`
         logger.error('GoogleDriveSyncService', error)
-        this.recordError(error)
+        this.recordError.error(error)
         throw new Error(error)
       }
 
@@ -915,7 +1104,315 @@ class GoogleDriveSyncService {
       }
     } catch (error) {
       logger.error('GoogleDriveSyncService', `❌ Error en limpieza de carpetas eliminadas: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * Comparte una carpeta con un empleado automáticamente
+   * NUEVA FUNCIONALIDAD: Resuelve el problema de permisos
+   */
+  async shareEmployeeFolderWithUser(employeeEmail, folderId, role = 'writer') {
+    try {
+      logger.info('GoogleDriveSyncService', `🔗 Compartiendo carpeta ${folderId} con ${employeeEmail} (${role})`)
+      
+      // Verificar autenticación
+      if (!googleDriveAuthService.isAuthenticated()) {
+        const error = `❌ No se puede compartir carpeta: Google Drive no está autenticado`
+        logger.error('GoogleDriveSyncService', error)
+        this.recordError(error)
+        throw new Error(error)
+      }
+
+      // Usar el método shareFolder existente en googleDriveService
+      const shareResult = await googleDriveService.shareFolder(folderId, employeeEmail, role)
+      
+      logger.info('GoogleDriveSyncService', `✅ Carpeta compartida exitosamente con ${employeeEmail}`)
+      
+      // Registrar el cambio en Supabase
+      await this.logPermissionChange(employeeEmail, folderId, 'shared', role)
+      
+      return {
+        success: true,
+        message: `Carpeta compartida con ${employeeEmail}`,
+        shareResult: shareResult
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error compartiendo carpeta con ${employeeEmail}: ${error.message}`)
       this.recordError(error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Revoca el acceso de un empleado a su carpeta
+   */
+  async revokeEmployeeFolderAccess(employeeEmail, folderId) {
+    try {
+      logger.info('GoogleDriveSyncService', `🚫 Revocando acceso de ${employeeEmail} a carpeta ${folderId}`)
+      
+      // Verificar autenticación
+      if (!googleDriveAuthService.isAuthenticated()) {
+        const error = `❌ No se puede revocar acceso: Google Drive no está autenticado`
+        logger.error('GoogleDriveSyncService', error)
+        this.recordError(error)
+        throw new Error(error)
+      }
+
+      // Obtener los permisos actuales de la carpeta
+      const permissions = await this.getFolderPermissions(folderId)
+      const employeePermission = permissions.find(p => p.emailAddress === employeeEmail)
+      
+      if (!employeePermission) {
+        logger.warn('GoogleDriveSyncService', `⚠️ No se encontró permiso para ${employeeEmail} en carpeta ${folderId}`)
+        return {
+          success: false,
+          message: `No se encontró acceso para revocar`
+        }
+      }
+
+      // Eliminar el permiso
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions/${employeePermission.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${googleDriveAuthService.getAccessToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error('GoogleDriveSyncService', `❌ Error revocando acceso: ${response.status} - ${errorData}`)
+        throw new Error(`Error revocando acceso: ${response.status}`)
+      }
+
+      logger.info('GoogleDriveSyncService', `✅ Acceso revocado para ${employeeEmail}`)
+      
+      // Registrar el cambio en Supabase
+      await this.logPermissionChange(employeeEmail, folderId, 'revoked', null)
+      
+      return {
+        success: true,
+        message: `Acceso revocado para ${employeeEmail}`
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error revocando acceso de ${employeeEmail}: ${error.message}`)
+      this.recordError(error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Obtiene los permisos de una carpeta
+   */
+  async getFolderPermissions(folderId) {
+    try {
+      logger.info('GoogleDriveSyncService', `🔍 Obteniendo permisos de carpeta ${folderId}`)
+      
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions`, {
+        headers: {
+          'Authorization': `Bearer ${googleDriveAuthService.getAccessToken()}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error('GoogleDriveSyncService', `❌ Error obteniendo permisos: ${response.status} - ${errorData}`)
+        throw new Error(`Error obteniendo permisos: ${response.status}`)
+      }
+
+      const data = await response.json()
+      logger.info('GoogleDriveSyncService', `✅ ${data.permissions?.length || 0} permisos encontrados`)
+      
+      return data.permissions || []
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en getFolderPermissions: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * Actualiza el rol de un empleado en su carpeta
+   */
+  async updateEmployeeFolderRole(employeeEmail, folderId, newRole) {
+    try {
+      logger.info('GoogleDriveSyncService', `🔄 Actualizando rol de ${employeeEmail} a ${newRole} en carpeta ${folderId}`)
+      
+      // Primero revocar acceso actual
+      await this.revokeEmployeeFolderAccess(employeeEmail, folderId)
+      
+      // Luego compartir con el nuevo rol
+      const shareResult = await this.shareEmployeeFolderWithUser(employeeEmail, folderId, newRole)
+      
+      logger.info('GoogleDriveSyncService', `✅ Rol actualizado para ${employeeEmail}: ${newRole}`)
+      
+      return {
+        success: true,
+        message: `Rol actualizado a ${newRole} para ${employeeEmail}`,
+        shareResult: shareResult
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error actualizando rol de ${employeeEmail}: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * Registra cambios de permisos en Supabase
+   */
+  async logPermissionChange(employeeEmail, folderId, action, role) {
+    try {
+      const logData = {
+        employee_email: employeeEmail,
+        drive_folder_id: folderId,
+        action: action, // 'shared', 'revoked', 'updated'
+        role: role,
+        timestamp: new Date().toISOString(),
+        performed_by: 'system' // En el futuro se puede agregar el usuario que hizo el cambio
+      }
+
+      // Aquí se podría crear una tabla 'permission_logs' para auditoría
+      logger.info('GoogleDriveSyncService', `📝 Log de permiso: ${action} - ${employeeEmail} - ${role}`)
+      
+      // Por ahora solo loggeamos, en el futuro se puede guardar en BD
+      return true
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error registrando log de permiso: ${error.message}`)
+      return false
+    }
+  }
+
+  /**
+   * Obtiene el estado de permisos de todos los empleados
+   */
+  async getAllEmployeePermissions() {
+    try {
+      logger.info('GoogleDriveSyncService', `🔍 Obteniendo estado de permisos de todos los empleados`)
+      
+      // Obtener todas las carpetas de empleados
+      const { data: folders, error } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .neq('folder_status', 'deleted')
+
+      if (error) {
+        logger.error('GoogleDriveSyncService', `❌ Error obteniendo carpetas: ${error.message}`)
+        throw error
+      }
+
+      const permissionsStatus = []
+
+      for (const folder of folders) {
+        try {
+          const permissions = await this.getFolderPermissions(folder.drive_folder_id)
+          const employeePermission = permissions.find(p => p.emailAddress === folder.employee_email)
+          
+          permissionsStatus.push({
+            employeeEmail: folder.employee_email,
+            employeeName: folder.employee_name,
+            folderId: folder.drive_folder_id,
+            folderName: `${folder.employee_name} (${folder.employee_email})`,
+            hasAccess: !!employeePermission,
+            currentRole: employeePermission?.role || null,
+            permissionId: employeePermission?.id || null,
+            lastChecked: new Date().toISOString()
+          })
+        } catch (folderError) {
+          logger.warn('GoogleDriveSyncService', `⚠️ Error verificando permisos de ${folder.employee_email}: ${folderError.message}`)
+          permissionsStatus.push({
+            employeeEmail: folder.employee_email,
+            employeeName: folder.employee_name,
+            folderId: folder.drive_folder_id,
+            folderName: `${folder.employee_name} (${folder.employee_email})`,
+            hasAccess: false,
+            currentRole: null,
+            permissionId: null,
+            error: folderError.message,
+            lastChecked: new Date().toISOString()
+          })
+        }
+      }
+
+      logger.info('GoogleDriveSyncService', `📊 Estado de permisos obtenido para ${permissionsStatus.length} empleados`)
+      
+      return {
+        totalEmployees: permissionsStatus.length,
+        employeesWithAccess: permissionsStatus.filter(p => p.hasAccess).length,
+        employeesWithoutAccess: permissionsStatus.filter(p => !p.hasAccess).length,
+        permissions: permissionsStatus,
+        timestamp: new Date().toISOString()
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error obteniendo estado de permisos: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * Comparte automáticamente todas las carpetas con sus empleados
+   * Útil para configuración masiva inicial
+   */
+  async shareAllEmployeeFolders(defaultRole = 'writer') {
+    try {
+      logger.info('GoogleDriveSyncService', `🔄 Iniciando compartir masivo de carpetas (rol: ${defaultRole})`)
+      
+      const status = await this.getAllEmployeePermissions()
+      const employeesWithoutAccess = status.permissions.filter(p => !p.hasAccess)
+      
+      if (employeesWithoutAccess.length === 0) {
+        logger.info('GoogleDriveSyncService', `ℹ️ Todos los empleados ya tienen acceso a sus carpetas`)
+        return {
+          success: true,
+          message: 'Todos los empleados ya tienen acceso',
+          shared: 0,
+          errors: 0
+        }
+      }
+
+      let shared = 0
+      let errors = 0
+      const results = []
+
+      for (const employee of employeesWithoutAccess) {
+        try {
+          logger.info('GoogleDriveSyncService', `🔗 Compartiendo carpeta con ${employee.employeeEmail}`)
+          
+          const result = await this.shareEmployeeFolderWithUser(
+            employee.employeeEmail,
+            employee.folderId,
+            defaultRole
+          )
+          
+          shared++
+          results.push({
+            employeeEmail: employee.employeeEmail,
+            success: true,
+            result: result
+          })
+          
+          logger.info('GoogleDriveSyncService', `✅ Carpeta compartida con ${employee.employeeEmail}`)
+        } catch (error) {
+          errors++
+          results.push({
+            employeeEmail: employee.employeeEmail,
+            success: false,
+            error: error.message
+          })
+          
+          logger.error('GoogleDriveSyncService', `❌ Error compartiendo con ${employee.employeeEmail}: ${error.message}`)
+        }
+      }
+
+      logger.info('GoogleDriveSyncService', `📊 Compartir masivo completado: ${shared} compartidas, ${errors} errores`)
+      
+      return {
+        success: true,
+        message: `Compartidas ${shared} carpetas, ${errors} errores`,
+        shared: shared,
+        errors: errors,
+        results: results
+      }
+    } catch (error) {
+      logger.error('GoogleDriveSyncService', `❌ Error en compartir masivo: ${error.message}`)
       throw error
     }
   }

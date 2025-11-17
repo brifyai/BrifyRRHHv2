@@ -359,7 +359,7 @@ const Files = () => {
               tokensUsed = Math.ceil(content.length / 4) // Aproximación estándar para tokens
               
               // Registrar uso de tokens usando el sistema correcto
-              const embeddingsServiceLib = await import('../../lib/embeddings')
+              const embeddingsServiceLib = await import('../../lib/embeddings.js')
               await embeddingsServiceLib.default.trackTokenUsage(user.id, tokensUsed, 'file_embedding')
               
             } else {
@@ -383,7 +383,7 @@ const Files = () => {
             console.log(`⚠️ Contenido muy largo (${content.length} caracteres), creando chunks en documentos_entrenador...`)
             
             // Importar embeddings service para chunking
-            const embeddingsServiceLib = await import('../../lib/embeddings')
+            const embeddingsServiceLib = await import('../../lib/embeddings.js')
             
             // Dividir contenido en chunks
             const chunks = embeddingsServiceLib.default.splitTextIntoChunks(content, 8000)

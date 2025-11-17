@@ -402,7 +402,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Importar el servicio de persistencia
-      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService.js')).default
 
       // Guardar credenciales en Supabase
       const { success, error } = await googleDrivePersistenceService.saveCredentials(
@@ -434,7 +434,7 @@ export const AuthProvider = ({ children }) => {
         return { connected: false, email: null }
       }
 
-      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService.js')).default
       return await googleDrivePersistenceService.getConnectionStatus(user.id)
     } catch (error) {
       console.error('Error obteniendo estado de Google Drive:', error)
@@ -449,7 +449,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('No hay usuario autenticado')
       }
 
-      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService.js')).default
       const { success, error } = await googleDrivePersistenceService.disconnect(user.id)
 
       if (!success) {
@@ -475,7 +475,7 @@ export const AuthProvider = ({ children }) => {
         return { token: null, error: { message: 'No hay usuario autenticado' } }
       }
 
-      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService')).default
+      const googleDrivePersistenceService = (await import('../services/googleDrivePersistenceService.js')).default
       return await googleDrivePersistenceService.getValidAccessToken(user.id)
     } catch (error) {
       console.error('Error obteniendo token válido:', error)

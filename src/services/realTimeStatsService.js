@@ -474,7 +474,7 @@ class RealTimeStatsService {
   async generateCompanyInsights(companyId, stats) {
     try {
       // Importar dinámicamente para evitar dependencia circular
-      const { default: analyticsInsightsService } = await import('./analyticsInsightsService')
+      const { default: analyticsInsightsService } = await import('./analyticsInsightsService.js')
       
       const { data: company } = await supabase
         .from('companies')
