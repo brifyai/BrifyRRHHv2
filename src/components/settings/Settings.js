@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext.js'
-import googleDriveService from '../../lib/googleDrive.js'
+import googleDriveService from '../../lib/unifiedGoogleDriveService.js'
 import googleDrivePersistenceService from '../../services/googleDrivePersistenceService.js'
 import googleDriveCallbackHandler from '../../lib/googleDriveCallbackHandler.js'
 import brevoService from '../../services/brevoService.js'

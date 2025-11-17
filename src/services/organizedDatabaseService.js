@@ -48,50 +48,29 @@ class OrganizedDatabaseService {
       
       // ⚡ PERFORMANCE FIX: Optimize query for production
       const selectFields = process.env.NODE_ENV === 'production'
-        ? 'id, name, status' // Only essential fields in production
-        : '*'; // All fields in development
+        ? 'id, name, industry, employee_count, created_at'
+        : '*';
 
       const { data, error } = await supabase
         .from('companies')
         .select(selectFields)
-        .eq('status', 'active') // Only active companies
         .order('name', { ascending: true });
 
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        console.warn('⚠️ organizedDatabaseService.getCompanies(): No active companies found');
-        return [];
+      if (error) {
+        console.error('❌ Error obteniendo empresas:', error);
+        throw error;
       }
-      
-      // Verificar duplicados antes de cachear y retornar
-      const uniqueCompanies = data.filter((company, index, self) =>
-        index === self.findIndex((c) => c.id === company.id)
-      );
 
-      if (uniqueCompanies.length !== data.length) {
-        console.warn('⚠️ organizedDatabaseService: Se detectaron duplicados en BD:', {
-          original: data.length,
-          unique: uniqueCompanies.length,
-          duplicados: data.length - uniqueCompanies.length,
-          datosOriginales: data.map(c => c.id),
-          datosUnicos: uniqueCompanies.map(c => c.id)
-        });
-      }
+      console.log('✅ DEBUG: organizedDatabaseService.getCompanies() - Empresas obtenidas:', data?.length || 0);
       
-      // 🛡️ PRODUCTION FIX: Only cache in development
+      // 🛡️ PRODUCTION FIX: Don't cache in production
       if (useCache) {
-        this.setCache(cacheKey, uniqueCompanies);
+        this.setCache(cacheKey, data);
       }
       
-      console.log('✅ organizedDatabaseService.getCompanies() - Empresas únicas cargadas:', uniqueCompanies.length);
-      console.log('📋 Empresas:', uniqueCompanies.map(c => c.name));
-      
-      return uniqueCompanies;
+      return data || [];
     } catch (error) {
-      console.error('❌ Error en organizedDatabaseService.getCompanies():', error);
-      
-      // 🛡️ PRODUCTION FIX: Return empty array instead of undefined
+      console.error('❌ Error en getCompanies():', error);
       return [];
     }
   }
@@ -104,10 +83,14 @@ class OrganizedDatabaseService {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo empresa por ID:', error);
+        throw error;
+      }
+
       return data;
     } catch (error) {
-      console.error('Error fetching company by ID:', error);
+      console.error('❌ Error en getCompanyById():', error);
       return null;
     }
   }
@@ -116,20 +99,21 @@ class OrganizedDatabaseService {
     try {
       const { data, error } = await supabase
         .from('companies')
-        .insert([{
-          ...companyData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
+        .insert(companyData)
         .select()
         .single();
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('❌ Error creando empresa:', error);
+        throw error;
+      }
+
+      // Limpiar caché de empresas
       this.clearCache('companies');
+      
       return data;
     } catch (error) {
-      console.error('Error creating company:', error);
+      console.error('❌ Error en createCompany():', error);
       throw error;
     }
   }
@@ -138,20 +122,22 @@ class OrganizedDatabaseService {
     try {
       const { data, error } = await supabase
         .from('companies')
-        .update({
-          ...updateData,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('❌ Error actualizando empresa:', error);
+        throw error;
+      }
+
+      // Limpiar caché de empresas
       this.clearCache('companies');
+      
       return data;
     } catch (error) {
-      console.error('Error updating company:', error);
+      console.error('❌ Error en updateCompany():', error);
       throw error;
     }
   }
@@ -163,12 +149,17 @@ class OrganizedDatabaseService {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('❌ Error eliminando empresa:', error);
+        throw error;
+      }
+
+      // Limpiar caché de empresas
       this.clearCache('companies');
+      
       return true;
     } catch (error) {
-      console.error('Error deleting company:', error);
+      console.error('❌ Error en deleteCompany():', error);
       throw error;
     }
   }
@@ -182,91 +173,73 @@ class OrganizedDatabaseService {
     // Normalizar parámetros
     let companyId = null;
     let filters = {};
-
-    if (params && typeof params === 'object' && !Array.isArray(params)) {
-      filters = params;
-      companyId = params.companyId || null;
-    } else if (typeof params === 'string') {
+    
+    if (typeof params === 'string') {
+      // Si es string, asumir que es companyId
       companyId = params;
-    } else if (params !== null && params !== undefined) {
-      // Permitir números u otros tipos simples
-      companyId = String(params);
+    } else if (params && typeof params === 'object') {
+      // Si es objeto, extraer companyId y otros filtros
+      companyId = params.companyId || null;
+      filters = { ...params };
+      delete filters.companyId; // Remover companyId de filtros
     }
 
-    // Construir clave de caché segura
-    const cacheKey = `employees_${companyId || 'all'}_${JSON.stringify({
-      department: filters.department || null,
-      region: filters.region || null,
-      search: filters.search || null,
-      limit: filters.limit || null,
-      offset: filters.offset || null
-    })}`;
-
-    const cached = this.getFromCache(cacheKey);
-    if (cached) return cached;
+    const cacheKey = `employees_${companyId || 'all'}_${JSON.stringify(filters)}`;
+    
+    // 🛡️ PRODUCTION FIX: Bypass cache in production
+    const useCache = process.env.NODE_ENV !== 'production';
+    const cached = useCache ? this.getFromCache(cacheKey) : null;
+    
+    if (cached) {
+      console.log('🔍 DEBUG: organizedDatabaseService.getEmployees() - Usando caché:', cached.length, 'empleados');
+      return cached;
+    }
 
     try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getEmployees() - Consultando empleados...');
+      
       let query = supabase
         .from('employees')
         .select(`
           *,
-          companies:company_id (
+          companies (
             id,
             name,
             industry
           )
         `);
 
-      // Filtros base
+      // Aplicar filtros
       if (companyId) {
         query = query.eq('company_id', companyId);
       }
 
-      // Filtros opcionales (sin asumir columnas que no existan como is_active)
-      if (filters.department) {
-        query = query.eq('department', filters.department);
-      }
-      if (filters.region) {
-        query = query.ilike('region', `%${filters.region}%`);
-      }
-      if (filters.level) {
-        query = query.eq('level', filters.level);
-      }
-      if (filters.workMode) {
-        query = query.eq('work_mode', filters.workMode);
-      }
-      if (filters.contractType) {
-        query = query.eq('contract_type', filters.contractType);
-      }
-      if (filters.search) {
-        // Buscar por nombre/apellido/email
-        const term = filters.search.replace(/%/g, '').trim();
-        if (term.length > 0) {
-          query = query.or(
-            `first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`
-          );
+      // Aplicar filtros adicionales
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          query = query.eq(key, value);
         }
+      });
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error obteniendo empleados:', error);
+        throw error;
       }
 
-      // Paginación
-      if (Number.isInteger(filters.limit) && filters.limit > 0) {
-        query = query.limit(filters.limit);
-        if (Number.isInteger(filters.offset) && filters.offset >= 0) {
-          const start = filters.offset;
-          const end =
-            start + (filters.limit || (LIMITS_CONFIG?.DEFAULT_PAGE_SIZE || 50)) - 1;
-          query = query.range(start, end);
-        }
+      console.log('✅ DEBUG: organizedDatabaseService.getEmployees() - Empleados obtenidos:', data?.length || 0);
+      
+      // 🛡️ PRODUCTION FIX: Don't cache in production
+      if (useCache) {
+        this.setCache(cacheKey, data);
       }
-
-      const { data, error } = await query.order('last_name', { ascending: true });
-
-      if (error) throw error;
-
-      this.setCache(cacheKey, data);
+      
       return data || [];
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error('❌ Error en getEmployees():', error);
       return [];
     }
   }
@@ -277,7 +250,7 @@ class OrganizedDatabaseService {
         .from('employees')
         .select(`
           *,
-          companies:company_id (
+          companies (
             id,
             name,
             industry
@@ -286,10 +259,14 @@ class OrganizedDatabaseService {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo empleado por ID:', error);
+        throw error;
+      }
+
       return data;
     } catch (error) {
-      console.error('Error fetching employee by ID:', error);
+      console.error('❌ Error en getEmployeeById():', error);
       return null;
     }
   }
@@ -301,10 +278,14 @@ class OrganizedDatabaseService {
         .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo conteo de empleados:', error);
+        throw error;
+      }
+
       return count || 0;
     } catch (error) {
-      console.error('Error counting employees:', error);
+      console.error('❌ Error en getEmployeeCountByCompany():', error);
       return 0;
     }
   }
@@ -315,19 +296,31 @@ class OrganizedDatabaseService {
 
   async getFolders(employeeId = null) {
     const cacheKey = `folders_${employeeId || 'all'}`;
-    const cached = this.getFromCache(cacheKey);
-    if (cached) return cached;
+    
+    // 🛡️ PRODUCTION FIX: Bypass cache in production
+    const useCache = process.env.NODE_ENV !== 'production';
+    const cached = useCache ? this.getFromCache(cacheKey) : null;
+    
+    if (cached) {
+      console.log('🔍 DEBUG: organizedDatabaseService.getFolders() - Usando caché:', cached.length, 'carpetas');
+      return cached;
+    }
 
     try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getFolders() - Consultando carpetas...');
+      
       let query = supabase
         .from('folders')
         .select(`
           *,
-          employees:employee_id (
+          employees (
             id,
-            first_name,
-            last_name,
-            employee_id
+            full_name,
+            email,
+            companies (
+              id,
+              name
+            )
           )
         `);
 
@@ -335,14 +328,25 @@ class OrganizedDatabaseService {
         query = query.eq('employee_id', employeeId);
       }
 
-      const { data, error } = await query.order('name', { ascending: true });
+      query = query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error obteniendo carpetas:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.getFolders() - Carpetas obtenidas:', data?.length || 0);
       
-      this.setCache(cacheKey, data);
+      // 🛡️ PRODUCTION FIX: Don't cache in production
+      if (useCache) {
+        this.setCache(cacheKey, data);
+      }
+      
       return data || [];
     } catch (error) {
-      console.error('Error fetching folders:', error);
+      console.error('❌ Error en getFolders():', error);
       return [];
     }
   }
@@ -353,10 +357,14 @@ class OrganizedDatabaseService {
         .from('folders')
         .select('*', { count: 'exact', head: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo conteo de carpetas:', error);
+        throw error;
+      }
+
       return count || 0;
     } catch (error) {
-      console.error('Error counting folders:', error);
+      console.error('❌ Error en getFolderCount():', error);
       return 0;
     }
   }
@@ -365,20 +373,32 @@ class OrganizedDatabaseService {
     try {
       const { data, error } = await supabase
         .from('folders')
-        .insert([{
-          ...folderData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
+        .insert(folderData)
+        .select(`
+          *,
+          employees (
+            id,
+            full_name,
+            email,
+            companies (
+              id,
+              name
+            )
+          )
+        `)
         .single();
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('❌ Error creando carpeta:', error);
+        throw error;
+      }
+
+      // Limpiar caché de carpetas
       this.clearCache('folders');
+      
       return data;
     } catch (error) {
-      console.error('Error creating folder:', error);
+      console.error('❌ Error en createFolder():', error);
       throw error;
     }
   }
@@ -389,19 +409,23 @@ class OrganizedDatabaseService {
 
   async getDocuments(folderId = null) {
     try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getDocuments() - Consultando documentos...');
+      
       let query = supabase
         .from('documents')
         .select(`
           *,
-          folders:folder_id (
+          folders (
             id,
             name,
-            employee_id
-          ),
-          employees:employee_id (
-            id,
-            first_name,
-            last_name
+            employees (
+              id,
+              full_name,
+              companies (
+                id,
+                name
+              )
+            )
           )
         `);
 
@@ -409,12 +433,19 @@ class OrganizedDatabaseService {
         query = query.eq('folder_id', folderId);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error obteniendo documentos:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.getDocuments() - Documentos obtenidos:', data?.length || 0);
       return data || [];
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      console.error('❌ Error en getDocuments():', error);
       return [];
     }
   }
@@ -425,10 +456,14 @@ class OrganizedDatabaseService {
         .from('documents')
         .select('*', { count: 'exact', head: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo conteo de documentos:', error);
+        throw error;
+      }
+
       return count || 0;
     } catch (error) {
-      console.error('Error counting documents:', error);
+      console.error('❌ Error en getDocumentCount():', error);
       return 0;
     }
   }
@@ -439,18 +474,15 @@ class OrganizedDatabaseService {
 
   async getCommunicationLogs(companyId = null) {
     try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getCommunicationLogs() - Consultando logs...');
+      
       let query = supabase
         .from('communication_logs')
         .select(`
           *,
-          companies:company_id (
+          companies (
             id,
             name
-          ),
-          employees:employee_id (
-            id,
-            first_name,
-            last_name
           )
         `);
 
@@ -458,21 +490,30 @@ class OrganizedDatabaseService {
         query = query.eq('company_id', companyId);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false }).limit(1000);
 
-      if (error) throw error;
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error obteniendo logs de comunicación:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.getCommunicationLogs() - Logs obtenidos:', data?.length || 0);
       return data || [];
     } catch (error) {
-      console.error('Error fetching communication logs:', error);
+      console.error('❌ Error en getCommunicationLogs():', error);
       return [];
     }
   }
 
   async getCommunicationStats(companyId = null) {
     try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getCommunicationStats() - Calculando estadísticas...');
+      
       let query = supabase
         .from('communication_logs')
-        .select('status');
+        .select('message_type, status, created_at');
 
       if (companyId) {
         query = query.eq('company_id', companyId);
@@ -480,348 +521,257 @@ class OrganizedDatabaseService {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo estadísticas de comunicación:', error);
+        throw error;
+      }
 
+      // Procesar estadísticas
       const stats = {
-        sent: 0,
-        scheduled: 0,
-        draft: 0,
-        failed: 0,
-        total: data?.length || 0
+        total: data?.length || 0,
+        byType: {},
+        byStatus: {},
+        recent: data?.slice(0, 10) || []
       };
 
       data?.forEach(log => {
-        if (stats[log.status] !== undefined) {
-          stats[log.status]++;
-        }
+        // Por tipo
+        stats.byType[log.message_type] = (stats.byType[log.message_type] || 0) + 1;
+        
+        // Por estado
+        stats.byStatus[log.status] = (stats.byStatus[log.status] || 0) + 1;
       });
 
+      console.log('✅ DEBUG: organizedDatabaseService.getCommunicationStats() - Estadísticas calculadas');
       return stats;
     } catch (error) {
-      console.error('Error fetching communication stats:', error);
-      return { sent: 0, scheduled: 0, draft: 0, failed: 0, total: 0 };
+      console.error('❌ Error en getCommunicationStats():', error);
+      return { total: 0, byType: {}, byStatus: {}, recent: [] };
     }
   }
 
   // ========================================
-  // MÉTODOS DE ESTADÍSTICAS GENERALES
+  // MÉTODOS DE DASHBOARD
   // ========================================
 
   async getDashboardStats() {
     const cacheKey = 'dashboard_stats';
-    const cached = this.getFromCache(cacheKey);
-    if (cached) return cached;
+    
+    // 🛡️ PRODUCTION FIX: Bypass cache in production
+    const useCache = process.env.NODE_ENV !== 'production';
+    const cached = useCache ? this.getFromCache(cacheKey) : null;
+    
+    if (cached) {
+      console.log('🔍 DEBUG: organizedDatabaseService.getDashboardStats() - Usando caché');
+      return cached;
+    }
 
     try {
-      console.log('🔍 OrganizedDatabase: Cargando estadísticas del dashboard...');
+      console.log('🔍 DEBUG: organizedDatabaseService.getDashboardStats() - Calculando estadísticas del dashboard...');
       
-      // Obtener conteos en paralelo con timeout individual
-      const queries = [
-        supabase.from('companies').select('*', { count: 'exact', head: true }),
-        supabase.from('employees').select('*', { count: 'exact', head: true }),
-        supabase.from('folders').select('*', { count: 'exact', head: true }),
-        supabase.from('documents').select('*', { count: 'exact', head: true }),
-        supabase.from('communication_logs').select('*', { count: 'exact', head: true })
-      ];
-
-      // Agregar timeout a cada consulta usando configuración centralizada
-      const queriesWithTimeout = queries.map(query =>
-        Promise.race([
-          query,
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout')), TIMEOUT_CONFIG.DATABASE_QUERY)
-          )
-        ])
-      );
-
+      // Obtener estadísticas en paralelo
       const [
         companiesResult,
         employeesResult,
         foldersResult,
         documentsResult,
-        communicationResult
-      ] = await Promise.allSettled(queriesWithTimeout);
-
-      // Extraer resultados de manera segura
-      const extractCount = (result) => {
-        if (result.status === 'fulfilled' && result.value) {
-          return result.value.count || 0;
-        }
-        console.warn('⚠️ Query fallida:', result.reason?.message || 'Error desconocido');
-        return 0;
-      };
-
-      const totalCompanies = extractCount(companiesResult);
-      const totalEmployees = extractCount(employeesResult);
-      const totalFolders = extractCount(foldersResult);
-      const totalDocuments = extractCount(documentsResult);
-      const totalCommunications = extractCount(communicationResult);
-      
-      console.log('📊 Datos básicos cargados:', {
-        companies: totalCompanies,
-        employees: totalEmployees,
-        folders: totalFolders,
-        documents: totalDocuments,
-        communications: totalCommunications
-      });
-
-      // Calcular métricas adicionales con manejo de errores
-      let monthlyGrowth = 0;
-      let successRate = 0;
-
-      try {
-        // Calcular crecimiento mensual (con timeout)
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        
-        const newEmployeesResult = await Promise.race([
-          supabase.from('employees').select('*', { count: 'exact', head: true })
-            .gte('created_at', oneMonthAgo.toISOString()),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Monthly growth query timeout')), TIMEOUT_CONFIG.DATABASE_QUERY)
-          )
-        ]);
-        
-        const newEmployeesThisMonth = newEmployeesResult?.count || 0;
-        monthlyGrowth = totalEmployees > 0
-          ? Math.round((newEmployeesThisMonth / totalEmployees) * 100)
-          : 0;
-      } catch (error) {
-        console.warn('⚠️ Error calculando crecimiento mensual:', error.message);
-        monthlyGrowth = 0;
-      }
-
-      try {
-        // Calcular tasa de éxito (con timeout)
-        const commStatsResult = await Promise.race([
-          supabase.from('communication_logs')
-            .select('status')
-            .in('status', ['sent', 'read'])
-            .limit(LIMITS_CONFIG.MAX_PAGE_SIZE), // Usar configuración centralizada
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Success rate query timeout')), TIMEOUT_CONFIG.DATABASE_QUERY)
-          )
-        ]);
-        
-        const successfulCommunications = commStatsResult?.data?.length || 0;
-        successRate = totalCommunications > 0
-          ? Math.round((successfulCommunications / totalCommunications) * 100)
-          : 0;
-      } catch (error) {
-        console.warn('⚠️ Error calculando tasa de éxito:', error.message);
-        successRate = 0;
-      }
-
-      // Calcular almacenamiento real (basado en documentos)
-      const avgDocumentSize = 50 * 1024; // 50KB promedio por documento
-      const storageUsed = totalDocuments * avgDocumentSize;
+        communicationStatsResult
+      ] = await Promise.all([
+        supabase.from('companies').select('*', { count: 'exact', head: true }),
+        supabase.from('employees').select('*', { count: 'exact', head: true }),
+        supabase.from('folders').select('*', { count: 'exact', head: true }),
+        supabase.from('documents').select('*', { count: 'exact', head: true }),
+        this.getCommunicationStats()
+      ]);
 
       const stats = {
-        companies: totalCompanies,
-        employees: totalEmployees,
-        folders: totalFolders,
-        documents: totalDocuments,
-        communications: totalCommunications,
-        tokensUsed: totalCommunications, // Usar comunicaciones como proxy de tokens
-        storageUsed: storageUsed,
-        monthlyGrowth: monthlyGrowth,
-        successRate: successRate,
-        activeUsers: totalEmployees // Usar empleados como usuarios activos
+        companies: companiesResult.count || 0,
+        employees: employeesResult.count || 0,
+        folders: foldersResult.count || 0,
+        documents: documentsResult.count || 0,
+        communication: communicationStatsResult,
+        lastUpdated: new Date().toISOString()
       };
 
-      console.log('✅ Estadísticas del dashboard calculadas:', stats);
-      this.setCache(cacheKey, stats);
+      console.log('✅ DEBUG: organizedDatabaseService.getDashboardStats() - Estadísticas calculadas:', stats);
+      
+      // 🛡️ PRODUCTION FIX: Don't cache in production
+      if (useCache) {
+        this.setCache(cacheKey, stats);
+      }
+      
       return stats;
     } catch (error) {
-      console.error('❌ Error crítico en getDashboardStats:', error);
-      
-      // Retornar valores seguros en caso de error crítico
-      const fallbackStats = {
+      console.error('❌ Error en getDashboardStats():', error);
+      return {
         companies: 0,
         employees: 0,
         folders: 0,
         documents: 0,
-        communications: 0,
-        tokensUsed: 0,
-        storageUsed: 0,
-        monthlyGrowth: 0,
-        successRate: 0,
-        activeUsers: 0
+        communication: { total: 0, byType: {}, byStatus: {}, recent: [] },
+        lastUpdated: new Date().toISOString()
       };
-      
-      // Cache por menos tiempo para reintentar pronto
-      this.setCache(cacheKey, fallbackStats);
-      return fallbackStats;
     }
   }
 
   // ========================================
-  // MÉTODOS DE EMPRESAS CON ESTADÍSTICAS
+  // MÉTODOS DE USUARIOS Y ROLES
   // ========================================
 
-  async getCompaniesWithStats() {
-    const cacheKey = 'companies_with_stats';
-    
-    // ✅ SOLUCIÓN AGRESIVA: Forzar limpieza de caché siempre para evitar datos viejos
-    this.forceClearCache();
-    console.log('🧹 getCompaniesWithStats: Caché forzado a limpiar completamente');
-
+  async getUsers() {
     try {
-      console.log('🔍 Obteniendo empresas con estadísticas detalladas...');
+      console.log('🔍 DEBUG: organizedDatabaseService.getUsers() - Consultando usuarios...');
       
-      // Obtener empresas con consulta directa y forzar frescura
-      const { data: companies, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('status', 'active')
-        .order('name', { ascending: true });
-
-      if (companiesError) throw companiesError;
-
-      if (!companies || companies.length === 0) {
-        console.log('⚠️ No se encontraron empresas en la base de datos');
-        return [];
-      }
-
-      console.log(`🔍 getCompaniesWithStats: ${companies.length} empresas obtenidas de BD`);
-
-      // ✅ CORRECCIÓN ROBUSTA: Filtrar duplicados por ID y por nombre
-      const uniqueById = companies.filter((company, index, self) =>
-        index === self.findIndex((c) => c.id === company.id)
-      );
-
-      const uniqueCompanies = uniqueById.filter((company, index, self) =>
-        index === self.findIndex((c) => c.name === company.name)
-      );
-
-      // Logging detallado de duplicados
-      if (companies.length !== uniqueById.length) {
-        console.warn('⚠️ DUPLICADOS POR ID detectados:', {
-          original: companies.length,
-          uniqueById: uniqueById.length,
-          duplicadosId: companies.length - uniqueById.length,
-          idsDuplicados: companies.map(c => c.id).filter((id, index) =>
-            companies.findIndex(c => c.id === id) !== index
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            name_es,
+            description,
+            hierarchy_level
           )
-        });
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error obteniendo usuarios:', error);
+        throw error;
       }
 
-      if (uniqueById.length !== uniqueCompanies.length) {
-        console.warn('⚠️ DUPLICADOS POR NOMBRE detectados:', {
-          uniqueById: uniqueById.length,
-          uniqueByName: uniqueCompanies.length,
-          duplicadosNombre: uniqueById.length - uniqueCompanies.length,
-          nombresDuplicados: uniqueById.map(c => c.name).filter((name, index) =>
-            uniqueById.findIndex(c => c.name === name) !== index
-          )
-        });
-      }
-
-      console.log(`🔍 getCompaniesWithStats: Procesando ${uniqueCompanies.length} empresas únicas finales`);
-      console.log('📋 Empresas únicas finales:', uniqueCompanies.map(c => ({ id: c.id, name: c.name })));
-
-      // Para cada empresa ÚNICA, obtener sus estadísticas
-      const companiesWithStats = await Promise.all(
-        uniqueCompanies.map(async (company) => {
-          try {
-            // Obtener conteo de empleados
-            const { count: employeeCount } = await supabase
-              .from('employees')
-              .select('*', { count: 'exact', head: true })
-              .eq('company_id', company.id);
-
-            // Obtener estadísticas de comunicación
-            const { data: commLogs, error: commError } = await supabase
-              .from('communication_logs')
-              .select('status, created_at')
-              .eq('company_id', company.id);
-
-            let sentMessages = 0;
-            let readMessages = 0;
-            let scheduledMessages = 0;
-            let draftMessages = 0;
-            let nextScheduledDate = null;
-
-            if (!commError && commLogs) {
-              sentMessages = commLogs.filter(log => log.status === 'sent').length;
-              readMessages = commLogs.filter(log => log.status === 'read').length;
-              scheduledMessages = commLogs.filter(log => log.status === 'scheduled').length;
-              draftMessages = commLogs.filter(log => log.status === 'draft').length;
-              
-              // Encontrar la próxima fecha programada
-              const scheduledLogs = commLogs
-                .filter(log => log.status === 'scheduled' && log.created_at)
-                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-              
-              if (scheduledLogs.length > 0) {
-                nextScheduledDate = scheduledLogs[0].created_at;
-              }
-            }
-
-            // Calcular sentimiento basado en engagement real (no más datos mock)
-            let sentimentScore = 0; // Neutral por defecto SIEMPRE cuando no hay mensajes
-           
-            console.log(`🔍 ${company.name}: sentMessages=${sentMessages}, readMessages=${readMessages}`);
-            
-            if (sentMessages > 0) {
-              const engagementRate = (readMessages / sentMessages);
-              // Sentimiento basado en tasa de lectura:
-              // > 80% = positivo (0.1 a 1.0)
-              // 50-80% = neutral (-0.1 a 0.1)
-              // < 50% = negativo (-1.0 a -0.1)
-              if (engagementRate >= 0.8) {
-                sentimentScore = 0.1 + (engagementRate - 0.8) * 4.5; // 0.1 a 1.0
-              } else if (engagementRate >= 0.5) {
-                sentimentScore = (engagementRate - 0.5) * 0.67 - 0.1; // -0.1 a 0.1
-              } else {
-                sentimentScore = (engagementRate / 0.5) * 0.4 - 1.0; // -1.0 a -0.1
-              }
-              
-              console.log(`📊 ${company.name}: engagementRate=${engagementRate.toFixed(2)}, sentimentScore=${sentimentScore.toFixed(2)}`);
-            } else {
-              console.log(`📊 ${company.name}: SIN MENSAJES - sentimiento neutral (0.00)`);
-            }
-
-            return {
-              ...company,
-              employeeCount: employeeCount || 0,
-              sentMessages,
-              readMessages,
-              scheduledMessages,
-              draftMessages,
-              nextScheduledDate,
-              sentimentScore,
-              engagementRate: sentMessages > 0 ? Math.round((readMessages / sentMessages) * 100) : 0
-            };
-          } catch (error) {
-            console.error(`Error obteniendo estadísticas para empresa ${company.id}:`, error);
-            return {
-              ...company,
-              employeeCount: 0,
-              sentMessages: 0,
-              readMessages: 0,
-              scheduledMessages: 0,
-              draftMessages: 0,
-              nextScheduledDate: null,
-              sentimentScore: 0,
-              engagementRate: 0
-            };
-          }
-        })
-      );
-
-      console.log(`✅ Se obtuvieron ${companiesWithStats.length} empresas con estadísticas`);
-      
-      this.setCache(cacheKey, companiesWithStats);
-      return companiesWithStats;
+      console.log('✅ DEBUG: organizedDatabaseService.getUsers() - Usuarios obtenidos:', data?.length || 0);
+      return data || [];
     } catch (error) {
-      console.error('❌ Error en getCompaniesWithStats:', error);
+      console.error('❌ Error en getUsers():', error);
       return [];
     }
   }
 
+  async getRoles() {
+    try {
+      console.log('🔍 DEBUG: organizedDatabaseService.getRoles() - Consultando roles...');
+      
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*')
+        .order('hierarchy_level', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error obteniendo roles:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.getRoles() - Roles obtenidos:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error en getRoles():', error);
+      return [];
+    }
+  }
+
+  async createUser(userData) {
+    try {
+      console.log('🔍 DEBUG: organizedDatabaseService.createUser() - Creando usuario...');
+      
+      const { data, error } = await supabase
+        .from('users')
+        .insert(userData)
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            name_es,
+            description,
+            hierarchy_level
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('❌ Error creando usuario:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.createUser() - Usuario creado:', data?.id);
+      
+      // Limpiar caché de usuarios
+      this.clearCache('users');
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error en createUser():', error);
+      throw error;
+    }
+  }
+
+  async updateUser(userId, updateData) {
+    try {
+      console.log('🔍 DEBUG: organizedDatabaseService.updateUser() - Actualizando usuario:', userId);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId)
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            name_es,
+            description,
+            hierarchy_level
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('❌ Error actualizando usuario:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.updateUser() - Usuario actualizado:', data?.id);
+      
+      // Limpiar caché de usuarios
+      this.clearCache('users');
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error en updateUser():', error);
+      throw error;
+    }
+  }
+
+  async deleteUser(userId) {
+    try {
+      console.log('🔍 DEBUG: organizedDatabaseService.deleteUser() - Eliminando usuario:', userId);
+      
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        console.error('❌ Error eliminando usuario:', error);
+        throw error;
+      }
+
+      console.log('✅ DEBUG: organizedDatabaseService.deleteUser() - Usuario eliminado:', userId);
+      
+      // Limpiar caché de usuarios
+      this.clearCache('users');
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error en deleteUser():', error);
+      throw error;
+    }
+  }
+
   // ========================================
-  // MÉTODOS DE CACHE
+  // MÉTODOS DE CACHÉ
   // ========================================
 
   getFromCache(key) {
@@ -829,7 +779,6 @@ class OrganizedDatabaseService {
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
     }
-    this.cache.delete(key);
     return null;
   }
 
@@ -838,12 +787,6 @@ class OrganizedDatabaseService {
       data,
       timestamp: Date.now()
     });
-  }
-
-  // Forzar limpieza de caché para actualizaciones inmediatas
-  forceClearCache() {
-    this.cache.clear();
-    console.log('🧹 OrganizedDatabaseService: Caché forzado a limpiar');
   }
 
   clearCache(key = null) {
