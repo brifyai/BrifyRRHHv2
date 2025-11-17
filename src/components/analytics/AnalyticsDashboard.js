@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   ChartBarIcon,
   UsersIcon,
-  ClockIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   DocumentTextIcon,
@@ -24,7 +23,7 @@ import {
   ArcElement,
   RadialLinearScale
 } from 'chart.js'
-import { Line, Bar, Pie, Radar, Doughnut } from 'react-chartjs-2'
+import { Line, Bar, Radar, Doughnut } from 'react-chartjs-2'
 import realTimeStatsService from '../../services/realTimeStatsService.js'
 import companyReportsService from '../../services/companyReportsService.js'
 import analyticsInsightsService from '../../services/analyticsInsightsService.js'
