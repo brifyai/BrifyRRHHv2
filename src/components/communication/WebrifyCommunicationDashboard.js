@@ -29,44 +29,9 @@ import organizedDatabaseService from '../../services/organizedDatabaseService.js
 import trendsAnalysisService from '../../services/trendsAnalysisService.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import FlipCard from '../common/FlipCard.js';
 
 const MySwal = withReactContent(Swal);
-
-// Estilos CSS para el efecto de flip
-const flipStyles = `
-  .flip-card {
-    perspective: 1000px;
-    min-height: 600px;
-  }
-
-  .flip-card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    transition: transform 0.8s;
-    transform-style: preserve-3d;
-  }
-
-  .flip-card.flipped .flip-card-inner {
-    transform: rotateY(180deg);
-  }
-
-  .flip-card-front, .flip-card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    border-radius: 1.5rem;
-    top: 0;
-    left: 0;
-    overflow: hidden;
-  }
-
-  .flip-card-back {
-    transform: rotateY(180deg);
-  }
-`;
 
 const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
   const navigate = useNavigate();
@@ -633,9 +598,6 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
             </div>
             
             <div className="mt-8">
-              {/* Inyectar estilos CSS para flip effect */}
-              <style dangerouslySetInnerHTML={{ __html: flipStyles }} />
-              
               {/* Análisis Inteligente de Tendencias - Diseño Moderno y Compacto */}
               <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl p-8 border border-gray-200 shadow-lg">
                 {/* Header */}
