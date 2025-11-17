@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import employeeFolderService from '../services/employeeFolderService.js';
+import unifiedEmployeeFolderService from '../services/unifiedEmployeeFolderService.js';
 import organizedDatabaseService from '../services/organizedDatabaseService.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -100,7 +100,7 @@ export const useEmployeeFolders = (companyId) => {
       // Procesar carpetas en paralelo
       const folderPromises = employeesForPage.map(async (employee) => {
         try {
-          const folder = await employeeFolderService.getEmployeeFolder(employee.email);
+          const folder = await unifiedEmployeeFolderService.checkSupabaseExists(employee.email);
           return {
             ...folder,
             employeeName: employee.name,
@@ -261,7 +261,7 @@ export const useEmployeeFolders = (companyId) => {
   // Ver carpeta individual
   const handleViewFolder = useCallback(async (employeeEmail) => {
     try {
-      const folder = await employeeFolderService.getEmployeeFolder(employeeEmail);
+      const folder = await unifiedEmployeeFolderService.checkSupabaseExists(employeeEmail);
       setSelectedFolder(folder);
       setSelectedFolders(new Set());
     } catch (error) {
