@@ -37,74 +37,27 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   const nextSendDate = company.nextScheduledDate;
   
   return (
-    <div className={`flip-card group relative ${isFlipped ? 'flipped' : ''}`}>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .flip-card {
-            perspective: 1000px;
-            width: 100%;
-            height: 100%;
-            position: relative;
-          }
-          
-          .flip-card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
-            transform-style: preserve-3d;
-            will-change: transform;
-          }
-          
-          .flip-card.flipped .flip-card-inner {
-            transform: rotateY(180deg);
-          }
-          
-          .flip-card-front, .flip-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            -moz-backface-visibility: hidden;
-            -ms-backface-visibility: hidden;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-          }
-          
-          .flip-card-back {
-            transform: rotateY(180deg);
-          }
-          
-          @supports (transform: rotateY(180deg)) {
-            .flip-card-inner {
-              transform-style: preserve-3d;
-            }
-            
-            .flip-card-front, .flip-card-back {
-              backface-visibility: hidden;
-            }
-          }
-          
-          @supports not (transform: rotateY(180deg)) {
-            .flip-card.flipped .flip-card-front {
-              opacity: 0;
-            }
-            
-            .flip-card:not(.flipped) .flip-card-back {
-              opacity: 0;
-            }
-          }
-        `
-      }} />
+    <div
+      style={{
+        perspective: '1000px',
+        width: '100%',
+        height: '100%',
+        transformStyle: 'preserve-3d',
+        transform: 'rotateY(0deg)',
+        backfaceVisibility: 'hidden',
+        position: 'relative'
+      }}
+    >
       <div
-        className="flip-card-inner relative cursor-pointer transition-all duration-700"
         style={{
-          height: '400px'
+          width: '100%',
+          height: '100%',
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          backfaceVisibility: 'hidden',
+          transition: 'transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1)',
+          cursor: 'pointer',
+          position: 'relative'
         }}
         onClick={(e) => {
           // Verificar si el clic fue en el botón de tendencias
