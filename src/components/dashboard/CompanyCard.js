@@ -40,16 +40,15 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   const renderFrontSide = () => (
     <div
       style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        width: '100%',
+        height: '400px',
         backgroundColor: 'white',
         borderRadius: '1.5rem',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         padding: '1.5rem',
-        border: '1px solid #f3f4f6'
+        border: '1px solid #f3f4f6',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       <div
@@ -109,7 +108,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
       </div>
 
       {/* Métricas principales */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
         <div
           style={{
             display: 'grid',
@@ -357,222 +356,212 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
   const renderBackSide = () => (
     <div
       style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        width: '100%',
+        height: '400px',
         background: 'linear-gradient(to bottom right, #e0e7ff, #f3e8ff)',
         borderRadius: '1.5rem',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         padding: '1rem',
-        border: '1px solid #f3f4f6'
+        border: '1px solid #f3f4f6',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       <div
         style={{
-          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '0.75rem',
+          flexShrink: 0
+        }}
+      >
+        <h4
+          style={{
+            fontSize: '1.125rem',
+            fontWeight: 'bold',
+            color: '#111827'
+          }}
+        >
+          📊 Vista Detallada
+        </h4>
+        <div
+          style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            marginLeft: '0.5rem'
+          }}
+        >
+          {company.name}
+        </div>
+      </div>
+
+      <div
+        style={{
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden'
+          gap: '0.75rem',
+          overflowY: 'auto',
+          paddingRight: '0.5rem'
+        }}
+      >
+        {/* Programados */}
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            border: '1px solid #f3f4f6'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>📅 Mensajes Programados</div>
+              <div
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  color: '#4f46e5'
+                }}
+              >
+                {scheduledMessages}
+              </div>
+              {nextSendDate && (
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: '#9ca3af',
+                    marginTop: '0.25rem'
+                  }}
+                >
+                  Próximo: {new Date(nextSendDate).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+            <ClockIcon style={{ height: '1.5rem', width: '1.5rem', color: '#4f46e5' }} />
+          </div>
+        </div>
+
+        {/* Borradores */}
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            border: '1px solid #f3f4f6'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>📝 Borradores</div>
+              <div
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  color: '#d97706'
+                }}
+              >
+                {draftMessages}
+              </div>
+            </div>
+            <DocumentTextIcon style={{ height: '1.5rem', width: '1.5rem', color: '#d97706' }} />
+          </div>
+        </div>
+
+        {/* Estadísticas adicionales */}
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            border: '1px solid #f3f4f6'
+          }}
+        >
+          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            📈 Estadísticas Adicionales
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Tasa de lectura:</span>
+              <span style={{ fontWeight: '500' }}>
+                {company.sentMessages > 0 ?
+                  Math.round((company.readMessages / company.sentMessages) * 100)
+                  : 0}%
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Última actividad:</span>
+              <span style={{ fontWeight: '500' }}>Hoy</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Estado:</span>
+              <span style={{ fontWeight: '500', color: '#059669' }}>🟢 Activa</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Información adicional */}
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            border: '1px solid #f3f4f6'
+          }}
+        >
+          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            🏢 Información de la Empresa
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>ID:</span>
+              <span style={{ fontFamily: 'monospace' }}>{company.id.slice(0, 12)}...</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Empleados:</span>
+              <span style={{ fontWeight: '500' }}>{company.employeeCount}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Indicador de flip de vuelta */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '0.5rem',
+          left: '1rem'
         }}
       >
         <div
           style={{
+            fontSize: '0.75rem',
+            color: '#9ca3af',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '0.75rem',
-            flexShrink: 0
+            alignItems: 'center'
           }}
         >
-          <h4
-            style={{
-              fontSize: '1.125rem',
-              fontWeight: 'bold',
-              color: '#111827'
-            }}
-          >
-            📊 Vista Detallada
-          </h4>
-          <div
-            style={{
-              fontSize: '0.875rem',
-              color: '#6b7280',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              marginLeft: '0.5rem'
-            }}
-          >
-            {company.name}
-          </div>
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            overflowY: 'auto',
-            paddingRight: '0.5rem'
-          }}
-        >
-          {/* Programados */}
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '0.75rem',
-              padding: '0.75rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              border: '1px solid #f3f4f6'
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>📅 Mensajes Programados</div>
-                <div
-                  style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 'bold',
-                    color: '#4f46e5'
-                  }}
-                >
-                  {scheduledMessages}
-                </div>
-                {nextSendDate && (
-                  <div
-                    style={{
-                      fontSize: '0.75rem',
-                      color: '#9ca3af',
-                      marginTop: '0.25rem'
-                    }}
-                  >
-                    Próximo: {new Date(nextSendDate).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-              <ClockIcon style={{ height: '1.5rem', width: '1.5rem', color: '#4f46e5' }} />
-            </div>
-          </div>
-
-          {/* Borradores */}
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '0.75rem',
-              padding: '0.75rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              border: '1px solid #f3f4f6'
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>📝 Borradores</div>
-                <div
-                  style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 'bold',
-                    color: '#d97706'
-                  }}
-                >
-                  {draftMessages}
-                </div>
-              </div>
-              <DocumentTextIcon style={{ height: '1.5rem', width: '1.5rem', color: '#d97706' }} />
-            </div>
-          </div>
-
-          {/* Estadísticas adicionales */}
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '0.75rem',
-              padding: '0.75rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              border: '1px solid #f3f4f6'
-            }}
-          >
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-              📈 Estadísticas Adicionales
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Tasa de lectura:</span>
-                <span style={{ fontWeight: '500' }}>
-                  {company.sentMessages > 0 ?
-                    Math.round((company.readMessages / company.sentMessages) * 100)
-                    : 0}%
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Última actividad:</span>
-                <span style={{ fontWeight: '500' }}>Hoy</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Estado:</span>
-                <span style={{ fontWeight: '500', color: '#059669' }}>🟢 Activa</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Información adicional */}
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '0.75rem',
-              padding: '0.75rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              border: '1px solid #f3f4f6'
-            }}
-          >
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-              🏢 Información de la Empresa
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>ID:</span>
-                <span style={{ fontFamily: 'monospace' }}>{company.id.slice(0, 12)}...</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Empleados:</span>
-                <span style={{ fontWeight: '500' }}>{company.employeeCount}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Indicador de flip de vuelta */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '0.5rem',
-            left: '1rem'
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: '#9ca3af',
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            <span>👆 Toca para volver</span>
-          </div>
+          <span>👆 Toca para volver</span>
         </div>
       </div>
     </div>
@@ -583,7 +572,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
       style={{
         perspective: '1000px',
         width: '100%',
-        height: '100%',
+        height: '400px',
         transformStyle: 'preserve-3d',
         position: 'relative'
       }}
