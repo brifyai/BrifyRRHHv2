@@ -103,13 +103,10 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
                 <h4 className="text-lg font-bold text-gray-900 leading-tight">
                   {company.name}
                 </h4>
-                <p className="text-sm text-gray-500">
-                  ID: {company.id.slice(0, 8)}...
-                </p>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-xl font-bold text-gray-900">
                 {company.employeeCount}
               </div>
               <div className="text-xs text-gray-500 flex items-center">
@@ -234,20 +231,20 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
         </div>
 
         {/* Lado trasero de la tarjeta */}
-        <div className="flip-card-back absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl shadow-xl p-6 border border-gray-100">
+        <div className="flip-card-back absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl shadow-xl p-4 border border-gray-100 overflow-hidden">
           <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h4 className="text-lg font-bold text-gray-900">
                 📊 Vista Detallada
               </h4>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500 truncate ml-2">
                 {company.name}
               </div>
             </div>
 
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-3 overflow-y-auto">
               {/* Programados */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm text-gray-500">📅 Mensajes Programados</div>
@@ -265,7 +262,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
               </div>
 
               {/* Borradores */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm text-gray-500">📝 Borradores</div>
@@ -278,7 +275,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
               </div>
 
               {/* Estadísticas adicionales */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
                 <div className="text-sm text-gray-500 mb-2">📈 Estadísticas Adicionales</div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
@@ -301,7 +298,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
               </div>
 
               {/* Información adicional */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
                 <div className="text-sm text-gray-500 mb-2">🏢 Información de la Empresa</div>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
@@ -317,7 +314,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
             </div>
 
             {/* Indicador de flip de vuelta */}
-            <div className="absolute bottom-4 left-4">
+            <div className="absolute bottom-2 left-4">
               <div className="text-xs text-gray-400 flex items-center">
                 <span>👆 Toca para volver</span>
               </div>
