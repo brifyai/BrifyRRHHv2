@@ -498,6 +498,164 @@ class UnifiedEmployeeFolderService {
       }
     }
   }
+
+  /**
+   * OBTENER ESTADÍSTICAS DE CARPETA DE EMPLEADO ESPECÍFICO
+   */
+  async getEmployeeFolderStats(employeeEmail) {
+    try {
+      const { data: folder } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .eq('employee_email', employeeEmail)
+        .single()
+
+      if (!folder) {
+        return {
+          exists: false,
+          employeeEmail,
+          message: 'Carpeta no encontrada'
+        }
+      }
+
+      // Obtener estadísticas de documentos
+      const { count: documentsCount } = await supabase
+        .from('employee_documents')
+        .select('*', { count: 'exact', head: true })
+        .eq('employee_folder_id', folder.id)
+
+      // Obtener estadísticas de FAQs
+      const { count: faqsCount } = await supabase
+        .from('employee_faqs')
+        .select('*', { count: 'exact', head: true })
+        .eq('employee_folder_id', folder.id)
+
+      // Obtener estadísticas de conversaciones
+      const { count: conversationsCount } = await supabase
+        .from('employee_conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('employee_folder_id', folder.id)
+
+      return {
+        exists: true,
+        employeeEmail,
+        folder: {
+          ...folder,
+          documentsCount: documentsCount || 0,
+          faqsCount: faqsCount || 0,
+          conversationsCount: conversationsCount || 0
+        },
+        service: 'UnifiedEmployeeFolderService'
+      }
+    } catch (error) {
+      console.error(`❌ Error obteniendo estadísticas para ${employeeEmail}:`, error)
+      return {
+        exists: false,
+        employeeEmail,
+        error: error.message,
+        service: 'UnifiedEmployeeFolderService'
+      }
+    }
+  }
+
+  /**
+   * SINCRONIZAR CARPETA CON GOOGLE DRIVE
+   */
+  async syncFolderWithDrive(employeeEmail) {
+    try {
+      await this.initialize()
+      await this.initializeHybridDrive()
+
+      // Obtener carpeta existente
+      const { data: folder } = await supabase
+        .from('employee_folders')
+        .select('*')
+        .eq('employee_email', employeeEmail)
+        .single()
+
+      if (!folder) {
+        throw new Error(`Carpeta para ${employeeEmail} no encontrada`)
+      }
+
+      // Si ya tiene Drive ID, intentar sincronizar
+      if (folder.drive_folder_id) {
+        try {
+          // Verificar si la carpeta existe en Drive
+          const driveFolder = await this.hybridDrive.getFileById(folder.drive_folder_id)
+          
+          if (driveFolder) {
+            // Actualizar información en Supabase
+            await supabase
+              .from('employee_folders')
+              .update({
+                drive_folder_url: driveFolder.webViewLink || driveFolder.webContentLink,
+                last_sync: new Date().toISOString(),
+                sync_status: 'synced'
+              })
+              .eq('id', folder.id)
+
+            return {
+              success: true,
+              message: `Carpeta sincronizada exitosamente para ${employeeEmail}`,
+              driveFolderId: folder.drive_folder_id,
+              service: 'UnifiedEmployeeFolderService'
+            }
+          }
+        } catch (driveError) {
+          console.warn(`⚠️ Error verificando carpeta en Drive:`, driveError)
+          // Continuar con recreación
+        }
+      }
+
+      // Recrear carpeta en Drive si es necesario
+      const employeeData = {
+        email: employeeEmail,
+        name: folder.employee_name || employeeEmail.split('@')[0]
+      }
+
+      const driveResult = await this.createDriveFolder(
+        employeeEmail,
+        employeeData.name,
+        folder.company_name || 'Default Company'
+      )
+
+      // Actualizar registro en Supabase
+      await supabase
+        .from('employee_folders')
+        .update({
+          drive_folder_id: driveResult.folderId,
+          drive_folder_url: driveResult.folderUrl,
+          last_sync: new Date().toISOString(),
+          sync_status: 'synced'
+        })
+        .eq('id', folder.id)
+
+      return {
+        success: true,
+        message: `Carpeta recreada y sincronizada para ${employeeEmail}`,
+        driveFolderId: driveResult.folderId,
+        service: 'UnifiedEmployeeFolderService'
+      }
+
+    } catch (error) {
+      console.error(`❌ Error sincronizando carpeta para ${employeeEmail}:`, error)
+      
+      // Marcar como error en Supabase
+      try {
+        await supabase
+          .from('employee_folders')
+          .update({
+            sync_status: 'error',
+            last_sync: new Date().toISOString()
+          })
+          .eq('employee_email', employeeEmail)
+      } catch (updateError) {
+        console.error('❌ Error actualizando estado de error:', updateError)
+      }
+
+      throw error
+    }
+  }
 }
 
 // Instancia singleton

@@ -64,7 +64,7 @@ const EmployeeFolderManager = () => {
       setCreatingFolders(true);
       toast.loading('Creando carpetas para todos los empleados...');
       
-      const result = await enhancedEmployeeFolderService.createFoldersForAllEmployees();
+      const result = await unifiedEmployeeFolderService.createFoldersForAllEmployees();
       
       toast.dismiss();
       
@@ -94,7 +94,7 @@ const EmployeeFolderManager = () => {
   // Obtener estadísticas de una carpeta
   const getFolderStats = async (employeeEmail) => {
     try {
-      const stats = await enhancedEmployeeFolderService.getEmployeeFolderStats(employeeEmail);
+      const stats = await unifiedEmployeeFolderService.getEmployeeFolderStats(employeeEmail);
       setSelectedFolder(stats);
       setShowDetails(true);
     } catch (error) {
@@ -108,7 +108,7 @@ const EmployeeFolderManager = () => {
     try {
       toast.loading('Sincronizando con Google Drive...');
       
-      await enhancedEmployeeFolderService.syncFolderWithDrive(employeeEmail);
+      await unifiedEmployeeFolderService.syncFolderWithDrive(employeeEmail);
       
       toast.dismiss();
       toast.success('Carpeta sincronizada con Google Drive');
