@@ -50,7 +50,9 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
         style={{
           height: '400px',
           transformStyle: 'preserve-3d',
-          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          WebkitTransformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          WebkitTransform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
         }}
         onClick={(e) => {
           // Verificar si el clic fue en el botón de tendencias
@@ -61,7 +63,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
         }}
       >
         {/* Lado frontal de la tarjeta */}
-        <div className="absolute inset-0 bg-white rounded-3xl shadow-xl p-6 border border-gray-100 backface-hidden">
+        <div className="absolute inset-0 bg-white rounded-3xl shadow-xl p-6 border border-gray-100" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
@@ -172,7 +174,7 @@ const CompanyCard = React.memo(({ company, isFlipped, onToggleFlip }) => {
         </div>
 
         {/* Lado trasero de la tarjeta */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl shadow-xl p-6 border border-gray-100 backface-hidden transform rotateY-180">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl shadow-xl p-6 border border-gray-100" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', WebkitTransform: 'rotateY(180deg)' }}>
           <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-bold text-gray-900">
