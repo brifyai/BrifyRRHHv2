@@ -825,33 +825,6 @@ class OrganizedDatabaseService {
   }
 
   // ========================================
-  // MÉTODOS DE CACHÉ
-  // ========================================
-
-  getFromCache(key) {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      return cached.data;
-    }
-    return null;
-  }
-
-  setCache(key, data) {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
-  }
-
-  clearCache(key = null) {
-    if (key) {
-      this.cache.delete(key);
-    } else {
-      this.cache.clear();
-    }
-  }
-
-  // ========================================
   // MÉTODOS DE VERIFICACIÓN
   // ========================================
 
@@ -896,19 +869,6 @@ class OrganizedDatabaseService {
     console.log('✅ OrganizedDatabaseService: Caché limpiado completamente');
   }
 
-  /**
-   * Limpia una entrada específica del caché
-   */
-  clearCache(key) {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-      console.log(`🧹 OrganizedDatabaseService: Caché '${key}' limpiado`);
-    }
-  }
-
-  /**
-   * Obtiene datos del caché si están disponibles
-   */
   getFromCache(key) {
     const cached = this.cache.get(key);
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
@@ -917,14 +877,21 @@ class OrganizedDatabaseService {
     return null;
   }
 
-  /**
-   * Guarda datos en el caché
-   */
   setCache(key, data) {
     this.cache.set(key, {
       data,
       timestamp: Date.now()
     });
+  }
+
+  clearCache(key = null) {
+    if (key) {
+      this.cache.delete(key);
+      console.log(`🧹 OrganizedDatabaseService: Caché '${key}' limpiado`);
+    } else {
+      this.cache.clear();
+      console.log('🧹 OrganizedDatabaseService: Caché completamente limpiado');
+    }
   }
 }
 
