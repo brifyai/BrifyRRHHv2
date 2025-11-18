@@ -334,7 +334,7 @@ class WhatsAppComplianceService {
         /\b(free|win|prize|lottery|congratulations|winner)\b/i,
         /\b(urgent|act now|limited time|offer expires)\b/i,
         /\b(click here|buy now|shop now)\b/i,
-        /+d{1,3}.*d{3,}.*d{3,}.*d{4}/, // Múltiples números de teléfono
+        /\+\d{1,3}.*\d{3,}.*\d{3,}.*\d{4}/, // Múltiples números de teléfono
         /([A-Z]{2,}){3,}/ // Exceso de mayúsculas
       ];
 
@@ -548,7 +548,7 @@ class WhatsAppComplianceService {
    */
   formatPhoneNumber(phone) {
     // Eliminar caracteres no numéricos excepto +
-    let formatted = phone.replace(/[^d+]/g, '');
+    let formatted = phone.replace(/[^\d+]/g, '');
     
     // Asegurar que comience con +
     if (!formatted.startsWith('+')) {

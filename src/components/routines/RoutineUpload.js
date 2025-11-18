@@ -194,7 +194,7 @@ useEffect(() => {
       setUploadProgress(70)
 
       // Verificar si ya existe una rutina para este usuario
-      const { data: existingRoutine, error: checkError } = await supabase
+      const { data: existingRoutine } = await supabase
         .from('rutinas')
         .select('*')
         .eq('user_email', folderName)
