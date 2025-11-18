@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate, Link, useLocation, useParams } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext.js'
 import googleDriveService from '../../lib/unifiedGoogleDriveService.js'
 import googleDrivePersistenceService from '../../services/googleDrivePersistenceService.js'
@@ -16,7 +16,6 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   PlusIcon,
-  PencilIcon,
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -36,7 +35,7 @@ import UserManagement from './UserManagement.js'
 import DatabaseSettings from './DatabaseSettings.js'
 
 const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
-  const { user, userProfile } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [companies, setCompanies] = useState([])
@@ -850,10 +849,6 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     setShowCompanyForm(true)
   }
 
-  const handleEditCompany = (company) => {
-    setEditingCompany(company)
-    setShowCompanyForm(true)
-  }
 
   const handleDeleteCompany = async (companyId) => {
     const company = companies.find(c => c.id === companyId)
@@ -1930,7 +1925,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
   };
 
-  const configureWhatsApp = async () => {
+  const showWhatsAppConfig = async () => {
     const { value: formValues } = await Swal.fire({
       title: 'Configurar WhatsApp Business API',
       html: `
@@ -2033,14 +2028,6 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
       setIntegrations(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, status: 'connecting' } }));
 
       try {
-        // Configurar el servicio de WhatsApp
-        const config = {
-          accessToken: formValues.accessToken,
-          phoneNumberId: formValues.phoneNumberId,
-          webhookVerifyToken: formValues.webhookToken,
-          testMode: formValues.testMode
-        };
-
         // Probar conexión usando communicationService
         const testResult = await communicationService.testWhatsAppConnection();
 
@@ -2884,7 +2871,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
 
     // Validar teléfono (solo números y algunos caracteres especiales)
-    const phoneRegex = /^[\+]?[0-9\s\-()]+$/;
+    const phoneRegex = /^[+]?[0-9\s-()]+$/;
     if (!phoneRegex.test(integrationForm.telefono)) {
       toast.error('Por favor ingresa un teléfono válido');
       return;

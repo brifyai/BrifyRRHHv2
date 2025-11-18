@@ -163,13 +163,13 @@ const RegisterInnovador = () => {
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-engage-black">
                 Acepto los{' '}
-                <a href="#" className="font-medium text-engage-blue hover:text-engage-yellow">
+                <button type="button" className="font-medium text-engage-blue hover:text-engage-yellow bg-transparent border-none cursor-pointer">
                   Términos de Servicio
-                </a>{' '}
+                </button>{' '}
                 y la{' '}
-                <a href="#" className="font-medium text-engage-blue hover:text-engage-yellow">
+                <button type="button" className="font-medium text-engage-blue hover:text-engage-yellow bg-transparent border-none cursor-pointer">
                   Política de Privacidad
-                </a>
+                </button>
               </label>
             </div>
 

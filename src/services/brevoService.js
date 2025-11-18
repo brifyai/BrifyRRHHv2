@@ -619,7 +619,7 @@ class BrevoService {
   validatePhoneNumber(phone) {
     // Expresión regular para números de teléfono internacionales
     const phoneRegex = /^\+?[1-9]\d{1,14}$/
-    return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''))
+    return phoneRegex.test(phone.replace(/[\s-()]/g, ''))
   }
 
   /**
