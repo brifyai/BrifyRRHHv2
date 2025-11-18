@@ -1,0 +1,75 @@
+  Line 53:10:  'refreshInterval' is assigned a value but never used                                                             no-unused-vars
+  Line 53:27:  'setRefreshInterval' is assigned a value but never used                                                          no-unused-vars
+  Line 5:8:  'LoadingSpinner' is defined but never used  no-unused-vars
+  Line 48:13:  'currentUser' is assigned a value but never used                                                                    no-unused-vars
+  Line 21:10:  'searchParams' is assigned a value but never used  no-unused-vars
+  Line 23:10:  'dragCounter' is assigned a value but never used  no-unused-vars
+  Line 7:3:   'CalendarIcon' is defined but never used      no-unused-vars
+  Line 8:3:   'TrendingUpIcon' is defined but never used    no-unused-vars
+  Line 9:3:   'TrendingDownIcon' is defined but never used  no-unused-vars
+  Line 11:3:  'UsersIcon' is defined but never used         no-unused-vars
+  Line 10:3:  'CheckCircleIcon' is defined but never used  no-unused-vars
+  Line 13:3:  'FunnelIcon' is defined but never used       no-unused-vars
+  Line 19:3:  'EyeSlashIcon' is defined but never used     no-unused-vars
+  Line 32:10:   'allFoldersNormalized' is assigned a value but never used                                                                                                                                              no-unused-vars
+  Line 32:32:   'setAllFoldersNormalized' is assigned a value but never used                                                                                                                                           no-unused-vars
+  Line 52:10:   'totalItems' is assigned a value but never used                                                                                                                                                        no-unused-vars
+  Line 54:8:    'employeeCompanyIndex' is assigned a value but never used                                                                                                                                              no-unused-vars
+  Line 918:9:   'filteredEmployeesForCount' is assigned a value but never used                                                                                                                                         no-unused-vars
+  Line 1:51:   'useMemo' is defined but never used                                                                                                                                            no-unused-vars
+  Line 27:8:   'communicationService' is defined but never used                                                                                                                               no-unused-vars
+  Line 32:8:   'FlipCard' is defined but never used                                                                                                                                           no-unused-vars
+  Line 3:10:  'supabase' is defined but never used                                                                                                                                                              no-unused-vars
+  Line 6:8:   'LoadingSpinner' is defined but never used           no-unused-vars
+  Line 15:3:  'ExclamationTriangleIcon' is defined but never used  no-unused-vars
+  Line 17:3:  'BuildingOfficeIcon' is defined but never used       no-unused-vars
+  Line 18:3:  'XMarkIcon' is defined but never used                no-unused-vars
+  Line 5:8:   'LoadingSpinner' is defined but never used                                                                          no-unused-vars
+  Line 16:3:  'FunnelIcon' is defined but never used                                                                              no-unused-vars
+  Line 51:9:  'formatDate' is assigned a value but never used  no-unused-vars
+  Line 6:3:    'CheckIcon' is defined but never used                                                                                       no-unused-vars
+  Line 8:3:    'PlusIcon' is defined but never used                                                                                        no-unused-vars
+  Line 16:17:  'userProfile' is assigned a value but never used                                                                            no-unused-vars
+  Line 9:3:    'CheckCircleIcon' is defined but never used                                                                                                                                                                                        no-unused-vars
+  Line 16:11:  'user' is assigned a value but never used                                                                                                                                                                                          no-unused-vars
+  Line 5:8:    'companyKnowledgeService' is defined but never used                                                               no-unused-vars
+  Line 19:3:   'DocumentTextIcon' is defined but never used                                                                      no-unused-vars
+  Line 21:3:   'KeyIcon' is defined but never used                                                                               no-unused-vars
+  Line 23:3:   'ServerIcon' is defined but never used                                                                            no-unused-vars
+  Line 1928:9:  'showWhatsAppConfig' is assigned a value but never used                                                           no-unused-vars
+  Line 18:17:  'currentUser' is assigned a value but never used                                                                                                                                                                                                               no-unused-vars
+  Line 149:9:  'getRoleBadgeColor' is assigned a value but never used                                                                                                                                                                                                         no-unused-vars
+  Line 19:11:  'user' is assigned a value but never used                                                                                                                                           no-unused-vars
+  Line 280:9:  'getStatusColor' is assigned a value but never used                                                                         no-unused-vars
+  Line 130:39:  'correctURIs' is assigned a value but never used                                                                     no-unused-vars
+  Line 10:3:   'PhoneIcon' is defined but never used                                                                                    no-unused-vars
+  Line 24:3:   'DocumentTextIcon' is defined but never used                                                                             no-unused-vars
+  Line 27:3:   'WrenchScrewdriverIcon' is defined but never used                                                                        no-unused-vars
+  Line 54:23:  'newLock' is assigned a value but never used  no-unused-vars
+  Line 3:8:     'groqService' is defined but never used                   no-unused-vars
+  Line 436:13:  'totalTokensFromPlan' is assigned a value but never used  no-unused-vars
+  Line 7:10:    'createClient' is defined but never used   no-unused-vars
+  Line 314:15:  'data' is assigned a value but never used  no-unused-vars
+  Line 74:23:   'newLock' is assigned a value but never used  no-unused-vars
+  Line 249:13:  'now' is assigned a value but never used      no-unused-vars
+  Line 116:13:  'timestamp' is assigned a value but never used  no-unused-vars
+  Line 583:13:  'ranking' is assigned a value but never used   no-unused-vars
+  Line 976:13:  'delivery' is assigned a value but never used  no-unused-vars
+  Line 151:21:  'tableCheck' is assigned a value but never used   no-unused-vars
+  Line 186:21:  'tableCheck' is assigned a value but never used   no-unused-vars
+  Line 248:21:  'tablesCheck' is assigned a value but never used  no-unused-vars
+  Line 259:21:  'commCheck' is assigned a value but never used    no-unused-vars
+  Line 4:8:     'organizedDatabaseService' is defined but never used  no-unused-vars
+  Line 310:13:  'commonLevels' is assigned a value but never used     no-unused-vars
+  Line 527:13:  'userPrefs' is assigned a value but never used        no-unused-vars
+  Line 221:15:  'data' is assigned a value but never used  no-unused-vars
+  Line 18:8:    'whatsappComplianceService' is defined but never used  no-unused-vars
+  Line 344:11:  'results' is assigned a value but never used           no-unused-vars
+  Line 142:21:  'tableCheck' is assigned a value but never used  no-unused-vars
+  Line 415:17:  'data' is assigned a value but never used        no-unused-vars
+  Line 459:15:  'data' is assigned a value but never used        no-unused-vars
+  Line 10:8:    'logger' is defined but never used                no-unused-vars
+  Line 149:13:  'serviceInfo' is assigned a value but never used  no-unused-vars
+  Line 449:17:  'toKeep' is assigned a value but never used       no-unused-vars
+  Line 204:13:  'twentyFourHoursAgo' is assigned a value but never used  no-unused-vars
+  Line 526:7:  'limit' is assigned a value but never used  no-unused-vars

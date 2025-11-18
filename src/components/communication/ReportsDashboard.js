@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
@@ -178,13 +178,62 @@ const ReportsDashboard = () => {
     channels: []
   });
 
-  // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-useEffect(() => {
+  const loadReports = useCallback(async () => {
+    try {
+      setLoading(true);
+      const reportData = await enhancedCommunicationService.getCommunicationReports(
+        dateFrom || null,
+        dateTo || null,
+        filters
+      );
+      setReports(reportData);
+
+      // Guardar datos de sentimiento en localStorage para sincronización con dashboard
+      if (reportData.sentimentMetrics) {
+        saveSentimentDataToLocalStorage(reportData.sentimentMetrics);
+      }
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateFrom, dateTo, filters]);
+
+  const loadEmployees = useCallback(async () => {
+    try {
+      const employeeData = await organizedDatabaseService.getEmployees();
+      setEmployees(employeeData);
+
+      // Extract unique values for filters
+      const companies = [...new Set(employeeData.map(emp => emp.company_name || emp.company).filter(Boolean))];
+      const departments = [...new Set(employeeData.map(emp => emp.department).filter(Boolean))];
+      const regions = [...new Set(employeeData.map(emp => emp.region).filter(Boolean))];
+      const levels = [...new Set(employeeData.map(emp => emp.level).filter(Boolean))];
+      const workModes = [...new Set(employeeData.map(emp => emp.work_mode).filter(Boolean))];
+      const contractTypes = [...new Set(employeeData.map(emp => emp.contract_type).filter(Boolean))];
+      const positions = [...new Set(employeeData.map(emp => emp.position).filter(Boolean))];
+
+      setAllCompanies(companies);
+      setAllDepartments(departments);
+      setAllRegions(regions);
+      setAllLevels(levels);
+      setAllWorkModes(workModes);
+      setAllContractTypes(contractTypes);
+      setAllPositions(positions);
+
+      console.log('Filter options loaded:', {
+        companies, departments, regions, levels, workModes, contractTypes, positions
+      });
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  }, []);
+
+  useEffect(() => {
     loadReports();
     loadEmployees();
     loadAutomatedReportSettings();
-  }, [dateFrom, dateTo, filters, loadReports]);
+  }, [dateFrom, dateTo, filters, loadReports, loadEmployees]);
 
   // Cargar configuraciones de reportes automáticos desde localStorage
   const loadAutomatedReportSettings = () => {
@@ -509,56 +558,6 @@ useEffect(() => {
     }
   };
 
-  const loadReports = async () => {
-    try {
-      setLoading(true);
-      const reportData = await enhancedCommunicationService.getCommunicationReports(
-        dateFrom || null,
-        dateTo || null,
-        filters
-      );
-      setReports(reportData);
-
-      // Guardar datos de sentimiento en localStorage para sincronización con dashboard
-      if (reportData.sentimentMetrics) {
-        saveSentimentDataToLocalStorage(reportData.sentimentMetrics);
-      }
-    } catch (error) {
-      console.error('Error loading reports:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadEmployees = async () => {
-    try {
-      const employeeData = await organizedDatabaseService.getEmployees();
-      setEmployees(employeeData);
-
-      // Extract unique values for filters
-      const companies = [...new Set(employeeData.map(emp => emp.company_name || emp.company).filter(Boolean))];
-      const departments = [...new Set(employeeData.map(emp => emp.department).filter(Boolean))];
-      const regions = [...new Set(employeeData.map(emp => emp.region).filter(Boolean))];
-      const levels = [...new Set(employeeData.map(emp => emp.level).filter(Boolean))];
-      const workModes = [...new Set(employeeData.map(emp => emp.work_mode).filter(Boolean))];
-      const contractTypes = [...new Set(employeeData.map(emp => emp.contract_type).filter(Boolean))];
-      const positions = [...new Set(employeeData.map(emp => emp.position).filter(Boolean))];
-
-      setAllCompanies(companies);
-      setAllDepartments(departments);
-      setAllRegions(regions);
-      setAllLevels(levels);
-      setAllWorkModes(workModes);
-      setAllContractTypes(contractTypes);
-      setAllPositions(positions);
-
-      console.log('Filter options loaded:', {
-        companies, departments, regions, levels, workModes, contractTypes, positions
-      });
-    } catch (error) {
-      console.error('Error loading employees:', error);
-    }
-  };
 
   // Funciones para manejar cambios en filtros
   const handleCompanyFilterChange = (field, value) => {

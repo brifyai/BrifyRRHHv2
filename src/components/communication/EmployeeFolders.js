@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   FolderIcon,
@@ -28,8 +28,9 @@ const EmployeeFolders = () => {
   const { user } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [folders, setFolders] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   
-  const [allFoldersNormalized, setAllFoldersNormalized] = useState([]);const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingFolders, setLoadingFolders] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -49,7 +50,6 @@ const EmployeeFolders = () => {
   const [uniqueContractTypes, setUniqueContractTypes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
 // Índice global email -> company_id para resolver empresa real del empleado
 const [employeeCompanyIndex, setEmployeeCompanyIndex] = useState(new Map());
 
@@ -98,18 +98,12 @@ useEffect(() => {
     };
   }, [user?.id]);
 
-  // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-useEffect(() => {
-    loadEmployeesOnly();
-  }, [companyId, filters, loadEmployeesOnly]);
-
   // Alinear filtro de empresa con el parámetro de ruta para evitar desajustes
   useEffect(() => {
     if (companyId && filters.companyId !== companyId) {
       setFilters(prev => ({ ...prev, companyId }));
     }
-  }, [companyId]);
+  }, [companyId, filters.companyId]);
 
   // ÚNICO efecto para cargar carpetas - consolidado para evitar duplicaciones
   useEffect(() => {
@@ -123,7 +117,7 @@ useEffect(() => {
       });
       loadFoldersForCurrentPage();
     }
-  }, [currentPage, searchTerm, filters, loading, companies.length, employees.length]);
+  }, [currentPage, searchTerm, filters, loading, companies.length, employees.length, loadFoldersForCurrentPage]);
 
   // Actualizar totalItems cuando cambian los filtros o la búsqueda (sin limpiar carpetas)
   useEffect(() => {
@@ -143,14 +137,13 @@ useEffect(() => {
       return matchesSearch;
     });
 
-    setTotalItems(filteredEmployees.length);
     // Solo resetear página si los filtros realmente cambiaron
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [searchTerm, filters, employees.length]);
+  }, [searchTerm, filters, employees.length, currentPage]);
 
-  const loadEmployeesOnly = async () => {
+  const loadEmployeesOnly = useCallback(async () => {
     try {
       setLoading(true);
       console.log('🚀 Iniciando carga de empleados...');
@@ -203,9 +196,13 @@ useEffect(() => {
       setLoading(false);
       console.log('🏁 Carga de empleados completada');
     }
-  };
+  }, [companyId, filters]);
 
-  const loadFoldersForCurrentPage = async () => {
+  useEffect(() => {
+    loadEmployeesOnly();
+  }, [companyId, filters, loadEmployeesOnly]);
+
+  const loadFoldersForCurrentPage = useCallback(async () => {
     // Prevenir múltiples cargas simultáneas
     if (loadingFolders) {
       console.log('⏳ Ya se están cargando carpetas, ignorando solicitud duplicada...');
@@ -412,7 +409,7 @@ useEffect(() => {
       setLoadingFolders(false);
       console.log('🏁 Carga de carpetas completada');
     }
-  };
+  }, [employees, searchTerm, filters, companies]);
 
   // Función de compatibilidad para mantener el código existente
   const loadEmployeesAndFolders = loadEmployeesOnly;
@@ -914,22 +911,6 @@ useEffect(() => {
     }
   };
 
-  // Calcular filteredEmployees para el conteo total
-  const filteredEmployeesForCount = employees.filter(employee => {
-    if (!employee?.email) return false;
-
-    const companyName = (employee.company && employee.company.name) || (employee.companies && employee.companies.name) || '';
-    const term = (searchTerm || '').toLowerCase();
-
-    const matchesSearch =
-      !term ||
-      (employee.name && employee.name.toLowerCase().includes(term)) ||
-      (employee.email && employee.email.toLowerCase().includes(term)) ||
-      (companyName && companyName.toLowerCase().includes(term)) ||
-      (employee.department && employee.department.toLowerCase().includes(term));
-
-    return matchesSearch;
-  });
 
   // Calcular páginas totales
   const totalPages = getTotalPages();

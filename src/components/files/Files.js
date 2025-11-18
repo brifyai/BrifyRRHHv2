@@ -46,18 +46,16 @@ const Files = () => {
   // Usar la instancia por defecto de googleDriveService
   const fileInputRef = useRef(null)
 
-  // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-useEffect(() => {
-    loadFolders()
-    loadFiles()
-  }, [loadFolders, loadFiles])
-
   useEffect(() => {
     if (selectedFolder) {
       loadFiles(selectedFolder)
     }
   }, [selectedFolder, loadFiles])
+
+  useEffect(() => {
+    loadFolders()
+    loadFiles()
+  }, [loadFolders, loadFiles])
 
   // Manejar carpeta preseleccionada desde navegación
   useEffect(() => {
