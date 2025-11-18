@@ -383,4 +383,5 @@ class UserGoogleDriveService {
   }
 }
 
-export default new UserGoogleDriveService()
+const userGoogleDriveService = new UserGoogleDriveService();
+export default userGoogleDriveService;

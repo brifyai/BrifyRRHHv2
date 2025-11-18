@@ -115,4 +115,5 @@ class FileContentExtractor {
   }
 }
 
-export default new FileContentExtractor()
+const fileContentExtractor = new FileContentExtractor();
+export default fileContentExtractor;

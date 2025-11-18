@@ -143,8 +143,10 @@ export const ensureCorrectSupabaseConfig = () => {
   }
 }
 
-export default {
+const clearSupabaseCacheUtils = {
   clearSupabaseCache,
   checkForIncorrectConfig,
   ensureCorrectSupabaseConfig
-}
+};
+
+export default clearSupabaseCacheUtils;

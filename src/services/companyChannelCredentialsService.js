@@ -353,4 +353,5 @@ class CompanyChannelCredentialsService {
   }
 }
 
-export default new CompanyChannelCredentialsService()
+const companyChannelCredentialsService = new CompanyChannelCredentialsService();
+export default companyChannelCredentialsService;

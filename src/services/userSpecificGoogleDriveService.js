@@ -493,4 +493,5 @@ class UserSpecificGoogleDriveService {
   }
 }
 
-export default new UserSpecificGoogleDriveService()
+const userSpecificGoogleDriveService = new UserSpecificGoogleDriveService();
+export default userSpecificGoogleDriveService;

@@ -328,4 +328,5 @@ class InMemoryUserService {
   }
 }
 
-export default new InMemoryUserService();
+const inMemoryUserService = new InMemoryUserService();
+export default inMemoryUserService;

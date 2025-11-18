@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { CACHE_CONFIG, TIMEOUT_CONFIG, LIMITS_CONFIG, DEV_CONFIG } from '../config/constants.js';
+import { CACHE_CONFIG, DEV_CONFIG } from '../config/constants.js';
 
 /**
  * SERVICIO DE BASE DE DATOS ORGANIZADA

@@ -457,4 +457,5 @@ class GoogleDrivePersistenceService {
   }
 }
 
-export default new GoogleDrivePersistenceService();
+const googleDrivePersistenceService = new GoogleDrivePersistenceService();
+export default googleDrivePersistenceService;

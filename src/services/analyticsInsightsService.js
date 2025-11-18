@@ -419,4 +419,5 @@ Sé específico, cuantitativo cuando sea posible, y enfócate en insights práct
   }
 }
 
-export default new AnalyticsInsightsService()
+const analyticsInsightsService = new AnalyticsInsightsService()
+export default analyticsInsightsService

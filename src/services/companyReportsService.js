@@ -1139,4 +1139,5 @@ class CompanyReportsService {
   }
 }
 
-export default new CompanyReportsService()
+const companyReportsService = new CompanyReportsService();
+export default companyReportsService;

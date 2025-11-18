@@ -654,4 +654,5 @@ class RealTimeStatsService {
   }
 }
 
-export default new RealTimeStatsService()
+const realTimeStatsService = new RealTimeStatsService();
+export default realTimeStatsService;

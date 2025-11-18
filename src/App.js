@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext.js'
@@ -7,64 +7,46 @@ import { ensureCorrectSupabaseConfig } from './utils/clearSupabaseCache.js'
 // Importar el interceptor forzado para asegurar el uso del proyecto correcto
 import './lib/forcedSupabaseClient.js'
 
-// Componentes
-import ForgotPassword from './components/auth/ForgotPassword.js'
-import ResetPassword from './components/auth/ResetPassword.js'
-import Plans from './components/plans/Plans.js'
-import Folders from './components/folders/Folders.js'
-import Files from './components/files/Files.js'
-import Profile from './components/profile/Profile.js'
-import SemanticSearch from './components/embeddings/SemanticSearch.js'
-import Abogado from './components/legal/Abogado.js'
+// Componentes pequeños (cargar directamente)
 import LoadingSpinner from './components/common/LoadingSpinner.js'
 import Navbar from './components/layout/Navbar.js'
 import GoogleAuthCallback from './components/auth/GoogleAuthCallback.js'
-// Componentes auxiliares
-// Nuevo Home Moderno
-import HomeStaffHubSEO from './components/home/HomeStaffHubSEO.js';
 
-// Manejo de errores y carga
-import ReactErrorBoundary from './components/error/ReactErrorBoundary.js'
-import SuspenseWrapper from './components/common/SuspenseWrapper.js'
-// Componentes de autenticación innovadores
-import LoginUltraModern from './components/auth/LoginRedesigned.js'
-import RegisterInnovador from './components/auth/RegisterInnovador.js'
-// Componente de dashboard innovador
-// import DashboardInnovador from './components/dashboard/DashboardInnovador.js'
-import ModernDashboard from './components/dashboard/ModernDashboardRedesigned.js'
-// Componentes de prueba de empresas (no implementados aún)
-// import TestCompanyData from './components/dashboard/TestCompanyData'
-// import DebugCompanyData from './components/dashboard/DebugCompanyData'
-import CompanyEmployeeTest from './components/dashboard/CompanyEmployeeTest.js'
-// Componente de prueba de sincronización de empresas
-import CompanySyncTest from './components/test/CompanySyncTest.js'
-// Componente de prueba de WhatsApp APIs
-import WhatsAppAPITest from './components/test/WhatsAppAPITest.js'
-// Nuevo componente de comunicación Webrify
-import WebrifyCommunicationDashboard from './components/communication/WebrifyCommunicationDashboard.js'
-// Componente de configuración
-import Settings from './components/settings/Settings.js'
-// Dashboard de estadísticas de Brevo
-import BrevoStatisticsDashboard from './components/communication/BrevoStatisticsDashboard.js'
-// Gestor de plantillas de Brevo
-import BrevoTemplatesManager from './components/communication/BrevoTemplatesManager.js'
-// Asistente de configuración fácil de WhatsApp Business
-import WhatsAppOnboarding from './components/whatsapp/WhatsAppOnboarding.js'
-// Gestor multi-WhatsApp para agencias (solo para usuarios avanzados)
-import MultiWhatsAppManager from './components/whatsapp/MultiWhatsAppManager.js'
-
-// Componentes de configuración de Google Drive
-import GoogleDriveIntegrationSelector from './components/integrations/GoogleDriveIntegrationSelector.js'
-import GoogleDriveAutoSetup from './components/integrations/GoogleDriveAutoSetup.js'
-import GoogleDriveSetupWizard from './components/integrations/GoogleDriveSetupWizard.js'
-import GoogleDriveSimplePage from './components/integrations/GoogleDriveSimplePage.js'
-import GoogleDriveTestPage from './components/integrations/GoogleDriveTestPage.js'
-import GoogleDriveLocalTest from './components/test/GoogleDriveLocalTest.js'
-import GoogleDriveProductionDiagnosis from './components/test/GoogleDriveProductionDiagnosis.js'
-import UserGoogleDriveConnector from './components/integrations/UserGoogleDriveConnector.js'
-import GoogleDriveURIChecker from './components/test/GoogleDriveURIChecker.js'
-import GoogleDriveURIDebugger from './components/test/GoogleDriveURIDebugger.js'
-import GoogleDriveConnectionVerifier from './components/test/GoogleDriveConnectionVerifier.js'
+// Componentes grandes - Lazy Loading para reducir bundle size
+const ForgotPassword = lazy(() => import('./components/auth/ForgotPassword.js'))
+const ResetPassword = lazy(() => import('./components/auth/ResetPassword.js'))
+const Plans = lazy(() => import('./components/plans/Plans.js'))
+const Folders = lazy(() => import('./components/folders/Folders.js'))
+const Files = lazy(() => import('./components/files/Files.js'))
+const Profile = lazy(() => import('./components/profile/Profile.js'))
+const SemanticSearch = lazy(() => import('./components/embeddings/SemanticSearch.js'))
+const Abogado = lazy(() => import('./components/legal/Abogado.js'))
+const HomeStaffHubSEO = lazy(() => import('./components/home/HomeStaffHubSEO.js'))
+const ReactErrorBoundary = lazy(() => import('./components/error/ReactErrorBoundary.js'))
+const SuspenseWrapper = lazy(() => import('./components/common/SuspenseWrapper.js'))
+const LoginUltraModern = lazy(() => import('./components/auth/LoginRedesigned.js'))
+const RegisterInnovador = lazy(() => import('./components/auth/RegisterInnovador.js'))
+const ModernDashboard = lazy(() => import('./components/dashboard/ModernDashboardRedesigned.js'))
+const CompanyEmployeeTest = lazy(() => import('./components/dashboard/CompanyEmployeeTest.js'))
+const CompanySyncTest = lazy(() => import('./components/test/CompanySyncTest.js'))
+const WhatsAppAPITest = lazy(() => import('./components/test/WhatsAppAPITest.js'))
+const WebrifyCommunicationDashboard = lazy(() => import('./components/communication/WebrifyCommunicationDashboard.js'))
+const Settings = lazy(() => import('./components/settings/Settings.js'))
+const BrevoStatisticsDashboard = lazy(() => import('./components/communication/BrevoStatisticsDashboard.js'))
+const BrevoTemplatesManager = lazy(() => import('./components/communication/BrevoTemplatesManager.js'))
+const WhatsAppOnboarding = lazy(() => import('./components/whatsapp/WhatsAppOnboarding.js'))
+const MultiWhatsAppManager = lazy(() => import('./components/whatsapp/MultiWhatsAppManager.js'))
+const GoogleDriveIntegrationSelector = lazy(() => import('./components/integrations/GoogleDriveIntegrationSelector.js'))
+const GoogleDriveAutoSetup = lazy(() => import('./components/integrations/GoogleDriveAutoSetup.js'))
+const GoogleDriveSetupWizard = lazy(() => import('./components/integrations/GoogleDriveSetupWizard.js'))
+const GoogleDriveSimplePage = lazy(() => import('./components/integrations/GoogleDriveSimplePage.js'))
+const GoogleDriveTestPage = lazy(() => import('./components/integrations/GoogleDriveTestPage.js'))
+const GoogleDriveLocalTest = lazy(() => import('./components/test/GoogleDriveLocalTest.js'))
+const GoogleDriveProductionDiagnosis = lazy(() => import('./components/test/GoogleDriveProductionDiagnosis.js'))
+const UserGoogleDriveConnector = lazy(() => import('./components/integrations/UserGoogleDriveConnector.js'))
+const GoogleDriveURIChecker = lazy(() => import('./components/test/GoogleDriveURIChecker.js'))
+const GoogleDriveURIDebugger = lazy(() => import('./components/test/GoogleDriveURIDebugger.js'))
+const GoogleDriveConnectionVerifier = lazy(() => import('./components/test/GoogleDriveConnectionVerifier.js'))
 
 
 // Limpiar configuración incorrecta de Supabase al iniciar la aplicación

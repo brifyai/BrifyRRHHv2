@@ -329,4 +329,5 @@ class DatabaseEmployeeService {
   }
 }
 
-export default new DatabaseEmployeeService();
+const databaseEmployeeService = new DatabaseEmployeeService();
+export default databaseEmployeeService;

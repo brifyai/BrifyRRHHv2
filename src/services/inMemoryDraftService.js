@@ -189,4 +189,5 @@ class InMemoryDraftService {
   }
 }
 
-export default new InMemoryDraftService();
+const inMemoryDraftService = new InMemoryDraftService();
+export default inMemoryDraftService;
