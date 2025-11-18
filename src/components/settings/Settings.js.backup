@@ -748,7 +748,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
   const addEmailRecipient = () => {
     const newEmail = prompt('Ingresa el email del destinatario:')
     if (newEmail) {
-      const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(newEmail)) {
         toast.error('Por favor ingresa un email válido')
         return
@@ -778,7 +778,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
 
     // Validar que todos los emails sean válidos
-    const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const invalidEmails = notificationSettings.reports.recipients.filter(email => !emailRegex.test(email))
 
     if (invalidEmails.length > 0) {
@@ -2009,7 +2009,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           return false;
         }
 
-        if (!/^d+$/.test(phoneNumberId)) {
+        if (!/^\d+$/.test(phoneNumberId)) {
           Swal.showValidationMessage('El Phone Number ID debe contener solo números');
           return false;
         }
@@ -2187,7 +2187,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           return false;
         }
 
-        if (!botToken.match(/^d+:[A-Za-z0-9_-]+$/)) {
+        if (!botToken.match(/^\d+:[A-Za-z0-9_-]+$/)) {
           Swal.showValidationMessage('El formato del Bot Token es inválido');
           return false;
         }
@@ -2443,7 +2443,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
           return false;
         }
 
-        if (!/^d+$/.test(phoneNumberId)) {
+        if (!/^\d+$/.test(phoneNumberId)) {
           Swal.showValidationMessage('El Phone Number ID debe contener solo números');
           return false;
         }
@@ -2864,7 +2864,7 @@ const Settings = ({ activeTab: propActiveTab, companyId: propCompanyId }) => {
     }
 
     // Validar email
-    const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(integrationForm.email)) {
       toast.error('Por favor ingresa un email válido');
       return;

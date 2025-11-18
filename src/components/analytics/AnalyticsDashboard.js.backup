@@ -139,7 +139,6 @@ const AnalyticsDashboard = ({ companyId = null, isComparative = false }) => {
 
   // Cargar datos iniciales
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     loadAnalyticsData()
   }, [loadAnalyticsData])

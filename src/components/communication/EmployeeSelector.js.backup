@@ -53,14 +53,12 @@ const EmployeeSelector = () => {
   }, []);
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     applyFilters();
     setCurrentPage(1); // Reset to first page when filters change
   }, [employees, filters]);
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     extractUniqueFilters();
   }, [employees]);

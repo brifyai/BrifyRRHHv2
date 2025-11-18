@@ -7,7 +7,6 @@ const GoogleDriveURIChecker = () => {
   const [currentConfig, setCurrentConfig] = useState({})
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     performDiagnosis()
   }, [])

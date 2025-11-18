@@ -483,7 +483,7 @@ class WhatsAppService {
    */
   formatPhoneNumber(phone) {
     // Eliminar caracteres no numéricos excepto +
-    let formatted = phone.replace(/[^d+]/g, '')
+    let formatted = phone.replace(/[^\d+]/g, '')
     
     // Asegurar que comience con +
     if (!formatted.startsWith('+')) {
@@ -506,7 +506,7 @@ class WhatsAppService {
   validatePhoneNumber(phone) {
     const formatted = this.formatPhoneNumber(phone)
     // Expresión regular para números internacionales
-    const phoneRegex = /^+[1-9]d{1,14}$/
+    const phoneRegex = /^\+[1-9]\d{1,14}$/
     return phoneRegex.test(formatted)
   }
 

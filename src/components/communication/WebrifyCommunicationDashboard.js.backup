@@ -343,7 +343,6 @@ const WebrifyCommunicationDashboard = ({ activeTab = 'dashboard' }) => {
 
   // Efecto para cargar métricas cuando cambia la empresa seleccionada
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     loadCompanyMetrics(selectedCompany);
   }, [selectedCompany, loadCompanyMetrics]);

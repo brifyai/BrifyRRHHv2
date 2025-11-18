@@ -80,14 +80,12 @@ const CompanySyncTest = () => {
   };
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     const unsubscribe = testSubscription();
     return unsubscribe;
   }, []);
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     testGetCompanies();
     testGetStats();

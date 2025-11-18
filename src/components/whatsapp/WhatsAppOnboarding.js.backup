@@ -101,7 +101,6 @@ const WhatsAppOnboarding = () => {
   ];
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     initializeOnboarding();
   }, []);

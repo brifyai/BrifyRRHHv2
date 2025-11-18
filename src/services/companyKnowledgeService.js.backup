@@ -112,7 +112,7 @@ class CompanyKnowledgeService {
    */
   async createDriveFolderStructure(companyData, userId) {
     try {
-      const companyName = companyData.name.replace(/[^a-zA-Z0-9s]/g, '').trim();
+      const companyName = companyData.name.replace(/[^a-zA-Z0-9\s]/g, '').trim();
       const timestamp = new Date().toISOString().split('T')[0];
       
       // 1. Carpeta principal de la empresa
@@ -753,8 +753,8 @@ class CompanyKnowledgeService {
    * @returns {number} Puntuación de relevancia (0-1)
    */
   calculateTextRelevance(query, text) {
-    const queryWords = query.toLowerCase().split(/s+/);
-    const textWords = text.toLowerCase().split(/s+/);
+    const queryWords = query.toLowerCase().split(/\s+/);
+    const textWords = text.toLowerCase().split(/\s+/);
     
     const matches = queryWords.filter(word => 
       textWords.some(textWord => textWord.includes(word) || word.includes(textWord))

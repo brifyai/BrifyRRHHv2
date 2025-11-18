@@ -42,7 +42,6 @@ const UserForm = ({ user, roles, onSuccess, onCancel }) => {
   }, [user])
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     loadPermissionsByCategory()
   }, [loadPermissionsByCategory])

@@ -697,7 +697,7 @@ class MultiWhatsAppService {
    */
   formatPhoneNumber(phone) {
     // Eliminar caracteres no numéricos excepto +
-    let formatted = phone.replace(/[^d+]/g, '');
+    let formatted = phone.replace(/[^\d+]/g, '');
     
     // Asegurar que comience con +
     if (!formatted.startsWith('+')) {

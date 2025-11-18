@@ -22,7 +22,6 @@ const RoutineUpload = ({ onUploadComplete, onClose }) => {
   const [selectedFolder, setSelectedFolder] = useState('')
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     loadFolders()
   }, [loadFolders])

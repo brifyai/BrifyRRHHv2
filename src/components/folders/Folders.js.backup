@@ -32,7 +32,6 @@ const Folders = () => {
   const [searchTerm, setSearchTerm] = useState('')
 
   // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
 useEffect(() => {
     loadAdminFolderByDefault()
     loadAvailableSubFolders()
