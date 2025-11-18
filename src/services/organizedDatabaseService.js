@@ -93,7 +93,9 @@ class OrganizedDatabaseService {
       console.error('❌ Error en getCompanyById():', error);
       return null;
     }
-/**
+  }
+
+  /**
    * Obtiene empresas con estadísticas combinadas
    * Método requerido por DatabaseCompanySummary.js
    */
