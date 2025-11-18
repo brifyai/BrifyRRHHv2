@@ -149,8 +149,6 @@ class OrganizedDatabaseService {
     }
   }
 
-  }
-
   async createCompany(companyData) {
     try {
       const { data, error } = await supabase
