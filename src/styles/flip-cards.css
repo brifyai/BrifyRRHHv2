@@ -69,3 +69,15 @@
     opacity: 0;
   }
 }
+
+/* Clases CSS faltantes para CompanyCard */
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+}
+
+.rotateY-180 {
+  transform: rotateY(180deg);
+}
