@@ -827,6 +827,51 @@ class OrganizedDatabaseService {
 
     return results;
   }
+
+  // ========================================
+  // MÉTODOS DE CACHÉ
+  // ========================================
+
+  /**
+   * Fuerza la limpieza completa del caché
+   * Método requerido por DatabaseCompanySummary.js
+   */
+  forceClearCache() {
+    console.log('🧹 OrganizedDatabaseService: Limpiando caché forzosamente...');
+    this.cache.clear();
+    console.log('✅ OrganizedDatabaseService: Caché limpiado completamente');
+  }
+
+  /**
+   * Limpia una entrada específica del caché
+   */
+  clearCache(key) {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+      console.log(`🧹 OrganizedDatabaseService: Caché '${key}' limpiado`);
+    }
+  }
+
+  /**
+   * Obtiene datos del caché si están disponibles
+   */
+  getFromCache(key) {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  /**
+   * Guarda datos en el caché
+   */
+  setCache(key, data) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
 }
 
 // Exportar instancia única
