@@ -565,10 +565,10 @@ class OrganizedDatabaseService {
     try {
       console.log('🔍 DEBUG: organizedDatabaseService.getCommunicationStats() - Calculando estadísticas...');
       
-      // FIX: Usar columnas que existen en la tabla communication_logs
+      // ✅ CORREGIDO: Usar columnas REALES que existen en la tabla communication_logs
       let query = supabase
         .from('communication_logs')
-        .select('status, created_at, channel, recipient');
+        .select('status, created_at, type, employee_id, company_id');
 
       if (companyId) {
         query = query.eq('company_id', companyId);
@@ -581,27 +581,33 @@ class OrganizedDatabaseService {
         throw error;
       }
 
-      // Procesar estadísticas usando columnas existentes
+      // ✅ CORREGIDO: Procesar estadísticas usando columnas reales
       const stats = {
         total: data?.length || 0,
-        byChannel: {},
+        byType: {}, // type en lugar de channel
         byStatus: {},
+        byEmployee: {},
         recent: data?.slice(0, 10) || []
       };
 
       data?.forEach(log => {
-        // Por canal (en lugar de message_type)
-        stats.byChannel[log.channel] = (stats.byChannel[log.channel] || 0) + 1;
+        // Por tipo (type en lugar de channel)
+        stats.byType[log.type] = (stats.byType[log.type] || 0) + 1;
         
         // Por estado
         stats.byStatus[log.status] = (stats.byStatus[log.status] || 0) + 1;
+        
+        // Por empleado (en lugar de recipient)
+        if (log.employee_id) {
+          stats.byEmployee[log.employee_id] = (stats.byEmployee[log.employee_id] || 0) + 1;
+        }
       });
 
       console.log('✅ DEBUG: organizedDatabaseService.getCommunicationStats() - Estadísticas calculadas');
       return stats;
     } catch (error) {
       console.error('❌ Error en getCommunicationStats():', error);
-      return { total: 0, byChannel: {}, byStatus: {}, recent: [] };
+      return { total: 0, byType: {}, byStatus: {}, byEmployee: {}, recent: [] };
     }
   }
 
