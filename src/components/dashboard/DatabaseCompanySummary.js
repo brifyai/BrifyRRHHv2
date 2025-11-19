@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { BuildingOfficeIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { supabase } from '../../lib/supabase.js'
 import CompanyCard from './CompanyCard.js'
@@ -11,14 +11,8 @@ const DatabaseCompanySummary = () => {
   const [error, setError] = useState(null)
   const [flippedCards, setFlippedCards] = useState(new Set())
 
-
-  // eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-// eslint-disable-next-line no-use-before-define, react-hooks/exhaustive-deps
-useEffect(() => {
-    loadCompanyData()
-  }, [loadCompanyData])
-
-  const loadCompanyData = async () => {
+  // Definir función con useCallback para evitar recreación en cada render
+  const loadCompanyData = useCallback(async () => {
     console.log('🚀 DatabaseCompanySummary: Cargando datos desde base de datos organizada')
     try {
       setLoading(true)
@@ -111,7 +105,7 @@ useEffect(() => {
     } finally {
       setLoading(false)
     }
-  }
+  }, []) // Dependencias vacías porque no usa props ni state
 
   const syncWithDashboard = async () => {
     try {

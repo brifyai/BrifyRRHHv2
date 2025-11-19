@@ -565,9 +565,10 @@ class OrganizedDatabaseService {
     try {
       console.log('🔍 DEBUG: organizedDatabaseService.getCommunicationStats() - Calculando estadísticas...');
       
+      // FIX: Usar columnas que existen en la tabla communication_logs
       let query = supabase
         .from('communication_logs')
-        .select('message_type, status, created_at');
+        .select('status, created_at, channel, recipient');
 
       if (companyId) {
         query = query.eq('company_id', companyId);
@@ -580,17 +581,17 @@ class OrganizedDatabaseService {
         throw error;
       }
 
-      // Procesar estadísticas
+      // Procesar estadísticas usando columnas existentes
       const stats = {
         total: data?.length || 0,
-        byType: {},
+        byChannel: {},
         byStatus: {},
         recent: data?.slice(0, 10) || []
       };
 
       data?.forEach(log => {
-        // Por tipo
-        stats.byType[log.message_type] = (stats.byType[log.message_type] || 0) + 1;
+        // Por canal (en lugar de message_type)
+        stats.byChannel[log.channel] = (stats.byChannel[log.channel] || 0) + 1;
         
         // Por estado
         stats.byStatus[log.status] = (stats.byStatus[log.status] || 0) + 1;
@@ -600,7 +601,7 @@ class OrganizedDatabaseService {
       return stats;
     } catch (error) {
       console.error('❌ Error en getCommunicationStats():', error);
-      return { total: 0, byType: {}, byStatus: {}, recent: [] };
+      return { total: 0, byChannel: {}, byStatus: {}, recent: [] };
     }
   }
 
